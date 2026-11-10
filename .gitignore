@@ -1,4 +1,6 @@
 /build/
 /dist/
 /tmp_*/
+/wtgo
+/wt-go
 *.exe
