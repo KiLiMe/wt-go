@@ -15,6 +15,10 @@ const TitleBarHeight = 36
 // tabWidth is how wide a tab is while the settings make them all alike.
 const tabWidth float32 = 176
 
+// mouseMiddle is the button that closes the tab it points at, as it does in
+// Windows Terminal.
+const mouseMiddle = 2
+
 // tabDrag is a tab on its way to another place in the strip.
 type tabDrag struct {
 	from int
@@ -88,6 +92,11 @@ func tab(c *myui.Context, st State, act Actions, i int) myui.Element {
 	} else if el.Hovered() {
 		el = el.Background(t.SurfaceHover)
 	}
+	el = el.ObserveInput(func(ev myui.InputEvent) {
+		if ev.Kind == myui.InputPointerDown && ev.Button == mouseMiddle {
+			act.CloseTab(i)
+		}
+	})
 	el.Children(func() {
 		if dot := colorOf(tb.Color); dot.A > 0 {
 			myui.Box(c).Size(8, 8).Radius(4).Background(dot)
