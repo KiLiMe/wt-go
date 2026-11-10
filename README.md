@@ -39,7 +39,7 @@ pwsh .\build.ps1 -Package        # 等于 go tool mygo build -platform windows/a
 | 查找（`Ctrl+Shift+F`）、命令面板（`Ctrl+Shift+P`） | ✅ |
 | 出故障能自己说清（`wtgo diag`、故障码 `E1xx`/`E2xx`/`E3xx`、崩溃日志） | ✅ 见 [docs/故障排查.md](docs/故障排查.md) |
 | 把现场交给 AI（`wtgo mcp`，Model Context Protocol） | ✅ 五个只读工具，不需要窗口开着 |
-| exe 图标与版本信息 | ✅ `resources/icon.png` + 入库的 `.syso` |
+| exe 图标与版本信息 | ✅ `resources/icon.png`，`mygo build`（含 `build.ps1`）打包时注入 |
 | profile：自动发现 pwsh / Windows PowerShell / cmd / WSL / POSIX shell | ✅ |
 | 配色方案 | ✅ 内置 9 套 + Ghostty 617 套直用 + 自定义 |
 | 字体 / 字号 / 行高 / 内边距 / 光标形状 / 窗口透明度 | ✅ |
@@ -79,7 +79,7 @@ internal/store/    settings.json 的解析、默认值、校验
 internal/theme/    配色方案解析
 internal/sys/      全部 OS 副作用（路径、原子写、日志、Job Object、shell 探测……）
 internal/i18n/     中英文案
-tools/genicon/     画 resources/icon.png；tools/resync.ps1 重新生成图标资源
+tools/genicon/     画 resources/icon.png（go run ./tools/genicon）
 resources/         应用图标（1024×1024 PNG）
 docs/              使用说明 / 故障排查 / 代码导读 / ADR / 阶段计划
 ```

@@ -29,10 +29,9 @@
 | `internal/fault/` | 故障码与一行含义：日志、`wtgo diag`、文档共用一套编号（纯函数） |
 | `internal/cli/` | 不开窗口的那部分：`wtgo diag` 的报告、`wtgo mcp` 的工具（不碰 OS，全走 `internal/sys`） |
 | `internal/mcp/` | 精简的 Model Context Protocol 服务器：JSON-RPC 2.0 + tools/resources（只用标准库） |
-| `tools/genicon/` | 画 `resources/icon.png`；`tools/resync.ps1` 用它和 go-winres 重新生成图标资源 |
-| `resources/icon.png` | 应用图标（1024×1024 PNG），`mygo build` 与 `go-winres` 都读它 |
-| `rsrc_windows_amd64.syso` | 入库的 Windows 资源（图标 + 版本信息），`go build` 会链进 exe |
-| `build.ps1` | 日常构建：产物固定为 `build\bin\Release\wtgo.exe` |
+| `tools/genicon/` | 画 `resources/icon.png`：`go run ./tools/genicon` |
+| `resources/icon.png` | 应用图标（1024×1024 PNG），`mygo build` 打包时嵌进 exe |
+| `build.ps1` | 日常构建：`go tool mygo build` 出 `build\bin\Release\wtgo.exe`（带图标、版本与 native 库） |
 | `docs/` | `使用说明.md` / `代码导读.md` / `故障排查.md`（故障码）/ `decisions.md`（ADR）/ `plan.md`（阶段计划） |
 | `mygo.json` | `go tool mygo build` 的包名、版本与打包信息 |
-| `build.ps1` | 构建脚本：产物固定为 `build\bin\Release\wtgo.exe`，`-Test` / `-Clean` / `-Package` |
+| `build.ps1` | 参数：`-Test` 先跑 vet 与测试、`-Clean` 清掉 `build/`、`-Package` 只出 `dist/` |

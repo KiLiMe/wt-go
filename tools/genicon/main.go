@@ -1,7 +1,6 @@
 // Command genicon draws the app icon: a rounded dark square with a green
 // chevron and a cursor bar, at the sizes Windows, macOS and Linux ask for.
-// The PNG it writes is what `go tool mygo build` embeds, and what
-// tools/resync.ps1 hands to go-winres for the exe's own icon.
+// The PNG it writes is what `go tool mygo build` embeds as the app icon.
 package main
 
 import (

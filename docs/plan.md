@@ -127,8 +127,8 @@
 2. ~~崩溃日志~~（已完成：`panic` 写 `crash-<时间>.log` 到配置目录）、内存/句柄泄漏检查（长期跑 shell 会话）。
 3. ~~冒烟脚本~~（部分完成：`wtgo diag` 与 `wtgo mcp` 提供了机器可读的现场，
    但“临时配置目录 + 截图”的自动化仍缺，见 `docs/decisions.md` 待定的控制接口）。
-4. 打包：`mygo build` 出单文件 exe + 原生库（已完成：含图标与版本信息的 `.syso` 已入库，
-   `tools/resync.ps1` 可重建）。
+4. 打包：`mygo build` 出单文件 exe + 原生库（已完成：图标、版本信息与 manifest
+   在打包时注入，`go run ./tools/genicon` 重画图标）。
 
 ---
 
