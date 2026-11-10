@@ -61,7 +61,7 @@ internal/i18n → （无内部依赖）
 
 阶段 1 的标签与 profile 已就位：`cmd/wtgo/main.go` 只调用 `app.Run()`；`internal/app` 持有状态、在 UI 线程上改（`Do`），`internal/ui` 只读 `ui.State` 并回传 `ui.Actions`。
 
-标签栏兼作标题栏：窗口用 `mygo.TitleBarHidden` + `TitleBarHeight = ui.TitleBarHeight`（36dp），标签栏自己就是拖窗区域（空白处 `DragWindow`），激活标签用终端背景色 + 上圆角，未激活融入标题栏底色。
+标签栏兼作标题栏：Windows/macOS 上窗口用 `mygo.TitleBarHidden` + `TitleBarHeight = ui.TitleBarHeight`（36dp），标签栏自己就是拖窗区域（空白处 `DragWindow`），激活标签用终端背景色 + 上圆角，未激活融入标题栏底色。Linux 反过来用 `mygo.TitleBarDefault`（`internal/app/titlebar_linux.go`）：mygo 的 hidden 在 X11 上会把窗口去装饰却不给 CSD，既没边框也没按钮，所以标题栏交给合成器或窗口管理器画，标签栏只负责标签与拖窗。
 
 窗格树：一个标签是一棵 `pane.Node` 树（`Term` 非空即窗格），切分把焦点窗格原地变成 split，旧终端作第一格、新终端作第二格；关闭一个窗格时兄弟节点接替它的位置（保持指针不变），最后一个窗格关闭即关闭标签。几何由 `internal/layout` 算：分割线 4dp、每个窗格至少 40dp，比例 `Share` 在拖动时被夹在两端之内。焦点移动按几何判定（同方向、跨度重叠最多者优先，其次最近），因为树序不等于视觉相邻。
 

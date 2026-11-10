@@ -129,13 +129,18 @@ Campbell / Solarized / Tango / Vintage 都不在其中。
 
 ## ADR-011 标签栏兼作标题栏
 
-**决定**：窗口用 `mygo.TitleBarHidden` + `TitleBarHeight = ui.TitleBarHeight`（36dp），
+**决定**：Windows/macOS 上窗口用 `mygo.TitleBarHidden` + `TitleBarHeight = ui.TitleBarHeight`（36dp），
 标签栏自己就是拖窗区域（空白处 `DragWindow`），不再单独画 40dp 标题栏。
+Linux 上改用 `mygo.TitleBarDefault`（`internal/app/titlebar_linux.go`）。
 
 **理由**：与 Windows Terminal 一致（用户提供的参考图即如此），省掉一行高度；
 `mygo` 的 `DragWindow` 放在容器上不影响子元素点击（`ui/input.go:481`）。
+Linux 除外，是因为 mygo 的 hidden 在 Wayland 上靠合成器补标题栏，在 X11 上只做
+`gtk_window_set_decorated(false)`，既没有服务端装饰也没有 CSD，窗口于是无边框、
+无按钮、拖不动；交给平台画标题栏后，X11 由窗口管理器装饰，Wayland 与之前一样由合成器装饰。
 
 **代价**：标签栏右侧必须留空白给拖窗，标签放不下时没有横向滚动（已知退化，待做文本测量）。
+Linux 上多一行合成器/窗口管理器的标题栏，标签栏不再顶到窗口上缘。
 
 ---
 

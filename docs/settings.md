@@ -20,7 +20,7 @@
   "startSize": { "columns": 0, "rows": 0 }, // 首屏网格；0 = 窗口默认大小
 
   // 外观
-  "font": { "family": "Cascadia Mono", "size": 13, "lineHeight": 1.2 },
+  "font": { "family": "monospace", "size": 13, "lineHeight": 1.2 }, // Windows 默认 "Cascadia Mono"
   "colorScheme": "Campbell",
   "padding": { "x": 12, "y": 8 },
   "backgroundOpacity": 1.0,         // 窗口整体透明度，0.3 – 1.0
@@ -115,14 +115,32 @@
 所以窗口启动时先长一次、读出差值算出单元格尺寸，再设成恰好放下这些格的大小（约两三帧内完成）。
 `0` 表示不设，用窗口默认大小。
 
+### 路径里的写法
+
+`startDirectory` 与 profile 的 `startingDirectory` 在启动标签时展开：
+
+- 开头的 `~`（或 `~/`、`~\`）是用户的主目录；
+- `%NAME%`、`$NAME`、`${NAME}` 是环境变量的值，两个平台都认。
+
+没设置的变量原样保留，所以一个写错的路径会在界面上显形，而不是变成空路径。
+
 ### 自动发现的 profile
 
 启动时扫描并补进 `profiles`（仅在用户没写同 `id` 时）：
+
+Windows：
 
 - `pwsh.exe`：WHERE 找到的 PowerShell 7
 - `powershell.exe`：Windows PowerShell 5.1
 - `cmd.exe`：命令提示符
 - `wsl -l -q` 的每个发行版 → `wsl.exe -d <distro>`
+
+POSIX（Linux/macOS）：
+
+- `$SHELL`，以及 profile 里自己写的每个 shell；
+- `/etc/shells` 里认识的 shell（bash、zsh、fish、sh、dash、ksh、tcsh、nu、pwsh），
+  登录 shell 之外的 `git-shell`、`rbash` 一类不列，因为标签跑起来只会退出；
+- 最后是 `/bin/sh` 兜底，所以机器再空也有一个能开的标签。
 
 自动发现的 profile 有 `"discovered": true`，用户可改名字/颜色，删除后不再自动加回。
 发现结果只补进内存（`internal/profile.Resolve`），不写回 `settings.json`。
