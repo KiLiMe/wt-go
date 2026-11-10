@@ -31,7 +31,25 @@ go build -o wtgo.exe ./cmd/wtgo
 .\wtgo.exe
 ```
 
-普通 `go build` 适合开发验证；发布包应按 mygo 的构建方式打包原生库。
+普通 `go build` 适合开发验证；它不带 `libghostty-vt`，首次运行会去下载。发布包用 mygo 的构建命令，一次产出可执行文件、原生库、`.deb`、`.tar.gz`（含 `install.sh`）与 `PKGBUILD`：
+
+```powershell
+go tool mygo build -platform windows/amd64 -o dist
+```
+
+版本号、包名、Linux 依赖写在 [mygo.json](mygo.json) 里。
+
+## 发布
+
+CI（[.github/workflows/ci.yml](.github/workflows/ci.yml)）在每个 push 与 PR 上跑 `gofmt`、`go vet`、`go test -race`（Linux 跑整套测试与 race，Windows/macOS 跑不带 race 的同一套），并试打包发布用的两个平台。发布用标签：
+
+```powershell
+# mygo.json 的 version 必须与标签一致，否则发布在第一个 job 就停下
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+[.github/workflows/release.yml](.github/workflows/release.yml) 编译 linux/amd64 与 windows/amd64，只保留发布用产物（`wt-go-<version>-linux-amd64.tar.gz`、`wt-go_<version>_amd64.deb`、`install.sh`、`wt-go-setup-<version>-amd64.exe`），生成 `SHA256SUMS`，并以 `--generate-notes` 建 GitHub Release。`PKGBUILD` 每个架构的 `sha256sums` 不同，因此不进 Release，随源码发布。
 
 ## 与参考项目的关系
 

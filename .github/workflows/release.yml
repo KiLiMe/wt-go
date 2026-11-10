@@ -1,0 +1,125 @@
+# Pushing a tag vX.Y.Z builds linux/amd64 and windows/amd64 and publishes a
+# GitHub release with the artifacts and SHA256SUMS. The tag is the release name;
+# mygo.json carries the version the artifacts are named after, and the two must
+# agree.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  preflight:
+    name: check the tag against mygo.json
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        name: version
+        run: |
+          set -euo pipefail
+          tag="$GITHUB_REF_NAME"
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::tag $tag is not vX.Y.Z"
+            exit 1
+          fi
+          version="${tag#v}"
+          configured="$(jq -r .version mygo.json)"
+          if [[ "$version" != "$configured" ]]; then
+            echo "::error::tag $tag but mygo.json says $configured: bump mygo.json, commit, then tag"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: build ${{ matrix.name }}
+    needs: preflight
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux/amd64, slug: linux-amd64, os: ubuntu-latest, platforms: linux/amd64 }
+          - { name: windows/amd64, slug: windows-amd64, os: windows-latest, platforms: windows/amd64 }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      # mygo build downloads the NSIS it makes the installer with; keep it.
+      - uses: actions/cache@v4
+        if: startsWith(matrix.os, 'windows')
+        with:
+          path: "~\\AppData\\Local\\mygo\\nsis-*"
+          key: nsis-${{ hashFiles('go.sum') }}
+      - name: package
+        run: go tool mygo build -platform "${{ matrix.platforms }}" -o dist
+      # Only what a release carries: the loose executable, the .so next to it,
+      # the desktop entry and the PKGBUILD are inside the .tar.gz and the .deb
+      # (the PKGBUILD names its own arch's tarball, so two of them cannot both
+      # be release assets; it stays in the source archive).
+      - name: collect
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          mkdir -p out
+          for f in dist/*/*.tar.gz dist/*/*.deb dist/*/*-setup-*.exe dist/*/update-*.json; do
+            cp "$f" out/
+          done
+          # The same script on every target: the amd64 one is the release's.
+          if [[ "${{ matrix.name }}" == "linux/amd64" ]]; then
+            cp dist/linux-amd64/install.sh out/
+          fi
+          ls -l out
+          [[ -n "$(ls -A out)" ]] || { echo "::error::mygo build made no release artifact"; exit 1; }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.slug }}
+          path: out/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: publish the release
+    needs: [preflight, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+      - name: checksums
+        run: |
+          set -euo pipefail
+          cd dist
+          ls -l
+          sha256sum $(ls) > SHA256SUMS
+          cat SHA256SUMS
+      - name: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "wt-go ${{ needs.preflight.outputs.version }}" \
+            --generate-notes

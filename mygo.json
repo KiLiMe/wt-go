@@ -1,0 +1,8 @@
+{
+  "name": "wt-go",
+  "identifier": "com.wtgo.desktop",
+  "version": "0.1.0",
+  "main": "./cmd/wtgo",
+  "out": "dist",
+  "linux": { "depends": [], "webview": false }
+}

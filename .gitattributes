@@ -1,0 +1,7 @@
+# Every text file is LF in the index, in the working tree, everywhere.
+* text=auto eol=lf
+
+# Binaries are not text and must never be converted.
+*.exe binary
+*.png binary
+*.ico binary
