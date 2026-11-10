@@ -1,0 +1,177 @@
+package i18n
+
+import "sync"
+
+// language is the language the words are in: nil is English, the words as
+// they are written.
+var (
+	mu       sync.RWMutex
+	language map[string]string
+)
+
+// Set makes the words come in a language: a language this program does not
+// know keeps them English.
+func Set(lang string) {
+	mu.Lock()
+	defer mu.Unlock()
+	switch lang {
+	case "zh-CN":
+		language = zhCN
+	default:
+		language = nil
+	}
+}
+
+// T is the word for english, in the language the window is in.
+func T(english string) string {
+	mu.RLock()
+	defer mu.RUnlock()
+	if language == nil {
+		return english
+	}
+	if word, ok := language[english]; ok {
+		return word
+	}
+	return english
+}
+
+var zhCN = map[string]string{
+	"New Tab":            "新建标签",
+	"Close Tab":          "关闭标签",
+	"Duplicate Tab":      "复制标签",
+	"Rename Tab":         "重命名标签",
+	"Close Other Tabs":   "关闭其它标签",
+	"Rename":             "重命名",
+	"Rename tab":         "重命名标签",
+	"Cancel":             "取消",
+	"OK":                 "确定",
+	"exited":             "已退出",
+	"No tabs open":       "没有打开的标签",
+	"Open a tab":         "新建标签",
+	"Settings":           "设置",
+	"Saved":              "已保存",
+	"Unsaved changes":    "有未保存的更改",
+	"Open settings.json": "打开 settings.json",
+	"Discard":            "放弃更改",
+	"Save":               "保存",
+	"Startup":            "启动",
+	"Interaction":        "交互",
+	"Appearance":         "外观",
+	"Color schemes":      "配色方案",
+	"Actions":            "操作",
+	"Profiles":           "配置文件",
+	"Defaults":           "默认值",
+	"Default profile":    "默认配置文件",
+	"The profile a new tab runs unless it picks one.": "新标签默认运行的配置文件。",
+	"None":            "无",
+	"Language":        "语言",
+	"Start directory": "起始目录",
+	"Where a new tab starts when its profile names no directory.": "profile 未指定目录时，新标签从哪里开始。",
+	"Start size": "启动大小",
+	"Columns and rows of the window when it opens; 0 keeps the size it opens with.": "打开时的列数与行数；0 表示保持默认。",
+	"Close on last tab":                                  "关最后一个标签时关窗口",
+	"Close the window when its last tab closes.":         "最后一个标签关闭时关闭窗口。",
+	"Copy on select":                                     "选中即复制",
+	"Copy the selection to the clipboard as it is made.": "选中内容后立刻复制到剪贴板。",
+	"Right click":                                        "右键行为",
+	"What a secondary click does in a terminal.":         "在终端里点右键时做什么。",
+	"Copy or paste":                                      "复制或粘贴",
+	"Paste":                                              "粘贴",
+	"Copy":                                               "复制",
+	"Menu":                                               "菜单",
+	"Nothing":                                            "无",
+	"Ask before pasting text of more than one line.": "粘贴多行文本前先确认。",
+	"Panes per tab": "每标签窗格上限",
+	"How many panes a tab may split into; 0 has no limit.": "一个标签最多分成几个窗格；0 表示不限。",
+	"Theme":                     "主题",
+	"How bright the window is.": "窗口本身的明暗。",
+	"System":                    "跟随系统",
+	"Light":                     "浅色",
+	"Dark":                      "深色",
+	"Background opacity":        "背景不透明度",
+	"How much of what is behind the window shows through.": "窗口后方的画面能透出多少。",
+	"New tab position":                  "新标签位置",
+	"Where a new tab opens.":            "新标签开在哪里。",
+	"After the last tab":                "最后一个标签之后",
+	"Before the first tab":              "第一个标签之前",
+	"Tab width":                         "标签宽度",
+	"How wide the tabs are.":            "标签有多宽。",
+	"As wide as the name":               "随名称宽度",
+	"All the same":                      "等宽",
+	"Always on top":                     "窗口置顶",
+	"Keep the window above the others.": "让窗口保持在其他窗口之上。",
+	"Title follows the pane":            "标题跟随窗格",
+	"Name the window after the pane with the keyboard.": "窗口标题跟随有键盘焦点的窗格。",
+	"Color scheme": "配色方案",
+	"The colors a terminal paints with unless its profile names another.": "终端使用的配色；profile 未另指定时用这套。",
+	"Scheme":                  "方案",
+	"Search the schemes":      "搜索配色方案",
+	"No scheme by that name.": "没有这个名称的配色方案。",
+	"Preview":                 "预览",
+	"Font":                    "字体",
+	"Font size":               "字号",
+	"How tall the letters of a terminal are, in DIPs.": "终端文字的大小，单位 DIP。",
+	"Line height": "行高",
+	"The height of a line of a terminal, as a multiple of the font size.": "终端行高，相对字号的倍数。",
+	"Cursor":    "光标",
+	"Bar":       "竖线",
+	"Block":     "方块",
+	"Underline": "下划线",
+	"Blink":     "闪烁",
+	"Padding":   "内边距",
+	"The space inside the edges of a terminal, in DIPs.": "终端边缘内侧的空白，单位 DIP。",
+	"Across":     "横向",
+	"Down":       "纵向",
+	"Scrollback": "回滚缓冲",
+	"How much a terminal keeps to scroll back through, in MB.": "终端保留多少 MB 内容供回滚。",
+	"Duplicate":                        "复制",
+	"Remove":                           "删除",
+	"Add profile":                      "添加新配置文件",
+	"New profile":                      "新配置文件",
+	"copy":                             "副本",
+	"Name":                             "名称",
+	"Command":                          "命令行",
+	"Arguments":                        "参数",
+	"Directory":                        "起始目录",
+	"Icon color":                       "图标颜色",
+	"Hidden":                           "隐藏",
+	"Hide the profile from the menus.": "在菜单里隐藏这个配置文件。",
+	"One argument a line.":             "每行一个参数。",
+	"The program a tab of this profile runs.":                               "这个配置文件运行的命令行。",
+	"Where a tab of this profile starts.":                                   "这个配置文件的标签从哪个目录开始。",
+	"Press a key…":                                                          "按一个键…",
+	"Restore the defaults":                                                  "恢复默认",
+	"What a right click does.":                                              "在终端里点右键时做什么。",
+	"Ask before a paste that holds more than one line.":                     "粘贴多行文本前先确认。",
+	"How many panes a tab splits into; 0 for no limit.":                     "一个标签最多分成几个窗格；0 表示不限。",
+	"Command line":                                                          "命令行",
+	"Where the profile starts; empty uses the setting.":                     "这个配置文件的标签从哪个目录开始；留空则用上面的起始目录。",
+	"Copy what a selection takes as it takes it.":                           "选中内容后立刻复制到剪贴板。",
+	"The light or dark face of the window itself.":                          "窗口本身的明暗。",
+	"The color of the dot the tab strip marks the profile with.":            "标签栏用来标记这个配置文件的圆点颜色。",
+	"Leave the profile out of the menu that opens tabs.":                    "在新建标签的菜单里隐藏这个配置文件。",
+	"Paste multiline confirm":                                               "多行粘贴确认",
+	"Confirm close":                                                         "关闭前确认",
+	"Ask before a tab closes while its program still runs.":                 "标签里的程序还在运行时，关标签前先问一句。",
+	"How much of what is behind the window shows through it.":               "窗口后方的画面能透出多少。",
+	"Where a new tab goes.":                                                 "新标签开在哪里。",
+	"Select a profile.":                                                     "选择一个配置文件。",
+	"The program the profile runs; empty runs the shell the system starts.": "这个配置文件运行的命令行；留空则用系统的默认 shell。",
+	"The arguments of the command, one on each line.":                       "命令行的参数，每行一个。",
+	"Follow the system":                                                     "跟随系统",
+	"settings.json changed on disk; discard your changes to take it.":       "settings.json 在磁盘上被改动；放弃当前修改才能应用。",
+	"settings.json: %v":                                                     "settings.json：%v",
+	"settings.json is not valid: %v; the original was kept at %s":           "settings.json 内容无效：%v；原文已保存到 %s",
+	"settings.json is not valid: %v; the original could not be kept: %v":    "settings.json 内容无效：%v；原文无法保存：%v",
+	"Paste many lines?":                                                     "粘贴多行？",
+	"This pastes %d lines into the pane.":                                   "这会往窗格里粘贴 %d 行。",
+	"Close the settings?":                                                   "关闭设置？",
+	"The settings hold changes you have not saved.":                         "设置有未保存的更改。",
+	"Close the tab?":                                                        "关闭标签？",
+	"The program in this tab is still running.":                             "这个标签里的程序还在运行。",
+	"Close the other tabs?":                                                 "关闭其它标签？",
+	"Programs in the other tabs are still running.":                         "其它标签里的程序还在运行。",
+	"Close":                                  "关闭",
+	"Copy as a custom scheme":                "复制为自定义配色",
+	"The scheme is copied; save to keep it.": "配色已复制；保存后才会留下。",
+}
