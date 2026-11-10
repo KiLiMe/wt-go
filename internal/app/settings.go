@@ -27,7 +27,7 @@ func (a *App) OpenSettings() {
 	if a.settingsTab == nil {
 		a.settingsTab = &pane.Tab{Name: i18n.T("Settings")}
 		a.settingsPage = ui.PageStartup
-		a.recording = -1
+		a.recording = ""
 		a.insertTab(a.settingsTab)
 	}
 	for i, tab := range a.panes.Tabs {
@@ -89,7 +89,7 @@ func (a *App) SelectSettingsPage(page string) {
 		return
 	}
 	a.settingsPage = page
-	a.recording = -1
+	a.recording = ""
 	a.note = ""
 	a.editNone()
 	if id, ok := ui.ProfileID(page); ok {
@@ -219,7 +219,7 @@ func (a *App) upsertProfile(p store.Profile) {
 func (a *App) closeSettingsTab() {
 	a.settings = a.saved.Clone()
 	a.note = ""
-	a.recording = -1
+	a.recording = ""
 	a.editNone()
 	a.refreshSettings()
 	a.settingsTab = nil
@@ -230,7 +230,7 @@ func (a *App) closeSettingsTab() {
 func (a *App) DiscardSettings() {
 	a.settings = a.saved.Clone()
 	a.note = ""
-	a.recording = -1
+	a.recording = ""
 	if a.editing != nil {
 		a.editProfile(a.editing.ID)
 	}
@@ -266,36 +266,48 @@ func (a *App) OpenSettingsFile() {
 	}
 }
 
-// RecordKeybinding waits for the key of a keybinding; asking again for the one
-// it waits for stops it.
-func (a *App) RecordKeybinding(i int) {
-	if i < 0 || i >= len(a.settings.Keybindings) {
-		return
-	}
-	if a.recording == i {
-		a.recording = -1
+// RecordKeybinding waits for a key of an action; asking again for the one it
+// waits for stops it.
+func (a *App) RecordKeybinding(action string) {
+	if a.recording == action {
+		a.recording = ""
 	} else {
-		a.recording = i
+		a.recording = action
 	}
 	a.redraw()
 }
 
-// SetKeybinding gives a keybinding a key, which ends the wait for one.
-func (a *App) SetKeybinding(i int, key string) {
-	if i >= 0 && i < len(a.settings.Keybindings) && key != "" {
-		a.settings.Keybindings[i].Key = key
+// SetKeybinding gives an action a key, which ends the wait for one: it
+// replaces the key the action had, or adds the keybinding it did not have.
+func (a *App) SetKeybinding(action, key string) {
+	if key != "" {
+		found := false
+		for i := range a.settings.Keybindings {
+			if a.settings.Keybindings[i].Action == action {
+				a.settings.Keybindings[i].Key = key
+				found = true
+				break
+			}
+		}
+		if !found {
+			a.settings.Keybindings = append(a.settings.Keybindings, store.Keybinding{Key: key, Action: action})
+		}
 	}
-	a.recording = -1
+	a.recording = ""
 	a.redraw()
 }
 
-// RemoveKeybinding drops a keybinding.
-func (a *App) RemoveKeybinding(i int) {
-	if i < 0 || i >= len(a.settings.Keybindings) {
-		return
+// RemoveKeybinding drops the keybindings of an action, so that it runs on no
+// key at all.
+func (a *App) RemoveKeybinding(action string) {
+	out := a.settings.Keybindings[:0]
+	for _, kb := range a.settings.Keybindings {
+		if kb.Action != action {
+			out = append(out, kb)
+		}
 	}
-	a.settings.Keybindings = append(a.settings.Keybindings[:i], a.settings.Keybindings[i+1:]...)
-	a.recording = -1
+	a.settings.Keybindings = out
+	a.recording = ""
 	a.redraw()
 }
 
@@ -331,7 +343,7 @@ func (a *App) schemeNamed(name string) bool {
 // ResetKeybindings goes back to the keybindings the window starts with.
 func (a *App) ResetKeybindings() {
 	a.settings.Keybindings = store.DefaultKeybindings()
-	a.recording = -1
+	a.recording = ""
 	a.redraw()
 }
 
@@ -365,7 +377,7 @@ func (a *App) RemoveProfile(id string) {
 	a.settings.Profiles = out
 	a.settingsPage = ui.PageProfiles
 	a.editNone()
-	a.recording = -1
+	a.recording = ""
 	a.redraw()
 }
 

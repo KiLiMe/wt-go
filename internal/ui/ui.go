@@ -46,12 +46,12 @@ type Actions interface {
 	DiscardSettings()
 	// OpenSettingsFile opens the file in the program that edits it.
 	OpenSettingsFile()
-	// RecordKeybinding waits for the key of the keybinding at i.
-	RecordKeybinding(i int)
-	// SetKeybinding gives the keybinding at i a key; "" stops recording.
-	SetKeybinding(i int, key string)
-	// RemoveKeybinding drops the keybinding at i.
-	RemoveKeybinding(i int)
+	// RecordKeybinding waits for a key of the action with an id.
+	RecordKeybinding(action string)
+	// SetKeybinding gives the action with an id a key; "" stops recording.
+	SetKeybinding(action, key string)
+	// RemoveKeybinding drops the keybindings of the action with an id.
+	RemoveKeybinding(action string)
 	// ResetKeybindings goes back to the keybindings the window starts with.
 	ResetKeybindings()
 	// CopyScheme makes a color scheme of the settings from the one the
@@ -125,9 +125,9 @@ type Settings struct {
 	// Note says what the last save did, or why the file is not the
 	// settings.
 	Note string
-	// Recording is the keybinding the window waits for a key of, -1 while
-	// it waits for none.
-	Recording int
+	// Recording is the action the window waits for a key of, "" while it
+	// waits for none.
+	Recording string
 	// Filter is what the color schemes page searches for.
 	Filter *string
 	// Profiles are the profiles the file holds, which the column lists.

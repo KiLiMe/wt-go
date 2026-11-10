@@ -5,7 +5,9 @@ package app
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"path/filepath"
 	"runtime/debug"
 	"strconv"
@@ -16,6 +18,8 @@ import (
 	"github.com/egoist/mygo/transfer"
 	myui "github.com/egoist/mygo/ui"
 
+	"wtgo/internal/cli"
+	"wtgo/internal/fault"
 	"wtgo/internal/i18n"
 	"wtgo/internal/layout"
 	"wtgo/internal/pane"
@@ -64,8 +68,8 @@ type App struct {
 	// open, and settingsPage the page it shows.
 	settingsTab  *pane.Tab
 	settingsPage string
-	// recording is the keybinding that waits for a key, -1 while none does.
-	recording int
+	// recording is the action that waits for a key, "" while none does.
+	recording string
 	// note is what the last action did; configErr is why the file is not
 	// settings and stays until the file is settings again.
 	note      string
@@ -100,6 +104,18 @@ type binding struct {
 
 // Run opens the window and runs until it closes.
 func Run() (err error) {
+	// The commands that answer without a window: `wtgo diag` and `wtgo mcp`.
+	if handled, code := cli.Run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr); handled {
+		if code != 0 {
+			os.Exit(code)
+		}
+		return nil
+	}
+	// A window started from Explorer has no console: what it says goes to
+	// wt-go.log as well, so that `wtgo diag` can read it back later.
+	if f, ferr := sys.OpenLog(); ferr == nil {
+		log.SetOutput(io.MultiWriter(os.Stderr, f))
+	}
 	defer func() {
 		if r := recover(); r != nil {
 			reportCrash(r)
@@ -133,6 +149,15 @@ func Run() (err error) {
 	return mygo.App.Run()
 }
 
+// faultCode is the code a settings error answers for: a field out of range
+// is a different fix from a file that is not JSON at all.
+func faultCode(err error) fault.Code {
+	if strings.Contains(err.Error(), " must be ") {
+		return fault.BadField
+	}
+	return fault.BadSettings
+}
+
 // reportCrash writes what stopped the program next to the settings, so that a
 // window that goes away leaves something to read.
 func reportCrash(r any) {
@@ -159,12 +184,12 @@ func opacity(v float64) float64 {
 // newApp reads the settings and finds the shells, and says what went wrong
 // when it could not: the window opens with the defaults.
 func newApp() *App {
-	a := &App{settings: store.Default(), recording: -1, watchStop: make(chan struct{})}
+	a := &App{settings: store.Default(), watchStop: make(chan struct{})}
 	settings, data, err := load()
 	if err == nil {
 		a.settings = settings
 	} else {
-		log.Printf("wt-go: settings: %v", err)
+		log.Printf("wt-go: %s", fault.Line(faultCode(err), err.Error()))
 	}
 	i18n.Set(a.settings.Language)
 	a.saved = a.settings.Clone()
@@ -172,7 +197,7 @@ func newApp() *App {
 		a.file.markSeen(data)
 	}
 	if err != nil {
-		a.configErr = configError(data, err)
+		a.configErr = faultCode(err).String() + ": " + configError(data, err)
 		a.badData = data
 	} else {
 		a.savedData = data
@@ -234,7 +259,7 @@ func bindings(keybindings []store.Keybinding) []binding {
 	for _, kb := range keybindings {
 		mods, key, ok := ui.ParseKey(kb.Key)
 		if !ok {
-			log.Printf("wt-go: keybinding %q: not a key", kb.Key)
+			log.Printf("wt-go: %s", fault.Line(fault.BadKeybinding, fmt.Sprintf("keybinding %q", kb.Key)))
 			continue
 		}
 		out = append(out, binding{mods: mods, key: key, action: kb.Action})
@@ -315,7 +340,7 @@ func (a *App) settingsView(c *myui.Context) myui.Element {
 // bind gives the window the keys of the tabs, unless the settings wait for a
 // key of their own.
 func (a *App) bind(c *myui.Context) {
-	if a.recording >= 0 {
+	if a.recording != "" {
 		return
 	}
 	for _, b := range a.keys {
@@ -471,7 +496,7 @@ func (a *App) openTab(p profile.Profile, dir string) {
 	opts.OnPaste = func(d transfer.Data) bool { return a.askPaste(term, d) }
 	term, err := terminal.New(opts)
 	if err != nil {
-		log.Printf("wt-go: %s: %v", p.Name, err)
+		log.Printf("wt-go: %s", fault.Line(fault.ChildFailed, p.Name+": "+err.Error()))
 		return
 	}
 	tab := pane.New(term)

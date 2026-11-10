@@ -9,7 +9,7 @@ import (
 // TestFindNeedsATerminal covers the bar the window opens: it opens on a tab
 // that holds a terminal, and not on one that does not, as the settings.
 func TestFindNeedsATerminal(t *testing.T) {
-	a := &App{recording: -1}
+	a := &App{}
 	a.OpenFind()
 	if a.find != nil {
 		t.Error("the find bar opened on a window with no terminal")

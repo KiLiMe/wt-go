@@ -12,7 +12,7 @@ import (
 // has, each with a title, and the numbered ones listed once, by what they
 // open.
 func TestPaletteCommands(t *testing.T) {
-	a := &App{settings: store.Default(), saved: store.Default(), recording: -1}
+	a := &App{settings: store.Default(), saved: store.Default()}
 	seen := map[string]bool{}
 	for _, cmd := range a.paletteCommands() {
 		if cmd.Title == "" {
@@ -37,7 +37,7 @@ func TestPaletteCommands(t *testing.T) {
 // TestRun covers the palette's run: the palette closes, and the action the
 // palette picked is what the window does.
 func TestRun(t *testing.T) {
-	a := &App{settings: store.Default(), saved: store.Default(), recording: -1}
+	a := &App{settings: store.Default(), saved: store.Default()}
 	a.palette = &ui.Palette{Open: true}
 	a.Run(action.Settings)
 	if a.palette != nil {

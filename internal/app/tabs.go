@@ -7,6 +7,7 @@ import (
 	"github.com/egoist/mygo/plugins/terminal"
 
 	"wtgo/internal/action"
+	"wtgo/internal/fault"
 	"wtgo/internal/layout"
 	"wtgo/internal/pane"
 	"wtgo/internal/profile"
@@ -270,7 +271,7 @@ func (a *App) splitPane(dir layout.Dir) {
 	}
 	term, err := terminal.New(a.termOptions(p, tab.Focus.Term.Dir()))
 	if err != nil {
-		log.Printf("wt-go: %s: %v", p.Name, err)
+		log.Printf("wt-go: %s", fault.Line(fault.ChildFailed, p.Name+": "+err.Error()))
 		return
 	}
 	tab.Split(dir, term)

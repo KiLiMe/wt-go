@@ -15,6 +15,13 @@ const TitleBarHeight = 36
 // tabWidth is how wide a tab is while the settings make them all alike.
 const tabWidth float32 = 176
 
+// The room a tab's name may take: as little as a name that is a single
+// letter and a close button, as much as stays readable in a strip of many.
+const (
+	minTabName float32 = 48
+	maxTabName float32 = 240
+)
+
 // mouseMiddle is the button that closes the tab it points at, as it does in
 // Windows Terminal.
 const mouseMiddle = 2
@@ -78,10 +85,9 @@ func tab(c *myui.Context, st State, act Actions, i int) myui.Element {
 		OnClick(func() { act.FocusTab(i) }).
 		Drag(tabDrag{from: i}).
 		ContextMenu(func(m *myui.Menu) { tabMenu(m, st, act, i) })
-	name := float32(220)
+	name := measuredName(c, tb.Name)
 	if st.EqualTabs {
-		// Every tab as wide as the others: the strip cannot measure the
-		// names, so they share the width the settings give them.
+		// Every tab as wide as the others, whatever its name takes.
 		el = el.Width(tabWidth)
 		name = tabWidth - 60
 	}
@@ -105,7 +111,7 @@ func tab(c *myui.Context, st State, act Actions, i int) myui.Element {
 		if active {
 			nameColor = t.Text
 		}
-		myui.Text(c, tb.Name).SingleLine().MaxWidth(name).TextColor(nameColor)
+		myui.Text(c, tb.Name).SingleLine().MaxWidth(name).Ellipsis("…").TextColor(nameColor)
 		if active || el.Hovered() {
 			closeButton(c, act, i, active)
 		} else {
@@ -115,6 +121,19 @@ func tab(c *myui.Context, st State, act Actions, i int) myui.Element {
 		}
 	})
 	return el
+}
+
+// measuredName is how wide a tab draws its name: as wide as the name takes
+// in the theme's font, within the room a tab may take.
+func measuredName(c *myui.Context, name string) float32 {
+	t := c.Theme()
+	w, _ := c.MeasureText(0, myui.Span{Text: name, Font: t.Font, Size: t.FontSize})
+	return nameWidth(w)
+}
+
+// nameWidth keeps a measured name inside the room a tab may take.
+func nameWidth(w float32) float32 {
+	return min(max(w, minTabName), maxTabName)
 }
 
 // tabMenu is the tab's context menu.

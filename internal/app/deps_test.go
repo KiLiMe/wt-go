@@ -11,7 +11,10 @@ import (
 // docs/代码导读.md draws the graph.
 var rules = map[string][]string{
 	"wtgo":                  {"wtgo/internal/app"},
-	"wtgo/internal/app":     {"wtgo/internal/action", "wtgo/internal/i18n", "wtgo/internal/layout", "wtgo/internal/pane", "wtgo/internal/profile", "wtgo/internal/store", "wtgo/internal/sys", "wtgo/internal/theme", "wtgo/internal/ui"},
+	"wtgo/internal/app":     {"wtgo/internal/action", "wtgo/internal/cli", "wtgo/internal/fault", "wtgo/internal/i18n", "wtgo/internal/layout", "wtgo/internal/pane", "wtgo/internal/profile", "wtgo/internal/store", "wtgo/internal/sys", "wtgo/internal/theme", "wtgo/internal/ui"},
+	"wtgo/internal/cli":     {"wtgo/internal/fault", "wtgo/internal/mcp", "wtgo/internal/profile", "wtgo/internal/store", "wtgo/internal/sys"},
+	"wtgo/internal/mcp":     {},
+	"wtgo/internal/fault":   {},
 	"wtgo/internal/ui":      {"wtgo/internal/action", "wtgo/internal/i18n", "wtgo/internal/layout", "wtgo/internal/pane", "wtgo/internal/profile", "wtgo/internal/store", "wtgo/internal/theme"},
 	"wtgo/internal/theme":   {"wtgo/internal/store"},
 	"wtgo/internal/pane":    {"wtgo/internal/layout"},
@@ -38,7 +41,7 @@ func TestDeps(t *testing.T) {
 // TestPure covers the packages that parse and draw rather than load: they
 // read no file and start no process.
 func TestPure(t *testing.T) {
-	for _, pkg := range []string{"wtgo/internal/action", "wtgo/internal/i18n", "wtgo/internal/layout", "wtgo/internal/pane", "wtgo/internal/profile", "wtgo/internal/store", "wtgo/internal/theme", "wtgo/internal/ui"} {
+	for _, pkg := range []string{"wtgo/internal/action", "wtgo/internal/cli", "wtgo/internal/fault", "wtgo/internal/i18n", "wtgo/internal/layout", "wtgo/internal/mcp", "wtgo/internal/pane", "wtgo/internal/profile", "wtgo/internal/store", "wtgo/internal/theme", "wtgo/internal/ui"} {
 		for _, imp := range imports(t, pkg) {
 			switch imp {
 			case "io/fs", "os", "os/exec", "path/filepath", "golang.org/x/sys/windows/registry":

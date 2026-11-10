@@ -5,6 +5,7 @@ import (
 
 	"github.com/egoist/mygo/plugins/terminal"
 
+	"wtgo/internal/action"
 	"wtgo/internal/layout"
 	"wtgo/internal/pane"
 	"wtgo/internal/store"
@@ -44,7 +45,7 @@ func settingsWindow(t *testing.T) (*App, *pane.Tab) {
 	p := store.Profile{ID: "p1", Name: "P", Args: []string{"-NoLogo"}}
 	a.editing, a.editingFrom = &p, p
 	a.editingArgs = "-NoLogo\n--dotfiles"
-	a.recording = 0
+	a.recording = action.TabClose
 	a.note = "Saved"
 	return a, tab
 }
@@ -87,8 +88,8 @@ func TestCloseSettingsTabRollsBackTheDraft(t *testing.T) {
 	if a.editing != nil {
 		t.Error("a profile is still open for editing")
 	}
-	if a.recording != -1 {
-		t.Errorf("recording = %d, want none", a.recording)
+	if a.recording != "" {
+		t.Errorf("recording = %q, want none", a.recording)
 	}
 	if a.note != "" {
 		t.Errorf("note = %q, want nothing", a.note)
@@ -118,8 +119,8 @@ func TestCloseOtherTabsDropsTheSettingsTab(t *testing.T) {
 	if a.dirty() {
 		t.Error("the settings are still dirty after the tab was dropped")
 	}
-	if a.editing != nil || a.recording != -1 || a.note != "" {
-		t.Errorf("editing = %v, recording = %d, note = %q, want none", a.editing, a.recording, a.note)
+	if a.editing != nil || a.recording != "" || a.note != "" {
+		t.Errorf("editing = %v, recording = %q, note = %q, want none", a.editing, a.recording, a.note)
 	}
 
 	a.OpenSettings()

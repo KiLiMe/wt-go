@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"wtgo/internal/action"
 	"wtgo/internal/pane"
 	"wtgo/internal/store"
 	"wtgo/internal/sys"
@@ -466,4 +467,67 @@ func TestWatchStops(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("the watcher is still running")
 	}
+}
+
+// TestSetKeybinding covers recording a key: it replaces the one the action
+// had, binds one the defaults do not, and removing the action drops every
+// keybinding it has.
+func TestSetKeybinding(t *testing.T) {
+	settingsDir(t)
+	a, _ := settingsApp(t, store.Default())
+	n := len(a.settings.Keybindings)
+
+	a.RecordKeybinding(action.TabClose)
+	if a.recording != action.TabClose {
+		t.Fatalf("recording = %q, want %q", a.recording, action.TabClose)
+	}
+	a.RecordKeybinding(action.TabClose)
+	if a.recording != "" {
+		t.Fatalf("recording = %q, want none", a.recording)
+	}
+
+	a.SetKeybinding(action.TabClose, "ctrl+alt+w")
+	if got := keyOf(a.settings.Keybindings, action.TabClose); got != "ctrl+alt+w" {
+		t.Errorf("key of %q = %q, want %q", action.TabClose, got, "ctrl+alt+w")
+	}
+	if len(a.settings.Keybindings) != n+1 {
+		t.Errorf("the settings hold %d keybindings, want %d", len(a.settings.Keybindings), n+1)
+	}
+	if a.recording != "" {
+		t.Errorf("recording = %q, want none", a.recording)
+	}
+
+	a.SetKeybinding(action.TabClose, "ctrl+alt+e")
+	if got := keyOf(a.settings.Keybindings, action.TabClose); got != "ctrl+alt+e" {
+		t.Errorf("key of %q = %q, want %q", action.TabClose, got, "ctrl+alt+e")
+	}
+	if len(a.settings.Keybindings) != n+1 {
+		t.Errorf("the settings hold %d keybindings, want %d", len(a.settings.Keybindings), n+1)
+	}
+
+	a.RemoveKeybinding(action.TabClose)
+	if got := keyOf(a.settings.Keybindings, action.TabClose); got != "" {
+		t.Errorf("key of %q = %q, want none", action.TabClose, got)
+	}
+	if len(a.settings.Keybindings) != n {
+		t.Errorf("the settings hold %d keybindings, want the %d they started with", len(a.settings.Keybindings), n)
+	}
+
+	// An action the defaults bind twice loses both keys.
+	a.RemoveKeybinding(action.TabNew)
+	for _, kb := range a.settings.Keybindings {
+		if kb.Action == action.TabNew {
+			t.Errorf("%q still runs on %q", action.TabNew, kb.Key)
+		}
+	}
+}
+
+// keyOf is the key an action runs on, "" when it runs on none.
+func keyOf(all []store.Keybinding, action string) string {
+	for _, kb := range all {
+		if kb.Action == action {
+			return kb.Key
+		}
+	}
+	return ""
 }

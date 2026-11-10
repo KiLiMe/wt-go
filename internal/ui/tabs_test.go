@@ -31,3 +31,21 @@ func TestShortcut(t *testing.T) {
 
 	shortcut(it, State{}, action.Settings)
 }
+
+// TestNameWidth covers the room a tab's name takes: a short name keeps a
+// tab clickable, a long one stops growing.
+func TestNameWidth(t *testing.T) {
+	tests := []struct{ measured, want float32 }{
+		{0, minTabName},
+		{12, minTabName},
+		{minTabName, minTabName},
+		{120, 120},
+		{maxTabName, maxTabName},
+		{900, maxTabName},
+	}
+	for _, tt := range tests {
+		if got := nameWidth(tt.measured); got != tt.want {
+			t.Errorf("nameWidth(%v) = %v, want %v", tt.measured, got, tt.want)
+		}
+	}
+}
