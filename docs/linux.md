@@ -1,6 +1,6 @@
 # Linux（实验性）
 
-现状：Linux/macOS 的平台分片（pty、配置目录）已交叉编译通过（`GOOS=linux GOARCH=amd64|arm64`、`go vet` 均无错），但**从未在 Linux 上运行过**，也没有 Linux CI。本文是首轮真机验证的手册：依赖、启动方式、逐条待验证的已知缺陷、以及结果记录方式。
+现状：已完成**首轮真机验证**（Arch Linux + KDE Plasma Wayland / XWayland，2026-11，结果见 §7）：构建、`go test -race`、`mygo build` 打包（deb / tar.gz / PKGBUILD）、启动、终端与设置页交互均可用；仍存在窗口边框（X11 下完全无边框）与若干 Windows 残留文案。本文是验证手册与结果记录。
 
 配合阅读：[docs/architecture.md](architecture.md)（分层与依赖方向）、[docs/plan.md](plan.md)（阶段计划）。
 
@@ -95,14 +95,31 @@ go build -o wtgo ./cmd/wtgo
 | L-12 | 保存设置后 `settings.json` 权限变 0644；软链接被替换成普通文件 | 设置里改任意项 | `internal/sys/write.go:12-45` | 预期复现 |
 | L-13 | 窗口尺寸/位置漂移，或平铺 WM 下反复跳位 | 自定义/平铺 WM | `internal/app/size.go:112`、`:15` | 可能复现 |
 | L-14 | 「窗口置顶」无效果 | Wayland | — | 预期无效（合成器限制） |
+| L-15 | 窗口完全没有边框与标题栏，最小化/最大化/关闭点不到 | X11（XWayland，KWin 不装饰该窗口） | `internal/app/app.go:115`（`TitleBarStyle: mygo.TitleBarHidden`） | 预期复现（首轮验证中实测复现） |
 
-## 7. 记录方式
+## 7. 验证结果
 
-每条一次，填完即是一份可执行的验收清单：
+首轮环境：Arch Linux（滚动）· 内核 7.2.15 · Go 1.27.3 · gtk3 1:3.24.52 · pango 1:1.58.2 · cairo 1.18.6 · glib2 2.90.1 · KDE Plasma（Wayland 会话 `wayland-1`，X11 走 XWayland `:1`）· noto-fonts-cjk / Source Han Sans。构建链路：`go build`、`go vet`、`gofmt`、`go test -race ./...`（9 个包全过，20s）与 `go tool mygo build -platform linux/amd64 -skip-dmg -skip-installer` 均通过。
 
-| 编号 | 环境（发行版 / 后端 / 桌面） | 结果 | 证据 | 备注 |
-| --- | --- | --- | --- | --- |
-| L-1 |  | 复现 / 不复现 | 截图 / log 行 |  |
+| 编号 | 结果 | 证据 | 备注 |
+| --- | --- | --- | --- |
+| L-1 | 复现（现象与预期有出入） | 截图 | `SHELL=` 空时不自动开标签，但界面不是全空：显示「没有打开的标签」+「新建标签」按钮 |
+| L-2 | 复现（现象与预期有出入） | 设置页多出一行 `exec: "explorer.exe": executable file not found in $PATH` | 不是「无任何反应」，错误进了 note 行；功能仍不可用 |
+| L-3 | 未验证 | — | 本机有网，`libghostty-vt.so` 自动下载（1.6s）；断网/墙内场景未测 |
+| L-4 | 不复现 | 截图 | Wayland 下 mygo 自绘标题栏，最小化/最大化/关闭都在 |
+| L-5 | 复现 | 同 L-15 | 条带右侧约 80px（`bar.Right` 让位）无任何可点/可拖内容；X11 下窗口按钮本身没画出来，整块成死区 |
+| L-6 | 不复现 | 截图 | cairo 1.18.6，文字颜色正常，无发白/绿边 |
+| L-7 | 不复现 | 截图 | 中文与框线字符正常 |
+| L-8 | 未验证 | — | 需有滚动内容时手测 |
+| L-9 | 复现 | `internal/profile/profile.go:116-128` | Linux 的 profile id（`zsh`）不在颜色表内，圆点为灰色 |
+| L-10 | 部分复现 | 截图 | 「起始目录」占位符是 `%USERPROFILE%`（`internal/ui/settings.go:151` 硬编码）；「默认配置文件」显示「无」，未见 `pwsh.exe` |
+| L-11 | 复现 | `ps` 进程树 | `kill -9` 主进程后仍有 `wt-go` 进程存活（被 reparent 到 init），需再杀一次；`SIGTERM`/关窗则干净退出、无残留 |
+| L-12 | 复现 | `ls -l ~/.config/wt-go/settings.json` → `0644` | 软链接场景未测 |
+| L-13 | 不复现 | `xdotool windowsize 1200 700` → 重启仍 1200x700 | 窗口位置/尺寸存于 `~/.config/wt-go/window-state.json`；平铺 WM 未测 |
+| L-14 | 未验证 | — | Wayland 下未测置顶 |
+| L-15 | 复现 | 截图 | `GDK_BACKEND=x11` 下窗口完全无边框无标题栏；a11y 树里存在最小化/最大化/关闭，但屏幕上不可见；拖动条带也不移动窗口 |
+
+复现时的补充（非缺陷清单内）：Wayland 与 X11 两种后端共存于同一会话时窗口外观差异很大，X11 下几乎不可用（无边框、无法拖动、按钮不可见），建议优先修 L-15。
 
 ## 8. 反馈时附上这些
 
