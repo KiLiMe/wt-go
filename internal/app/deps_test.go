@@ -10,7 +10,7 @@ import (
 // rules are the internal packages each package may import, as
 // docs/代码导读.md draws the graph.
 var rules = map[string][]string{
-	"wtgo/cmd/wtgo":         {"wtgo/internal/app"},
+	"wtgo":                  {"wtgo/internal/app"},
 	"wtgo/internal/app":     {"wtgo/internal/action", "wtgo/internal/i18n", "wtgo/internal/layout", "wtgo/internal/pane", "wtgo/internal/profile", "wtgo/internal/store", "wtgo/internal/sys", "wtgo/internal/theme", "wtgo/internal/ui"},
 	"wtgo/internal/ui":      {"wtgo/internal/action", "wtgo/internal/i18n", "wtgo/internal/layout", "wtgo/internal/pane", "wtgo/internal/profile", "wtgo/internal/store", "wtgo/internal/theme"},
 	"wtgo/internal/theme":   {"wtgo/internal/store"},

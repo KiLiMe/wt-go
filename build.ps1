@@ -62,7 +62,7 @@ try {
         # 终端窗口就是界面，不需要控制台。
         $ldflags += ' -H=windowsgui'
     }
-    & go build -trimpath -ldflags $ldflags -o $Exe ./cmd/wtgo
+    & go build -trimpath -ldflags $ldflags -o $Exe .
     if ($LASTEXITCODE -ne 0) { Write-Host '  [ERR] 编译失败。' -ForegroundColor Red; exit $LASTEXITCODE }
 } finally {
     Pop-Location
