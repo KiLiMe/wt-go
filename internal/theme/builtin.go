@@ -12,7 +12,7 @@ type scheme struct {
 	palette                                         [16]string
 }
 
-// builtinSchemes are the schemes docs/settings.md lists that Ghostty has not:
+// builtinSchemes are the schemes docs/使用说明.md lists that Ghostty has not:
 // Windows Terminal's own two, and the Solarized, Tango and Vintage of its
 // list.
 var builtinSchemes = []scheme{

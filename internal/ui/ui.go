@@ -67,6 +67,16 @@ type Actions interface {
 	RemoveProfile(id string)
 	// DuplicateProfile copies the profile with an id, and shows its page.
 	DuplicateProfile(id string)
+	// Run does the action with an id, as the palette picked it.
+	Run(action string)
+	// Find searches the terminal in front for text, as it is typed.
+	Find(text string)
+	// FindNext picks the match after the one selected.
+	FindNext()
+	// FindPrevious picks the match before the one selected.
+	FindPrevious()
+	// EndFind closes the find bar, and stops the search.
+	EndFind()
 }
 
 // Tab is a tab as the window draws it.
@@ -160,6 +170,11 @@ type State struct {
 	Settings *Settings
 	// Confirm is the question the window asks, nil while it asks none.
 	Confirm *Confirm
+	// Palette is the command palette, nil while it is not open.
+	Palette *Palette
+	// Find is the bar that asks the terminal for text, nil while it is
+	// closed.
+	Find *Find
 	// EqualTabs makes every tab as wide as the others, rather than as wide
 	// as its name.
 	EqualTabs bool
@@ -184,4 +199,6 @@ func View(c *myui.Context, st State, act Actions) {
 	})
 	rename(c, st, act)
 	confirm(c, st, act)
+	findBar(c, st, act)
+	palette(c, st, act)
 }

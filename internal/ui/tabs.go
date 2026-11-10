@@ -3,8 +3,8 @@ package ui
 import (
 	myui "github.com/egoist/mygo/ui"
 
+	"wtgo/internal/action"
 	"wtgo/internal/i18n"
-	"wtgo/internal/store"
 )
 
 // TitleBarHeight is the height of the tab strip, which is the title bar: the
@@ -167,7 +167,7 @@ func profilesMenu(c *myui.Context, st State, act Actions) myui.Element {
 		for i, p := range st.Profiles {
 			it := m.Item(p.Name)
 			if i < 9 {
-				shortcut(it, st, store.ProfileAction(i+1))
+				shortcut(it, st, action.ProfileAction(i+1))
 			}
 			if it.Chosen() {
 				act.NewTab(p.ID)
@@ -175,7 +175,7 @@ func profilesMenu(c *myui.Context, st State, act Actions) myui.Element {
 		}
 		m.Separator()
 		it := m.Item(i18n.T("Settings"))
-		shortcut(it, st, store.ActionSettings)
+		shortcut(it, st, action.Settings)
 		if it.Chosen() {
 			act.OpenSettings()
 		}

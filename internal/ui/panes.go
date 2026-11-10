@@ -71,7 +71,7 @@ func paneAt(c *myui.Context, st State, act Actions, p pane.Place) {
 			return
 		}
 		el := tb.Mount(c, p.Node).Fill()
-		if p.Node == tb.Panes.Focus && st.Rename == nil {
+		if p.Node == tb.Panes.Focus && st.Rename == nil && st.Find == nil {
 			// The pane with the keyboard keeps it, so that the typing goes
 			// where the window says it does, unless a dialog takes it.
 			el.Focus()

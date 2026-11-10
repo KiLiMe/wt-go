@@ -6,10 +6,10 @@ import (
 
 	"github.com/egoist/mygo/plugins/terminal"
 
+	"wtgo/internal/action"
 	"wtgo/internal/layout"
 	"wtgo/internal/pane"
 	"wtgo/internal/profile"
-	"wtgo/internal/store"
 	"wtgo/internal/ui"
 )
 
@@ -289,48 +289,52 @@ func (a *App) moveFocus(dir pane.Direction) {
 }
 
 // act does the action a keybinding names.
-func (a *App) act(action string) {
-	switch action {
-	case store.ActionTabNew:
+func (a *App) act(id string) {
+	switch id {
+	case action.TabNew:
 		a.NewTab("")
-	case store.ActionTabClose:
+	case action.TabClose:
 		if _, ok := a.panes.Front(); ok {
 			a.CloseTab(a.panes.Active)
 		}
-	case store.ActionTabNext:
+	case action.TabNext:
 		a.stepTab(1)
-	case store.ActionTabPrev:
+	case action.TabPrev:
 		a.stepTab(-1)
-	case store.ActionTabDuplicate:
+	case action.TabDuplicate:
 		a.DuplicateTab(a.panes.Active)
-	case store.ActionPaneSplitAuto:
+	case action.PaneSplitAuto:
 		if tab, ok := a.panes.Front(); ok {
 			a.splitPane(tab.Auto(a.content))
 		}
-	case store.ActionPaneSplitRight:
+	case action.PaneSplitRight:
 		a.splitPane(layout.SideBySide)
-	case store.ActionPaneSplitDown:
+	case action.PaneSplitDown:
 		a.splitPane(layout.Stacked)
-	case store.ActionPaneFocusLeft:
+	case action.PaneFocusLeft:
 		a.moveFocus(pane.Left)
-	case store.ActionPaneFocusRight:
+	case action.PaneFocusRight:
 		a.moveFocus(pane.Right)
-	case store.ActionPaneFocusUp:
+	case action.PaneFocusUp:
 		a.moveFocus(pane.Up)
-	case store.ActionPaneFocusDown:
+	case action.PaneFocusDown:
 		a.moveFocus(pane.Down)
-	case store.ActionPaneClose:
+	case action.PaneClose:
 		a.closePane(a.panes.Active)
-	case store.ActionPaneCloseOthers:
+	case action.PaneCloseOthers:
 		a.closeOtherPanes(a.panes.Active)
-	case store.ActionSettings:
+	case action.Settings:
 		a.OpenSettings()
+	case action.Palette:
+		a.OpenPalette()
+	case action.Find:
+		a.OpenFind()
 	default:
-		if i, ok := store.GotoIndex(action); ok {
+		if i, ok := action.GotoIndex(id); ok {
 			a.FocusTab(i)
 			return
 		}
-		if n, ok := store.ProfileIndex(action); ok {
+		if n, ok := action.ProfileIndex(id); ok {
 			a.newProfileTab(n)
 		}
 	}

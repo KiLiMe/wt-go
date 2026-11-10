@@ -7,10 +7,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strconv"
+
+	"wtgo/internal/action"
 )
 
-// Settings is settings.json, as docs/settings.md describes it.
+// Settings is settings.json, as docs/使用说明.md describes it.
 type Settings struct {
 	Language       string `json:"language"`
 	Theme          string `json:"theme"`
@@ -178,31 +179,14 @@ func Marshal(s Settings) ([]byte, error) {
 	return append(b, '\n'), nil
 }
 
-// DefaultKeybindings are the keys keys.md lists for the actions the window
-// has today.
+// DefaultKeybindings are the keys the actions start on, as the action catalog
+// names them.
 func DefaultKeybindings() []Keybinding {
-	kb := []Keybinding{
-		{Key: "ctrl+shift+t", Action: ActionTabNew},
-		{Key: "ctrl+t", Action: ActionTabNew},
-		{Key: "ctrl+shift+w", Action: ActionPaneClose},
-		{Key: "ctrl+tab", Action: ActionTabNext},
-		{Key: "ctrl+shift+tab", Action: ActionTabPrev},
-		{Key: "ctrl+shift+d", Action: ActionTabDuplicate},
-		{Key: "alt+shift+d", Action: ActionPaneSplitAuto},
-		{Key: "alt+shift+right", Action: ActionPaneSplitRight},
-		{Key: "alt+shift+down", Action: ActionPaneSplitDown},
-		{Key: "alt+left", Action: ActionPaneFocusLeft},
-		{Key: "alt+right", Action: ActionPaneFocusRight},
-		{Key: "alt+up", Action: ActionPaneFocusUp},
-		{Key: "alt+down", Action: ActionPaneFocusDown},
-		{Key: "alt+shift+w", Action: ActionPaneCloseOthers},
-		{Key: "ctrl+comma", Action: ActionSettings},
-	}
-	for n := 1; n <= 9; n++ {
-		kb = append(kb,
-			Keybinding{Key: "ctrl+" + strconv.Itoa(n), Action: GotoAction(n)},
-			Keybinding{Key: "ctrl+shift+" + strconv.Itoa(n), Action: ProfileAction(n)},
-		)
+	var kb []Keybinding
+	for _, a := range action.All() {
+		for _, key := range a.Keys {
+			kb = append(kb, Keybinding{Key: key, Action: a.ID})
+		}
 	}
 	return kb
 }

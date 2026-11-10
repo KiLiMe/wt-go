@@ -37,6 +37,9 @@ type App struct {
 	keys       []binding
 	renaming   *ui.Rename
 	confirm    *ask
+	palette    *ui.Palette
+	find       *ui.Find
+	findTerm   *terminal.Terminal
 	shownTitle string
 	// content is the room the panes took in the last frame, which the keys
 	// that split and move between panes measure.
@@ -263,6 +266,9 @@ func (a *App) view(c *myui.Context) {
 	if a.confirm != nil && !a.confirm.Open {
 		a.confirm = nil
 	}
+	if a.palette != nil && !a.palette.Open {
+		a.palette = nil
+	}
 	a.content = ui.Content(c)
 	a.frames++
 	a.apply()
@@ -277,6 +283,8 @@ func (a *App) view(c *myui.Context) {
 	if a.confirm != nil {
 		st.Confirm = &a.confirm.Confirm
 	}
+	st.Palette = a.paletteState()
+	st.Find = a.findState()
 	if a.settingsTab != nil {
 		state := a.settingsState()
 		st.Settings = &state

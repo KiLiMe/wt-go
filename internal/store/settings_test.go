@@ -11,7 +11,7 @@ func TestDefaultFontFamily(t *testing.T) {
 }
 
 // TestDefault covers the settings a window starts with: the values
-// docs/settings.md promises, and the keys the tab actions need.
+// docs/使用说明.md promises, and the keys the tab actions need.
 func TestDefault(t *testing.T) {
 	s := Default()
 	if s.Language != "zh-CN" || s.Theme != "dark" || s.ColorScheme != "Campbell" {
@@ -77,21 +77,5 @@ func TestMarshalRoundTrip(t *testing.T) {
 	}
 	if s.Font != Default().Font || len(s.Keybindings) != len(Default().Keybindings) {
 		t.Errorf("round trip changed the settings: %+v", s)
-	}
-}
-
-// TestGotoAction covers the tab.goto.n actions.
-func TestGotoAction(t *testing.T) {
-	for n := 1; n <= 9; n++ {
-		action := GotoAction(n)
-		i, ok := GotoIndex(action)
-		if !ok || i != n-1 {
-			t.Errorf("GotoIndex(%q) = %d, %v", action, i, ok)
-		}
-	}
-	for _, action := range []string{"tab.new", "tab.goto.", "tab.goto.x", "tab.goto.0"} {
-		if _, ok := GotoIndex(action); ok {
-			t.Errorf("GotoIndex(%q) found a tab", action)
-		}
 	}
 }
