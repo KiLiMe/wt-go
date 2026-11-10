@@ -45,6 +45,9 @@ type App struct {
 	find       *ui.Find
 	findTerm   *terminal.Terminal
 	shownTitle string
+	// shells is the process each terminal runs, when the window learned it,
+	// which is how it tells a shell at its prompt from a program running.
+	shells map[*terminal.Terminal]int
 	// content is the room the panes took in the last frame, which the keys
 	// that split and move between panes measure.
 	content layout.Rect
@@ -114,7 +117,9 @@ func Run() (err error) {
 	// A window started from Explorer has no console: what it says goes to
 	// wt-go.log as well, so that `wtgo diag` can read it back later.
 	if f, ferr := sys.OpenLog(); ferr == nil {
-		log.SetOutput(io.MultiWriter(os.Stderr, f))
+		// The file comes first: a window started from Explorer has no console,
+		// and writing to one that is not there must not lose the line.
+		log.SetOutput(io.MultiWriter(f, console{os.Stderr}))
 	}
 	defer func() {
 		if r := recover(); r != nil {
@@ -184,7 +189,7 @@ func opacity(v float64) float64 {
 // newApp reads the settings and finds the shells, and says what went wrong
 // when it could not: the window opens with the defaults.
 func newApp() *App {
-	a := &App{settings: store.Default(), watchStop: make(chan struct{})}
+	a := &App{settings: store.Default(), shells: map[*terminal.Terminal]int{}, watchStop: make(chan struct{})}
 	settings, data, err := load()
 	if err == nil {
 		a.settings = settings
@@ -442,6 +447,15 @@ func (a *App) redraw() {
 	a.win.Invalidate()
 }
 
+// console is stderr for a window that may not have one: the file keeps the
+// lines either way, so a console that is not there is not an error.
+type console struct{ f *os.File }
+
+func (c console) Write(p []byte) (int, error) {
+	_, _ = c.f.Write(p)
+	return len(p), nil
+}
+
 // Do runs fn on the UI thread, where it may change what the window shows:
 // a terminal reports its title and its exit from goroutines of its own.
 func (a *App) Do(fn func()) {
@@ -494,7 +508,7 @@ func (a *App) openTab(p profile.Profile, dir string) {
 	// The paste that waits for an answer needs the terminal that takes it,
 	// which exists once the options are read.
 	opts.OnPaste = func(d transfer.Data) bool { return a.askPaste(term, d) }
-	term, err := terminal.New(opts)
+	term, err := a.newTerminal(opts)
 	if err != nil {
 		log.Printf("wt-go: %s", fault.Line(fault.ChildFailed, p.Name+": "+err.Error()))
 		return

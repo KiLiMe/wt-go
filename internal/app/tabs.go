@@ -3,6 +3,7 @@ package app
 import (
 	"log"
 	"strings"
+	"time"
 
 	"github.com/egoist/mygo/plugins/terminal"
 
@@ -11,6 +12,7 @@ import (
 	"wtgo/internal/layout"
 	"wtgo/internal/pane"
 	"wtgo/internal/profile"
+	"wtgo/internal/sys"
 	"wtgo/internal/ui"
 )
 
@@ -35,7 +37,7 @@ func (a *App) CloseTab(i int) {
 		a.askCloseSettings(tab)
 		return
 	}
-	if a.settings.ConfirmClose && tab.Running() {
+	if a.settings.ConfirmClose.Ask(a.running(tab)) {
 		a.askCloseTab(tab)
 		return
 	}
@@ -52,6 +54,7 @@ func (a *App) closeTab(tab *pane.Tab) {
 	if len(a.panes.Tabs) == 1 && a.settings.CloseOnLastTab {
 		a.closeWindow()
 		closeTerminals(tab)
+		a.forget(tab.Terminals()...)
 		return
 	}
 	a.panes.Remove(i)
@@ -59,6 +62,7 @@ func (a *App) closeTab(tab *pane.Tab) {
 		a.closeSettingsTab()
 	}
 	closeTerminals(tab)
+	a.forget(tab.Terminals()...)
 	a.syncTitle()
 	a.redraw()
 }
@@ -67,6 +71,74 @@ func (a *App) closeTab(tab *pane.Tab) {
 func closeTerminals(tab *pane.Tab) {
 	for _, term := range tab.Terminals() {
 		term.Close()
+	}
+}
+
+// newTerminal starts the program a terminal runs and remembers its process:
+// the plugin keeps the process to itself, so the window learns it from the one
+// child that starts between the two lists.
+func (a *App) newTerminal(opts terminal.Options) (*terminal.Terminal, error) {
+	before, berr := sys.Processes()
+	term, err := terminal.New(opts)
+	if err != nil {
+		return nil, err
+	}
+	if berr == nil {
+		// The plugin starts the program in a goroutine of its own, so the
+		// child is not there the moment New returns: wait for it off the UI
+		// thread, and hand the answer back when it comes.
+		go func() {
+			pid, ok := spawned(before)
+			if ok {
+				a.Do(func() { a.shells[term] = pid })
+			}
+		}()
+	}
+	return term, nil
+}
+
+// spawned waits a moment for the process a terminal started: the child of this
+// process that was not there before.
+func spawned(before []sys.Proc) (int, bool) {
+	for i := 0; i < 50; i++ {
+		if after, err := sys.Processes(); err == nil {
+			if pid, ok := sys.Spawned(before, after, sys.OwnPID()); ok {
+				return pid, true
+			}
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	return 0, false
+}
+
+// running reports whether a program other than the shell itself still runs in
+// the tab: a tab at its prompt does not ask before it closes. A terminal whose
+// process the window did not learn counts as running, since guessing wrong
+// would end a program someone was in the middle of.
+func (a *App) running(tab *pane.Tab) bool {
+	all, err := sys.Processes()
+	if err != nil {
+		return tab.Running()
+	}
+	for _, term := range tab.Terminals() {
+		select {
+		case <-term.Done():
+			continue
+		default:
+		}
+		pid, ok := a.shells[term]
+		if !ok || len(sys.Descendants(all, pid)) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// forget drops the processes of the terminals that close, so that the map of
+// terminals to processes does not grow with every tab that ever opened.
+func (a *App) forget(terms ...*terminal.Terminal) {
+	for _, term := range terms {
+		delete(a.shells, term)
 	}
 }
 
@@ -102,17 +174,17 @@ func (a *App) CloseOtherTabs(i int) {
 		return
 	}
 	tab := a.panes.Tabs[i]
-	if a.settings.ConfirmClose && a.othersRunning(tab) {
+	if a.settings.ConfirmClose.Ask(a.othersRunning(tab)) {
 		a.askCloseOtherTabs(tab)
 		return
 	}
 	a.closeOtherTabs(tab)
 }
 
-// othersRunning reports whether a tab but keep still runs its program.
+// othersRunning reports whether a program still runs in a tab but keep.
 func (a *App) othersRunning(keep *pane.Tab) bool {
 	for _, tab := range a.panes.Tabs {
-		if tab != keep && tab.Running() {
+		if tab != keep && a.running(tab) {
 			return true
 		}
 	}
@@ -217,6 +289,7 @@ func (a *App) closePane(i int) {
 	}
 	if term, _ := tab.Close(); term != nil {
 		term.Close()
+		a.forget(term)
 	}
 	a.syncTitle()
 	a.redraw()
@@ -234,6 +307,7 @@ func (a *App) closeOtherPanes(i int) {
 	}
 	for _, term := range closeOthers(tab) {
 		term.Close()
+		a.forget(term)
 	}
 	a.syncTitle()
 	a.redraw()
@@ -269,7 +343,7 @@ func (a *App) splitPane(dir layout.Dir) {
 	if !ok {
 		return
 	}
-	term, err := terminal.New(a.termOptions(p, tab.Focus.Term.Dir()))
+	term, err := a.newTerminal(a.termOptions(p, tab.Focus.Term.Dir()))
 	if err != nil {
 		log.Printf("wt-go: %s", fault.Line(fault.ChildFailed, p.Name+": "+err.Error()))
 		return

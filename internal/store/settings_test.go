@@ -1,6 +1,9 @@
 package store
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 // TestDefaultFontFamily covers the font a terminal draws with before the
 // settings name one, which the settings page also shows as its placeholder.
@@ -77,5 +80,60 @@ func TestMarshalRoundTrip(t *testing.T) {
 	}
 	if s.Font != Default().Font || len(s.Keybindings) != len(Default().Keybindings) {
 		t.Errorf("round trip changed the settings: %+v", s)
+	}
+}
+
+// TestConfirmAsk covers the three answers: only "running" looks at what the
+// tab holds, "always" asks about a tab that lives, "never" about none.
+func TestConfirmAsk(t *testing.T) {
+	tests := []struct {
+		mode    Confirm
+		running bool
+		want    bool
+	}{
+		{ConfirmRunning, true, true},
+		{ConfirmRunning, false, false},
+		{ConfirmAlways, true, true},
+		{ConfirmAlways, false, true},
+		{ConfirmNever, true, false},
+		{ConfirmNever, false, false},
+	}
+	for _, tc := range tests {
+		if got := tc.mode.Ask(tc.running); got != tc.want {
+			t.Errorf("%q.Ask(%v) = %v, want %v", tc.mode, tc.running, got, tc.want)
+		}
+	}
+}
+
+// TestConfirmJSON covers the words a file writes, and the true and false the
+// setting held before it had three answers.
+func TestConfirmJSON(t *testing.T) {
+	tests := []struct {
+		data string
+		want Confirm
+	}{
+		{`"running"`, ConfirmRunning},
+		{`"always"`, ConfirmAlways},
+		{`"never"`, ConfirmNever},
+		{`true`, ConfirmRunning},
+		{`false`, ConfirmNever},
+	}
+	for _, tc := range tests {
+		var got Confirm
+		if err := json.Unmarshal([]byte(tc.data), &got); err != nil {
+			t.Errorf("reading %s: %v", tc.data, err)
+			continue
+		}
+		if got != tc.want {
+			t.Errorf("reading %s = %q, want %q", tc.data, got, tc.want)
+		}
+		data, err := json.Marshal(got)
+		if err != nil || string(data) != `"`+string(tc.want)+`"` {
+			t.Errorf("writing %q = %s, %v, want %q", got, data, err, tc.want)
+		}
+	}
+	var bad Confirm
+	if err := json.Unmarshal([]byte(`3`), &bad); err == nil {
+		t.Errorf("reading 3 = %q, want an error", bad)
 	}
 }

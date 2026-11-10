@@ -349,6 +349,33 @@ Windows 关句柄 → 作业里的进程全部终止。
 
 ---
 
+## ADR-025 关闭确认按进程树判断，`confirmClose` 改三态
+
+**背景**：`pane.Tab.Running()` 只看终端本身是否结束，停在提示符的 shell 也不算结束，
+于是关任何一个活标签都弹「这个标签里的程序还在运行。」——用户一眼就看穿："实际上并没有程序"。
+插件不给 PID（`terminal.Terminal` 没有进程句柄，`internal/pty` 是 internal 且 Windows 上返回 0），
+所以「程序在跑」只能自己看进程树。
+
+**决定**：
+
+- `internal/sys/process.go` 枚举全机进程（Windows 走 Toolhelp32，其它读 `/proc/<pid>/stat`）：
+  `Children`、`Descendants`（BFS，防环）、`Spawned`（两次快照里新增的、父进程是本进程的子进程）。
+  创建终端时 `before`/`after` 各取一次快照，记下 `App.shells[term]`；关标签时该 PID 有子孙才算「还在跑」。
+- `Spawned` 跳过 pty 的后台宿主（`conhost.exe` / `OpenConsole.exe`）：ConPTY 会把它和 shell 一起
+  作为本进程的子进程拉起，pid 更大，不排除就会认错。
+- 插件在 goroutine 里启动程序，`terminal.New` 返回时进程还没起来，所以等待放到后台
+  （50 × 10ms 轮询），结果经 `App.Do` 回到 UI 线程写入 `shells`。
+- `confirmClose` 从 bool 变三态字符串：`running`（默认）/ `always` / `never`；
+  `UnmarshalJSON` 仍接受旧的 `true`（= `running`）与 `false`（= `never`）。
+
+**理由**：只有进程树能区分"提示符"和"正在跑东西"；三态让不想被问的人一次关掉，也让喜欢确认的人保留旧行为，
+而旧的 bool 无法表达"有程序才问"这个默认意图。
+
+**代价**：每次关标签枚举一次全机进程（几百条，微秒级）；快照拿不到 PID 时退回"总是问"（宁可多问，不可误杀）；
+Windows 上靠进程名排除 conhost 是启发式，改名后就会退化成"总是问"。
+
+---
+
 ## 待定
 
 - 会话常驻：阶段 5 评估是否采用 ADR-009 所述的会话服务模型。

@@ -9,6 +9,7 @@ import (
 
 	"wtgo/internal/i18n"
 	"wtgo/internal/pane"
+	"wtgo/internal/store"
 	"wtgo/internal/ui"
 )
 
@@ -82,11 +83,12 @@ func (a *App) askCloseSettings(tab *pane.Tab) {
 }
 
 // askCloseTab asks whether to close a tab whose program still runs, and closes
-// it when the answer is yes.
+// it when the answer is yes. It says what still runs, which is a shell at its
+// prompt only when the settings ask about every tab.
 func (a *App) askCloseTab(tab *pane.Tab) {
 	a.ask(ui.Confirm{
 		Title: i18n.T("Close the tab?"),
-		Text:  i18n.T("The program in this tab is still running."),
+		Text:  a.closeText("The program in this tab is still running.", "Closing the tab ends the shell it runs."),
 		Yes:   i18n.T("Close"),
 	}, func() { a.closeTab(tab) }, nil)
 }
@@ -96,7 +98,16 @@ func (a *App) askCloseTab(tab *pane.Tab) {
 func (a *App) askCloseOtherTabs(keep *pane.Tab) {
 	a.ask(ui.Confirm{
 		Title: i18n.T("Close the other tabs?"),
-		Text:  i18n.T("Programs in the other tabs are still running."),
+		Text:  a.closeText("Programs in the other tabs are still running.", "Closing the other tabs ends the shells they run."),
 		Yes:   i18n.T("Close"),
 	}, func() { a.closeOtherTabs(keep) }, nil)
+}
+
+// closeText is what the question says: what still runs, or, when the settings
+// ask about every tab, what closing it ends.
+func (a *App) closeText(running, always string) string {
+	if a.settings.ConfirmClose == store.ConfirmAlways {
+		return i18n.T(always)
+	}
+	return i18n.T(running)
 }

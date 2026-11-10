@@ -183,7 +183,11 @@ func interactionPage(c *myui.Context, st Settings, act Actions) {
 			myui.Switch(c, &s.PasteMultilineConfirm)
 		})
 		field(c, i18n.T("Confirm close"), i18n.T("Ask before a tab closes while its program still runs."), func() {
-			myui.Switch(c, &s.ConfirmClose)
+			choice(c, &s.ConfirmClose, []option{
+				{string(store.ConfirmRunning), i18n.T("While a program runs")},
+				{string(store.ConfirmAlways), i18n.T("Always")},
+				{string(store.ConfirmNever), i18n.T("Never")},
+			})
 		})
 		field(c, i18n.T("Panes per tab"), i18n.T("How many panes a tab splits into; 0 for no limit."), func() {
 			count(c, &s.MaxPanes, 0, 32)

@@ -39,18 +39,19 @@ func section(c *myui.Context, title string, fields func()) {
 	})
 }
 
-// choice is a control that picks one of a few values.
-func choice(c *myui.Context, value *string, options []option) myui.Element {
-	label := *value
+// choice is a control that picks one of a few values: the string settings
+// hold, and the named types over one, such as store.Confirm.
+func choice[T ~string](c *myui.Context, value *T, options []option) myui.Element {
+	label := string(*value)
 	for _, o := range options {
-		if o.Value == *value {
+		if o.Value == string(*value) {
 			label = o.Label
 		}
 	}
 	return myui.MenuButton(c, label, func(m *myui.Menu) {
 		for _, o := range options {
-			if m.Item(o.Label).Checked(o.Value == *value).Chosen() {
-				*value = o.Value
+			if m.Item(o.Label).Checked(o.Value == string(*value)).Chosen() {
+				*value = T(o.Value)
 			}
 		}
 	})
