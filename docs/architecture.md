@@ -5,7 +5,7 @@
 | 层 | 选择 | 理由 |
 | --- | --- | --- |
 | UI 框架 | mygo v0.8.3 | Go 原生窗口，无 webview；sshterm 已验证 |
-| 终端内核 | mygo `plugins/terminal`（libghostty-vt） | 完整的 VT 实现；ConPTY 管理；选中/搜索/链接/剪贴板协议齐全 |
+| 终端内核 | mygo `plugins/terminal`（libghostty-vt） | 完整的 VT 实现；Windows 使用 ConPTY，Linux/macOS 使用 pty；选中/搜索/链接/剪贴板协议齐全 |
 | 语言 | Go 1.27 | 与 sshterm 同栈，便于复用经验 |
 
 **不自己实现 VT 解析器**：终端模拟器的正确性坑极多（宽字符、reflow、键盘协议、
@@ -57,6 +57,8 @@ internal/i18n → （无内部依赖）
 
 ## 阶段 3 当前边界
 
+阶段 0–3 已完成；搜索、命令面板、滚动条、会话恢复等仍在后续阶段。Linux/macOS 路径与 pty 已提供，但当前主要在 Windows 上验证。
+
 阶段 1 的标签与 profile 已就位：`cmd/wtgo/main.go` 只调用 `app.Run()`；`internal/app` 持有状态、在 UI 线程上改（`Do`），`internal/ui` 只读 `ui.State` 并回传 `ui.Actions`。
 
 标签栏兼作标题栏：窗口用 `mygo.TitleBarHidden` + `TitleBarHeight = ui.TitleBarHeight`（36dp），标签栏自己就是拖窗区域（空白处 `DragWindow`），激活标签用终端背景色 + 上圆角，未激活融入标题栏底色。
@@ -65,7 +67,7 @@ internal/i18n → （无内部依赖）
 
 指针：每个窗格是一个绝对定位的 `Box`，`ObserveInput` 收到左键按下就 `FocusPane`；焦点窗格每帧调 `Element.Focus()` 保持键盘焦点（`AutoFocus` 只在一帧生效，移动焦点必须用 `Focus`），对话框打开时不抢。分割线先画线（`theme.Border`），再叠一条 8dp 宽的透明 handle（`Cursor` 改成 resize 光标、`Dragged()` 取每帧增量）。
 
-已生效的设置项：全部，除下表列出的。`language`、`theme`（界面明暗）、`defaultProfile`、`startDirectory`、`startSize`、`font`、`colorScheme`、`schemes`、`padding`、`backgroundOpacity`（窗口整体透明度）、`cursorShape`、`cursorBlink`、`scrollbackMB`、`copyOnSelect`、`rightClick`、`pasteMultilineConfirm`、`closeOnLastTab`、`maxPanes`（切分上限，0 为不限）、`newTabPosition`、`tabWidth`、`alwaysOnTop`、`titleFromActiveTerminal`、`profiles`、`keybindings`。
+已解析并可配置的设置项：`language`、`theme`（界面明暗）、`defaultProfile`、`startDirectory`、`startSize`、`font`、`colorScheme`、`schemes`、`padding`、`backgroundOpacity`（窗口整体透明度）、`cursorShape`、`cursorBlink`、`scrollbackMB`、`copyOnSelect`、`rightClick`、`pasteMultilineConfirm`、`confirmClose`、`closeOnLastTab`、`maxPanes`（切分上限，0 为不限）、`newTabPosition`、`tabWidth`、`alwaysOnTop`、`titleFromActiveTerminal`、`profiles`、`keybindings`。其中字体、配色、选中即复制、窗口透明度/置顶、语言和快捷键可立即应用；部分终端创建参数主要在新建标签或窗格时生效。
 
 只解析、未生效的设置项：`startOn`。`settings.json` 缺失时写入默认值，之后被监视并热重载（每秒比字节，解析失败保留旧值并把原因写进设置页底部）；自动发现的 profile 只补进内存，不写回文件。
 
@@ -114,13 +116,13 @@ Windows 上 ConPTY 会话的输入输出是给创建者的管道，外部进程�
 
 ## 进程与生命周期
 
-- 每个窗格一个 `*terminal.Terminal`，一个子进程（ConPTY）；设置标签页没有窗格，也没有终端。
+- 每个窗格一个 `*terminal.Terminal`，一个子进程（Windows 为 ConPTY，Linux/macOS 为 pty）；设置标签页没有窗格，也没有终端。
 - 关窗格 = `Terminal.Close()`；关标签 = 关它所有窗格；关窗口 = 关所有标签。
-- 子进程树靠 Windows 的 Job Object 收尾：`Run` 一开始就把本进程加进一个 `KILL_ON_JOB_CLOSE` 的作业，
+- Windows 子进程树靠 Job Object 收尾：`Run` 一开始就把本进程加进一个 `KILL_ON_JOB_CLOSE` 的作业，
   之后所有窗格的 shell（以及它们自己起的进程）都在作业里，窗口崩了或被强杀也不会留下 `pwsh.exe`。
   因为子进程自动继承作业，不需要逐个挂。
 - 主 goroutine 与 `watch` 协程的 `panic` 都会写一份 `crash-<时间>.log` 到配置目录（与 `settings.json` 并排）再退出。
-- 应用退出 = 关闭所有标签，最后落盘设置。
+- 应用退出 = 关闭所有标签；未保存的设置改动不会自动落盘。
 
 ## 与 sshterm 的复用边界
 

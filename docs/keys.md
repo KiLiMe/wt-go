@@ -2,7 +2,7 @@
 
 默认值与 Windows Terminal 对齐；可被 `settings.json` 的 `keybindings` 覆盖。
 
-已生效（阶段 3）：`tab.new` / `tab.close` / `tab.next` / `tab.prev` / `tab.duplicate` / `tab.goto.N`，
+已生效（阶段 0–3）：`tab.new` / `tab.close` / `tab.next` / `tab.prev` / `tab.duplicate` / `tab.goto.N`，
 `pane.split.auto` / `pane.split.right` / `pane.split.down` / `pane.focus.left|right|up|down` /
 `pane.close` / `pane.closeOthers`，以及 `settings.open` / `profile.N`；复制粘贴由终端插件自带的默认键位处理。
 其余键位在对应阶段接入。
@@ -60,16 +60,15 @@
 | `Ctrl+Shift+K` | 清屏 |
 | `Shift+PageUp` / `Shift+PageDown` | 翻页 |
 | `Ctrl+Shift+Home` / `Ctrl+Shift+End` | 滚到顶 / 底 |
-| `Ctrl+Shift+F` | 搜索（阶段 4） |
-| `Ctrl+Shift+P` | 命令面板（阶段 4） |
+| `Ctrl+Shift+F` | 搜索（待实现） |
+| `Ctrl+Shift+P` | 命令面板（待实现） |
 | `Ctrl+,` | 设置 |
 | `F11` / `Alt+Enter` | 全屏 |
 | `Ctrl+Shift+Space` | 打开下拉菜单 |
 
 ## 保留给程序
 
-不在表内的键一律发给终端里的程序。`Ctrl+Shift+*` 组合默认由 wt-go 处理，
-需要交给程序时（如 vim 的某些映射）用 `keybindings` 把它绑到 `none`。
+不在表内的键一律发给终端里的程序。需要把某个默认快捷键交给终端时，请删除对应的 `keybindings` 条目；当前不要写 `none`，因为它不会实现透传。
 
 ## 字符串写法
 
@@ -78,5 +77,4 @@
 `insert` `delete` `space` `tab` `enter`（或 `return`）`escape` `backspace` `minus`，
 例如 `"ctrl+shift+t"`、`"alt+shift+d"`。
 
-字符串解析不了（拼错、或用了尚未支持的 `plus`/`comma`/`period`/`f13`+）时，该条被忽略，
-对应动作退回默认键，不影响启动。
+字符串解析不了时，该条会被丢弃，对应动作不会退回默认键。`comma`、`period`、`equal`、`slash`、`semicolon`、`quote`、`backslash` 均支持；`plus` 与 `f13` 以上暂不支持。

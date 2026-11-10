@@ -3,7 +3,7 @@
 用 [mygo](https://github.com/egoist/mygo)（Go 原生 UI）写的 Windows Terminal 风格终端。
 目标：Windows 上开箱即用、外观与操作贴近 Windows Terminal，单文件可执行、无 Electron。
 
-> 当前已完成阶段 0 的最小可运行骨架：可启动单窗口、单终端并运行默认 shell。标签、分栏、设置等功能尚未实现。实现计划见 [docs/plan.md](docs/plan.md)。
+> 当前已完成阶段 0–3：单窗口、多标签、分栏、设置界面、可配置快捷键、配色方案与 settings.json 热重载。搜索、命令面板、会话恢复等列在后续阶段。实现计划见 [docs/plan.md](docs/plan.md)。
 
 ## 文档
 
@@ -18,9 +18,19 @@
 
 ## 运行环境
 
-- Windows 10 1809+ / Windows 11（ConPTY 是硬前提）
+- 主要支持并在 Windows 上验证：Windows 10 1809+ / Windows 11（ConPTY）
+- Linux/macOS：已提供 pty 与配置目录的平台实现并可交叉编译，但仍属实验性；部分 Windows 专属能力（如 Job Object 进程树收尾）不可用
 - Go 1.27+（`go.mod` 里 `go 1.27.3`，与 sshterm 对齐）
-- mygo ≥ v0.8.3（`plugins/terminal` 内含 libghostty-vt，需 `mygo build` 打包原生库）
+- mygo ≥ v0.8.3（`plugins/terminal` 内含 libghostty-vt；发布时建议使用 `mygo build` 打包原生库）
+
+## 构建与运行
+
+```powershell
+go build -o wtgo.exe ./cmd/wtgo
+.\wtgo.exe
+```
+
+普通 `go build` 适合开发验证；发布包应按 mygo 的构建方式打包原生库。
 
 ## 与参考项目的关系
 
