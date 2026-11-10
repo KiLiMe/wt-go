@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"log"
-	"os/exec"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -261,7 +260,7 @@ func (a *App) OpenSettingsFile() {
 		a.redraw()
 		return
 	}
-	if err := exec.Command("explorer.exe", path).Start(); err != nil {
+	if err := sys.OpenPath(path); err != nil {
 		a.note = err.Error()
 		a.redraw()
 	}

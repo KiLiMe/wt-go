@@ -4,6 +4,7 @@ import (
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/i18n"
+	"wtgo/internal/store"
 )
 
 // TitleBarHeight is the height of the tab strip, which is the title bar: the
@@ -157,20 +158,34 @@ func profilesMenu(c *myui.Context, st State, act Actions) myui.Element {
 		for i, p := range st.Profiles {
 			it := m.Item(p.Name)
 			if i < 9 {
-				it.Shortcut(myui.Ctrl|myui.Shift, myui.Key0+myui.Key(i+1))
+				shortcut(it, st, store.ProfileAction(i+1))
 			}
 			if it.Chosen() {
 				act.NewTab(p.ID)
 			}
 		}
 		m.Separator()
-		if m.Item(i18n.T("Settings")).Shortcut(myui.Ctrl, myui.KeyComma).Chosen() {
+		it := m.Item(i18n.T("Settings"))
+		shortcut(it, st, store.ActionSettings)
+		if it.Chosen() {
 			act.OpenSettings()
 		}
 	}).
 		Children(func() {
 			myui.Text(c, "\u25be").FontSize(12).TextColor(t.TextMuted)
 		})
+}
+
+// shortcut shows an action's key by a menu item, when the window knows one.
+func shortcut(it *myui.MenuItem, st State, action string) {
+	if st.Shortcut == nil {
+		return
+	}
+	mods, key, ok := ParseKey(st.Shortcut(action))
+	if !ok {
+		return
+	}
+	it.Shortcut(mods, key)
 }
 
 // newTabButton opens a tab that runs the default profile.

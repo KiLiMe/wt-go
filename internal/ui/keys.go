@@ -25,7 +25,7 @@ func ParseKey(s string) (myui.Modifiers, myui.Key, bool) {
 			mods |= myui.Shift
 		case "alt":
 			mods |= myui.Alt
-		case "win", "super", "meta":
+		case "win", "super", "meta", "cmd", "command":
 			mods |= myui.Super
 		default:
 			return 0, 0, false
@@ -136,7 +136,7 @@ func FormatKey(mods myui.Modifiers, key myui.Key) (string, bool) {
 	for _, m := range []struct {
 		mod  myui.Modifiers
 		name string
-	}{{myui.Ctrl, "ctrl"}, {myui.Shift, "shift"}, {myui.Alt, "alt"}, {myui.Super, "win"}} {
+	}{{myui.Ctrl, "ctrl"}, {myui.Shift, "shift"}, {myui.Alt, "alt"}, {myui.Super, "super"}} {
 		if mods&m.mod != 0 {
 			parts = append(parts, m.name)
 		}

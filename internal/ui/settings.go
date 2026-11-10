@@ -6,6 +6,7 @@ import (
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/i18n"
+	"wtgo/internal/store"
 )
 
 // The pages the settings tab shows in its left column.
@@ -148,7 +149,7 @@ func startupPage(c *myui.Context, st Settings, act Actions) {
 			choice(c, &s.Language, []option{{"zh-CN", "简体中文"}, {"en-US", "English"}})
 		})
 		field(c, i18n.T("Start directory"), i18n.T("Where a new tab starts when its profile names no directory."), func() {
-			myui.TextInput(c, &s.StartDirectory).Width(320).Placeholder("%USERPROFILE%")
+			myui.TextInput(c, &s.StartDirectory).Width(320).Placeholder(store.DefaultHomeHint())
 		})
 		field(c, i18n.T("Start size"), i18n.T("Columns and rows of the window when it opens; 0 keeps the size it opens with."), func() {
 			myui.Row(c).AlignItems(myui.Center).Gap(8).Children(func() {
@@ -234,7 +235,7 @@ func profilesPage(c *myui.Context, st Settings, act Actions) {
 			choice(c, &s.ColorScheme, schemeOptions(st.Schemes))
 		})
 		field(c, i18n.T("Font"), "", func() {
-			myui.TextInput(c, &s.Font.Family).Width(220).Placeholder("Cascadia Mono")
+			myui.TextInput(c, &s.Font.Family).Width(220).Placeholder(store.DefaultFontFamily())
 		})
 		field(c, i18n.T("Font size"), i18n.T("How tall the letters of a terminal are, in DIPs."), func() {
 			measure(c, &s.Font.Size, 6, 48, 1)
@@ -291,13 +292,13 @@ func profilePage(c *myui.Context, st Settings, act Actions, id string) {
 			myui.TextInput(c, &p.Name).Width(320)
 		})
 		field(c, i18n.T("Command line"), i18n.T("The program the profile runs; empty runs the shell the system starts."), func() {
-			myui.TextInput(c, &p.Command).Width(320).Placeholder("pwsh.exe")
+			myui.TextInput(c, &p.Command).Width(320).Placeholder(store.DefaultShellHint())
 		})
 		field(c, i18n.T("Arguments"), i18n.T("The arguments of the command, one on each line."), func() {
 			myui.TextArea(c, st.Args).Lines(2, 6)
 		})
 		field(c, i18n.T("Start directory"), i18n.T("Where the profile starts; empty uses the setting."), func() {
-			myui.TextInput(c, &p.Dir).Width(320).Placeholder("%USERPROFILE%")
+			myui.TextInput(c, &p.Dir).Width(320).Placeholder(store.DefaultHomeHint())
 		})
 		field(c, i18n.T("Icon color"), i18n.T("The color of the dot the tab strip marks the profile with."), func() {
 			colorField(c, &p.Color)

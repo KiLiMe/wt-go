@@ -2,6 +2,14 @@ package store
 
 import "testing"
 
+// TestDefaultFontFamily covers the font a terminal draws with before the
+// settings name one, which the settings page also shows as its placeholder.
+func TestDefaultFontFamily(t *testing.T) {
+	if got := Default(); got.Font.Family != DefaultFontFamily() {
+		t.Errorf("default font family = %q, want %q", got.Font.Family, DefaultFontFamily())
+	}
+}
+
 // TestDefault covers the settings a window starts with: the values
 // docs/settings.md promises, and the keys the tab actions need.
 func TestDefault(t *testing.T) {
@@ -9,7 +17,7 @@ func TestDefault(t *testing.T) {
 	if s.Language != "zh-CN" || s.Theme != "dark" || s.ColorScheme != "Campbell" {
 		t.Errorf("language, theme, scheme = %q, %q, %q", s.Language, s.Theme, s.ColorScheme)
 	}
-	if s.Font.Family != "Cascadia Mono" || s.Font.Size != 13 || s.Font.LineHeight != 1.2 {
+	if s.Font.Family != DefaultFontFamily() || s.Font.Size != 13 || s.Font.LineHeight != 1.2 {
 		t.Errorf("font = %+v", s.Font)
 	}
 	if s.Padding.X != 12 || s.Padding.Y != 8 {
@@ -36,7 +44,7 @@ func TestParseKeepsDefaults(t *testing.T) {
 	if s.Language != "en" || s.Font.Size != 14 {
 		t.Errorf("named settings = %q, %v", s.Language, s.Font.Size)
 	}
-	if s.Font.Family != "Cascadia Mono" {
+	if s.Font.Family != DefaultFontFamily() {
 		t.Errorf("font family = %q, want the default", s.Font.Family)
 	}
 	if s.CloseOnLastTab {

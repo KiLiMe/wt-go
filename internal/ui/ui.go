@@ -163,6 +163,9 @@ type State struct {
 	// EqualTabs makes every tab as wide as the others, rather than as wide
 	// as its name.
 	EqualTabs bool
+	// Shortcut is the key the settings bind an action to, as a keybinding
+	// writes it, and "" when none binds it. nil shows no shortcut.
+	Shortcut func(action string) string
 }
 
 // Content is the room the panes take: the window, less the strip it draws

@@ -70,3 +70,31 @@ func TestCommandLine(t *testing.T) {
 		t.Errorf("command line = %v", got)
 	}
 }
+
+// TestColorOf covers the dot a discovered profile wears: a known shell gets
+// its own color, and a shell nothing knows gets none.
+func TestColorOf(t *testing.T) {
+	tests := []struct {
+		id   string
+		want string
+	}{
+		{"pwsh7", "#3b78ff"},
+		{"powershell", "#2671be"},
+		{"cmd", "#cccccc"},
+		{"wsl:Ubuntu", "#e95420"},
+		{"bash", "#4eaa25"},
+		{"zsh", "#e5c07b"},
+		{"fish", "#56b6c2"},
+		{"sh", "#b0b0b0"},
+		{"nu", "#7c6cf5"},
+		{"dash", "#ff9e64"},
+		{"ksh", "#c678dd"},
+		{"tcsh", "#e06c9f"},
+		{"elvish", ""},
+	}
+	for _, tt := range tests {
+		if got := colorOf(tt.id); got != tt.want {
+			t.Errorf("colorOf(%q) = %q, want %q", tt.id, got, tt.want)
+		}
+	}
+}

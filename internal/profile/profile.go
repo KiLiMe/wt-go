@@ -123,6 +123,25 @@ func colorOf(id string) string {
 		return "#cccccc"
 	case strings.HasPrefix(id, "wsl:"):
 		return "#e95420"
+	case id == "pwsh":
+		// The same PowerShell 7 as pwsh7: a POSIX system calls it pwsh.
+		return "#3b78ff"
+	case id == "bash":
+		return "#4eaa25"
+	case id == "zsh":
+		return "#e5c07b"
+	case id == "fish":
+		return "#56b6c2"
+	case id == "sh":
+		return "#b0b0b0"
+	case id == "nu":
+		return "#7c6cf5"
+	case id == "dash":
+		return "#ff9e64"
+	case id == "ksh":
+		return "#c678dd"
+	case id == "tcsh":
+		return "#e06c9f"
 	}
 	return ""
 }

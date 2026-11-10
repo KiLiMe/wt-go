@@ -6,6 +6,7 @@ package app
 import (
 	"fmt"
 	"log"
+	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -112,7 +113,7 @@ func Run() (err error) {
 			Title:           "wt-go",
 			Width:           960,
 			Height:          600,
-			TitleBarStyle:   mygo.TitleBarHidden,
+			TitleBarStyle:   titleBarStyle(),
 			TitleBarHeight:  ui.TitleBarHeight,
 			StateKey:        "main",
 			BackgroundColor: theme.Hex(theme.Terminal(a.settings).Background),
@@ -238,6 +239,22 @@ func bindings(keybindings []store.Keybinding) []binding {
 	return out
 }
 
+// shortcut is the key the settings bind to an action, as a keybinding
+// writes it, and "" when none binds it.
+func (a *App) shortcut(action string) string {
+	for _, b := range a.keys {
+		if b.action != action {
+			continue
+		}
+		key, ok := ui.FormatKey(b.mods, b.key)
+		if !ok {
+			return ""
+		}
+		return key
+	}
+	return ""
+}
+
 // view is the window's frame.
 func (a *App) view(c *myui.Context) {
 	if a.renaming != nil && !a.renaming.Open {
@@ -255,6 +272,7 @@ func (a *App) view(c *myui.Context) {
 		Profiles:  a.menuProfiles(),
 		Rename:    a.renaming,
 		EqualTabs: a.settings.TabWidth == "equal",
+		Shortcut:  a.shortcut,
 	}
 	if a.confirm != nil {
 		st.Confirm = &a.confirm.Confirm
@@ -363,8 +381,8 @@ func label(name, title, profileName string) string {
 // isProgramPath reports whether s is the path of a program rather than a
 // title, which a shell with no title of its own sets.
 func isProgramPath(s string) bool {
-	if len(s) > 1 && s[1] == ':' {
-		return true // D:\Applications\pwsh\pwsh.exe
+	if filepath.VolumeName(s) != "" {
+		return true // D:\Applications\pwsh\pwsh.exe, \\server\share\pwsh.exe
 	}
 	if strings.HasPrefix(s, `\\`) || strings.HasPrefix(s, "/") {
 		return true
@@ -437,6 +455,7 @@ func (a *App) openTab(p profile.Profile, dir string) {
 	if dir == "" {
 		dir = a.settings.StartDirectory
 	}
+	dir = sys.ExpandPath(dir)
 	var term *terminal.Terminal
 	opts := a.termOptions(p, dir)
 	// The paste that waits for an answer needs the terminal that takes it,

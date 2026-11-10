@@ -68,7 +68,21 @@ func clashes(all []store.Keybinding, key string) bool {
 // keys as shortcuts only, so it listens for every key there is, with every
 // combination of the modifiers it knows.
 func capture(c *myui.Context, act Actions, row int) {
-	mods := []myui.Modifiers{
+	for _, m := range captureMods() {
+		for _, k := range KeyNames() {
+			name, ok := FormatKey(m, k.Key)
+			if !ok {
+				continue
+			}
+			c.OnWindowShortcut(m, k.Key, func() { act.SetKeybinding(row, name) })
+		}
+	}
+}
+
+// captureMods are the modifiers capture listens for: every combination of the
+// modifiers it records, with and without Super.
+func captureMods() []myui.Modifiers {
+	base := []myui.Modifiers{
 		0,
 		myui.Ctrl,
 		myui.Shift,
@@ -78,13 +92,10 @@ func capture(c *myui.Context, act Actions, row int) {
 		myui.Shift | myui.Alt,
 		myui.Ctrl | myui.Shift | myui.Alt,
 	}
-	for _, m := range mods {
-		for _, k := range KeyNames() {
-			name, ok := FormatKey(m, k.Key)
-			if !ok {
-				continue
-			}
-			c.OnWindowShortcut(m, k.Key, func() { act.SetKeybinding(row, name) })
-		}
+	mods := make([]myui.Modifiers, 0, len(base)*2)
+	mods = append(mods, base...)
+	for _, m := range base {
+		mods = append(mods, m|myui.Super)
 	}
+	return mods
 }

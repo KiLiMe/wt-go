@@ -106,7 +106,7 @@ func Default() Settings {
 		Language:              "zh-CN",
 		Theme:                 "dark",
 		StartOn:               "default",
-		Font:                  Font{Family: "Cascadia Mono", Size: 13, LineHeight: 1.2},
+		Font:                  Font{Family: DefaultFontFamily(), Size: 13, LineHeight: 1.2},
 		ColorScheme:           "Campbell",
 		Padding:               Padding{X: 12, Y: 8},
 		BackgroundOpacity:     1.0,
