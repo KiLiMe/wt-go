@@ -27,3 +27,4 @@
 | `internal/i18n/` | 中英文案，缺条目回落原文 |
 | `docs/` | `使用说明.md` / `代码导读.md` / `decisions.md`（ADR）/ `plan.md`（阶段计划） |
 | `mygo.json` | `go tool mygo build` 的包名、版本与打包信息 |
+| `build.ps1` | 构建脚本：产物固定为 `build\bin\Release\wtgo.exe`，`-Test` / `-Clean` / `-Package` |

@@ -9,14 +9,14 @@ Windows Terminal 风格的终端，用 [mygo](https://github.com/egoist/mygo)（
 ## 快速开始
 
 ```pwsh
-go build -o wtgo.exe ./cmd/wtgo
-.\wtgo.exe
+pwsh .\build.ps1                 # 编译到 build\bin\Release\wtgo.exe
+.\build\bin\Release\wtgo.exe
 ```
 
 发布包用 mygo 自己的构建命令，一次产出可执行文件、原生库与 Linux 包：
 
 ```pwsh
-go tool mygo build -platform windows/amd64 -o dist
+pwsh .\build.ps1 -Package        # 等于 go tool mygo build -platform windows/amd64 -o dist
 ```
 
 ## 能力
