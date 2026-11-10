@@ -15,6 +15,7 @@
 | [docs/settings.md](docs/settings.md) | 配置文件 `settings.json` 的结构与默认值 |
 | [docs/keys.md](docs/keys.md) | 快捷键表 |
 | [docs/decisions.md](docs/decisions.md) | 设计决策与理由（ADR） |
+| [docs/linux.md](docs/linux.md) | Linux 依赖、启动方式、已知缺陷验证清单 |
 
 ## 运行环境
 
