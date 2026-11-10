@@ -7,8 +7,9 @@ package store
 func DefaultFontFamily() string { return "monospace" }
 
 // DefaultShellHint is the command line the settings show before a profile
-// names one.
-func DefaultShellHint() string { return "/bin/bash" }
+// names one: the name of the shell a POSIX system almost always has, so that
+// the example is a program rather than a Windows path.
+func DefaultShellHint() string { return "bash" }
 
 // DefaultHomeHint is how the settings write the user's home directory.
 func DefaultHomeHint() string { return "~" }
