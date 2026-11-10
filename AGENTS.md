@@ -6,15 +6,16 @@
 - 不要因为是我提的需求就硬塞功能。如果找不到自然的方式实现，且你认为该重构才能让整体更干净，那就提前停下来说明。
 - 代码注释用英文（与 mygo 上游一致），文档用中文；注释解释“为什么”，不复述代码。
 - 依赖方向是硬规则，由 `internal/app/deps_test.go` 用 `go list` 机械校验。新增包或改 import 时同步它的规则表，以及 `docs/代码导读.md` 的依赖图。
-- 纯函数包（`internal/action`、`internal/store`、`internal/profile`、`internal/layout`、`internal/theme`）不 import `os`、`os/exec`、`path/filepath`、注册表；要 OS 能力时由 `internal/app` 读入数据后注入。
+- 纯函数包（`internal/action`、`internal/cli`、`internal/fault`、`internal/mcp`、`internal/store`、`internal/profile`、`internal/layout`、`internal/theme`）不 import `os`、`os/exec`、`path/filepath`、注册表；要 OS 能力时由 `internal/sys` 提供、`internal/app` 读入数据后注入。
 - 动作的 id、标题、分组与默认键位只有一份：`internal/action`。菜单、命令面板、设置页、默认 `keybindings` 都从它取名，不另拼字符串。
 - 改行为时一起改文档：`docs/使用说明.md`（用户视角）、`docs/代码导读.md`（代码地图）、`docs/decisions.md`（新决策写成 ADR）、`docs/plan.md`（阶段状态）。
+- 新的失败路径要编号：`internal/fault` 里加一个码，`docs/故障排查.md` 里写它的确认与修法；日志里用 `fault.Line(code, detail)` 打印，别写自由文本。
 
 ## 路径
 
 | 路径 | 内容 |
 | --- | --- |
-| `cmd/wtgo/main.go` | 入口，一行 `app.Run()` |
+| `main.go` | 入口，一行 `app.Run()` |
 | `internal/app/` | 应用状态与动作：标签、窗格、设置读写、热重载、进程生命周期、命令面板与查找栏的状态 |
 | `internal/ui/` | 纯绘制：标签栏（兼标题栏）、窗格、设置页、命令面板、查找栏、对话框；动作经 `ui.Actions` 回传 |
 | `internal/action/` | 动作目录：id、标题、分组、默认键位（纯函数） |
@@ -25,6 +26,13 @@
 | `internal/theme/` | 配色：设置里的方案 > 内置 > Ghostty 的 617 套（纯函数） |
 | `internal/sys/` | 全部 OS 副作用：路径、原子写、坏配置归档、Job Object、shell 探测、打开路径、崩溃日志 |
 | `internal/i18n/` | 中英文案，缺条目回落原文 |
-| `docs/` | `使用说明.md` / `代码导读.md` / `decisions.md`（ADR）/ `plan.md`（阶段计划） |
+| `internal/fault/` | 故障码与一行含义：日志、`wtgo diag`、文档共用一套编号（纯函数） |
+| `internal/cli/` | 不开窗口的那部分：`wtgo diag` 的报告、`wtgo mcp` 的工具（不碰 OS，全走 `internal/sys`） |
+| `internal/mcp/` | 精简的 Model Context Protocol 服务器：JSON-RPC 2.0 + tools/resources（只用标准库） |
+| `tools/genicon/` | 画 `resources/icon.png`；`tools/resync.ps1` 用它和 go-winres 重新生成图标资源 |
+| `resources/icon.png` | 应用图标（1024×1024 PNG），`mygo build` 与 `go-winres` 都读它 |
+| `rsrc_windows_amd64.syso` | 入库的 Windows 资源（图标 + 版本信息），`go build` 会链进 exe |
+| `build.ps1` | 日常构建：产物固定为 `build\bin\Release\wtgo.exe` |
+| `docs/` | `使用说明.md` / `代码导读.md` / `故障排查.md`（故障码）/ `decisions.md`（ADR）/ `plan.md`（阶段计划） |
 | `mygo.json` | `go tool mygo build` 的包名、版本与打包信息 |
 | `build.ps1` | 构建脚本：产物固定为 `build\bin\Release\wtgo.exe`，`-Test` / `-Clean` / `-Package` |
