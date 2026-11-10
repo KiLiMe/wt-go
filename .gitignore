@@ -5,3 +5,4 @@
 /wt-go
 *.exe
 *.syso
+tmp_*.png
