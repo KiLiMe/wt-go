@@ -19,5 +19,15 @@ func OpenPath(path string) error {
 	if err != nil {
 		return fmt.Errorf("sys: open %s: %w", path, err)
 	}
-	return exec.Command(program, path).Start()
+	cmd := exec.Command(program, path)
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("sys: open %s: %w", path, err)
+	}
+	// Nothing waits for the desktop's program: releasing the process keeps the
+	// one it leaves behind from becoming a zombie the window holds for the
+	// rest of the session.
+	if err := cmd.Process.Release(); err != nil {
+		return fmt.Errorf("sys: open %s: %w", path, err)
+	}
+	return nil
 }

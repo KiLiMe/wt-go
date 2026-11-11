@@ -29,20 +29,47 @@ const fallbackFamily = "monospace"
 // moves them by a fraction of a pixel at most.
 const advanceSpread = 0.5
 
+// fontOf is the family and size the terminal would draw with, which is what a
+// measure is about: mygo draws an empty family with the generic one, and a
+// size of zero at 13.
+func fontOf(family string, size float32) (string, float32) {
+	if strings.TrimSpace(family) == "" {
+		family = fallbackFamily
+	}
+	if size <= 0 {
+		size = 13
+	}
+	return family, size
+}
+
+// fontCensus is what the window learned about the machine's fonts: the
+// families the font setting offers, and what monospace said of a family at a
+// size. Listing the families and shaping the printable ASCII are the two
+// slowest measures the window makes, and both answers hold for the session:
+// the families a machine has do not change under a running window.
+type fontCensus struct {
+	// families are the installed monospace families, and asked whether the
+	// window has asked for them: the list arrives a frame or two after the page
+	// that shows it opens.
+	families []string
+	asked    bool
+	// mono is what monospace said of a family at a size.
+	mono map[monoKey]bool
+}
+
+// monoKey is a family measured at a size, which is what monospace answers for.
+type monoKey struct {
+	family string
+	size   float32
+}
+
 // monospace reports whether family shapes the printable ASCII at one advance
 // at size, which is what a grid of cells needs. A family that is not installed
 // answers for the font the terminal would draw with instead: the system picks a
 // proportional one, and every cell then takes the width of its widest glyph,
 // which spreads the letters out and makes the columns drift.
 func monospace(family string, size float32) bool {
-	if strings.TrimSpace(family) == "" {
-		// mygo draws an empty family with the generic one.
-		family = fallbackFamily
-	}
-	if size <= 0 {
-		// And a size of zero at 13.
-		size = 13
-	}
+	family, size = fontOf(family, size)
 	glyphs := myui.Shape(asciiPrintable, myui.Font{Family: family, Size: size})
 	if len(glyphs) == 0 {
 		return false
@@ -57,14 +84,31 @@ func monospace(family string, size float32) bool {
 	return hi-lo < advanceSpread
 }
 
+// isMonospace is monospace, measured once per family and size: the window asks
+// the same question for every tab it opens and every setting it applies, and a
+// shape of the ASCII is the longest measure it makes.
+func (a *App) isMonospace(family string, size float32) bool {
+	family, size = fontOf(family, size)
+	key := monoKey{family: family, size: size}
+	if ok, known := a.fonts.mono[key]; known {
+		return ok
+	}
+	ok := monospace(family, size)
+	if a.fonts.mono == nil {
+		a.fonts.mono = make(map[monoKey]bool)
+	}
+	a.fonts.mono[key] = ok
+	return ok
+}
+
 // monospaceFamilies are the installed families a terminal can draw with: those
 // the text engine calls monospaced and that shape the printable ASCII at one
 // advance, sorted. The font setting lists them, so that a family it offers is
 // one the terminal takes as it is, without a line about it in the log.
-func monospaceFamilies(fs []myui.FontFamily, size float32) []string {
+func (a *App) monospaceFamilies(fs []myui.FontFamily, size float32) []string {
 	var out []string
 	for _, f := range fs {
-		if f.Monospaced && monospace(f.Name, size) {
+		if f.Monospaced && a.isMonospace(f.Name, size) {
 			out = append(out, f.Name)
 		}
 	}
@@ -72,14 +116,20 @@ func monospaceFamilies(fs []myui.FontFamily, size float32) []string {
 	return out
 }
 
-// loadFontFamilies lists the families the font setting offers, off the UI
-// thread: the text engine takes long enough to list them for a frame to show it.
-// The measures are the window's, though, so they wait for it.
-func (a *App) loadFontFamilies(size float32) {
+// ensureFontFamilies lists the families the font setting offers, which only the
+// page that lists them needs: enumerating the machine's fonts and shaping the
+// ASCII of each monospaced one costs the first frame 23–26 ms for a menu the
+// user may not open. The first ask starts the work, later ones keep it; the
+// measures are the window's, so they run on the UI thread once the list is in.
+func (a *App) ensureFontFamilies(size float32) {
+	if a.fonts.asked {
+		return
+	}
+	a.fonts.asked = true
 	go func() {
 		fs := myui.FontFamilies()
 		a.Do(func() {
-			a.families = monospaceFamilies(fs, size)
+			a.fonts.families = a.monospaceFamilies(fs, size)
 			a.redraw()
 		})
 	}()
@@ -92,7 +142,7 @@ func (a *App) loadFontFamilies(size float32) {
 func (a *App) terminalFont() terminal.Font {
 	s := a.settings.Font
 	f := terminal.Font{Family: s.Family, Size: s.Size, LineHeight: s.LineHeight}
-	if monospace(f.Family, f.Size) {
+	if a.isMonospace(f.Family, f.Size) {
 		a.fontWarned = ""
 		return f
 	}

@@ -628,3 +628,27 @@ func keyOf(all []store.Keybinding, action string) string {
 	}
 	return ""
 }
+
+// The page asks for the schemes once per settings revision: building them
+// sorts 617 names, which a frame should not do twice.
+func TestSchemeListIsBuiltOnce(t *testing.T) {
+	a := &App{settings: store.Default()}
+	first := a.schemeList()
+	if len(first) == 0 {
+		t.Fatal("no schemes")
+	}
+	if second := a.schemeList(); &second[0] != &first[0] {
+		t.Fatal("the list was rebuilt for the same settings")
+	}
+}
+
+// The schemes the settings page offers come from the theme package, which
+// sorts the 617 names it is built with; once per frame is a cost the page
+// should not pay, so this pins what one call buys.
+func BenchmarkUISchemes(b *testing.B) {
+	s := store.Default()
+	b.ReportAllocs()
+	for b.Loop() {
+		uiSchemes(s)
+	}
+}

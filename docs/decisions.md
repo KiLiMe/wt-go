@@ -782,7 +782,70 @@ v4.8.0 是最后一个 **Apache-2.0** 版本，与 wt-go 的许可证相容；`s
 覆盖/隐藏/恢复/幂等、`reset` 删文件并调用 `relaunch`；`internal/ui/advanced_test.go` 钉住
 两个按钮都先问再动、目录按钮的接线。
 
+## ADR-039 字体下拉的族列表按需枚举，等宽判定按 `(family, size)` 记忆化
+
+**背景**：`Run` 在首帧前调 `loadFontFamilies`：主线程枚举 261 个族，对其中 5 个等宽族各
+整一遍 95 个 ASCII 字符，23–26 ms；而这份列表只服务设置页「配置文件 → 默认值」的字体下拉。
+另外 `monospace()` 每次也要整一遍 95 个字符（6.7–10 ms），每开一个标签、每次应用设置都走一遍。
+
+**决定**：
+
+1. 枚举推迟到 `settingsState()` 里页面为 `ui.PageProfiles` 时（`ensureFontFamilies`），
+   一次会话只做一次，反复进出页面不重来。
+2. 等宽结论按 `(family, size)` 缓存（`App.isMonospace`），`monospace()` 保持纯函数；
+   归一化（空族 → `monospace`、size ≤ 0 → 13）在缓存键上做，所以默认设置与显式的
+   `"monospace"` 共用一条。
+
+**理由**：字体族的等宽与否不随会话变化，字号影响度量——按两者缓存既够用又不用去猜哪些
+设置会改变结论。实测首帧 153.5 → 124.5 ms。
+
+**代价**：列表到达前展开下拉只看到 `monospace` 与当前值（`choice` 的既有行为），一帧后补全；
+会话中新装的等宽字体要重启才进列表（缓存是有意的：按一下字号步进器不该重新枚举并逐族量一遍）。
+
+**测试**：`internal/app/font_test.go` 的 `TestMonospaceFamilies` 走 `App`，
+`TestIsMonospaceCaches` 钉住「`monospace` 与空族共用一条、换字号另算一条」。
+
 ---
+
+## ADR-040 不做进程内 `malloc_trim`
+
+**背景**：`[heap]` 21.9 MB 里约 7 MB 是已释放、glibc 留着复用的页。探针里用 `LD_PRELOAD`
+调 `malloc_trim(0)`，3 秒空闲 RSS 从 ~154 MB 降到 ~143 MB，看起来值得在首帧后调一次。
+
+**实测**（进程内用 purego 取 `malloc_trim` 调用）：符号能取到、返回 1（确实归还），
+调用瞬间 VmRSS 154.6 → 149.0 MB，但 3 秒后回到 151 MB；改在 2 秒时调用是 145 → 147 MB。
+只有周期性 trim（每 500 ms）能稳定在 143 MB，那是把复用池一直压小的结果。
+
+**决定**：不做。一次性归还真值 3–4 MB 且不稳定；要稳定就得在 UI 循环里加定时器与跨线程的
+「上次绘制时间」，为 glibc 的复用池不值得。代码已删，这条 ADR 记的是「别再试」。
+
+**代价**：常驻 RSS 停在 ~150 MB。真需要时 `MALLOC_TRIM_THRESHOLD_` 仍可由用户设置。
+
+**测试**：无（不留代码）。
+
+---
+
+## ADR-041 设置页一帧取一次快照，配色列表随 `apply` 失效
+
+**背景**：`view()` 与 `settingsView()` 各算一次 `settingsState()`，每次含两件贵事：
+`theme.Schemes()`（`uiSchemes`）与 `store.Equal` 的 `reflect.DeepEqual`。前者实测
+2.19 ms / 745 KB / 39 153 次分配——设置页每帧两次。
+
+**决定**：
+
+1. `view()` 开头算一次，存进 `a.settingsShown`；`st.Settings` 与 `settingsView` 都用它。
+2. 配色列表缓存在 `a.schemes`（nil 表示待建），`apply()` 在设置真的变化后置 nil。
+
+**理由**：同一帧里没有别的东西会改设置，两次取值必然相同；`apply()` 是唯一「设置生效」的
+出口，在那里失效最自然，也不需要观察 `Settings` 的每个字段。
+
+**代价**：绕过 `apply()` 直接改 `a.settings` 的地方会让配色列表滞后一帧——目前没有这样的地方。
+
+**测试**：`TestSchemeListIsBuiltOnce` 钉住「同一份设置只建一次」，`BenchmarkUISchemes`
+钉住单次成本（2.19 ms / 745 KB，改动前设置页每帧付两次）。
+
+---
+
 ## 待定
 
 - 会话常驻：阶段 5 评估是否采用 ADR-009 所述的会话服务模型。

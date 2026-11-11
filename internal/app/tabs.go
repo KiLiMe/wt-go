@@ -37,7 +37,8 @@ func (a *App) CloseTab(i int) {
 		a.askCloseSettings(tab)
 		return
 	}
-	if act := a.activity(tab); a.asksClose(act) {
+	list := a.processList()
+	if act := a.activity(tab, list); a.asksClose(act) {
 		a.askCloseTab(tab, act)
 		return
 	}
@@ -214,11 +215,31 @@ type tabActivity struct {
 	programs []string
 }
 
+// processList is the machine's process list as one question sees it: the list,
+// and whether it could be read at all. A question that covers several tabs reads
+// it once, because a scan of the process table costs milliseconds per call.
+type processList struct {
+	procs []sys.Proc
+	known bool
+}
+
+// processList reads the machine's processes, and says so in the log when it
+// cannot: the answer to a question about a tab is then that the window cannot
+// speak for it.
+func (a *App) processList() processList {
+	procs, err := sys.Processes()
+	if err != nil {
+		log.Printf("wt-go: %s", fault.Line(fault.NoProcessList, err.Error()))
+		return processList{}
+	}
+	return processList{procs: procs, known: true}
+}
+
 // activity is what a tab does, as the processes of the shells it runs say. A
 // shell that ended runs nothing, and neither does the console the pty runs
 // behind. A shell the window did not learn is one it cannot speak for, and
 // saying so beats guessing either way.
-func (a *App) activity(tab *pane.Tab) tabActivity {
+func (a *App) activity(tab *pane.Tab, list processList) tabActivity {
 	var live []*terminal.Terminal
 	for _, term := range tab.Terminals() {
 		select {
@@ -230,9 +251,7 @@ func (a *App) activity(tab *pane.Tab) tabActivity {
 	if len(live) == 0 {
 		return tabActivity{}
 	}
-	all, err := sys.Processes()
-	if err != nil {
-		log.Printf("wt-go: %s", fault.Line(fault.NoProcessList, err.Error()))
+	if !list.known {
 		return tabActivity{act: sys.Unknown}
 	}
 	out := tabActivity{}
@@ -243,10 +262,10 @@ func (a *App) activity(tab *pane.Tab) tabActivity {
 			out.act = sys.Unknown
 			continue
 		}
-		switch shell.Activity(all) {
+		switch shell.Activity(list.procs) {
 		case sys.Busy:
 			out.act = sys.Busy
-			out.programs = append(out.programs, shell.Programs(all)...)
+			out.programs = append(out.programs, shell.Programs(list.procs)...)
 		case sys.Unknown:
 			if out.act == sys.Idle {
 				out.act = sys.Unknown
@@ -328,11 +347,14 @@ func (a *App) CloseOtherTabs(i int) {
 func (a *App) othersActivity(keep *pane.Tab) tabActivity {
 	out := tabActivity{}
 	seen := make(map[string]bool)
+	// One list for every tab the question covers: a scan per tab would read the
+	// whole process table once per tab, for one answer.
+	list := a.processList()
 	for _, tab := range a.panes.Tabs {
 		if tab == keep {
 			continue
 		}
-		act := a.activity(tab)
+		act := a.activity(tab, list)
 		if act.act == sys.Busy {
 			out.act = sys.Busy
 			for _, name := range act.programs {

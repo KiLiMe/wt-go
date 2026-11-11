@@ -50,6 +50,11 @@ func (a *App) insertTab(tab *pane.Tab) {
 
 // settingsState is the settings tab as the window draws it.
 func (a *App) settingsState() ui.Settings {
+	// The list is a menu of the machine's fonts, so it is asked for when the
+	// page that shows it opens, not before the window does.
+	if a.settingsPage == ui.PageProfiles {
+		a.ensureFontFamilies(a.settings.Font.Size)
+	}
 	return ui.Settings{
 		Page:         a.settingsPage,
 		Draft:        &a.settings,
@@ -62,9 +67,18 @@ func (a *App) settingsState() ui.Settings {
 		Profiles:     fileProfiles(a.settings, a.showHidden),
 		Hidden:       a.showHidden,
 		Known:        knownProfiles(a.profiles),
-		Schemes:      uiSchemes(a.settings),
-		FontFamilies: a.families,
+		Schemes:      a.schemeList(),
+		FontFamilies: a.fonts.families,
 	}
+}
+
+// schemeList is the color schemes the settings page lists, built once per
+// settings the window applied and kept until they change.
+func (a *App) schemeList() []ui.Scheme {
+	if a.schemes == nil {
+		a.schemes = uiSchemes(a.settings)
+	}
+	return a.schemes
 }
 
 // uiSchemes are the color schemes the color schemes page lists, each saying
@@ -552,6 +566,9 @@ func (a *App) apply() {
 		a.win.SetAlwaysOnTop(s.AlwaysOnTop)
 	}
 	a.applied = s.Clone()
+	// What the settings page lists is built from the settings, so a new set is
+	// a new list: it is built again when the page asks.
+	a.schemes = nil
 	a.redraw()
 }
 

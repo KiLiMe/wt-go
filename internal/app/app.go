@@ -71,10 +71,19 @@ type App struct {
 	// else the terminal's own colors, so that the strip and the panes below it
 	// are one surface. nil until the settings are read.
 	uiTheme *myui.Theme
-	// families are the installed families the terminal can draw with, which
-	// the font setting lists; they take a moment to list, so they arrive after
-	// the window does.
-	families []string
+	// fonts are the machine's monospace families and the measures the window
+	// made of them; the settings page lists the families, so they are asked for
+	// when that page first shows.
+	fonts fontCensus
+	// schemes are the color schemes the settings page lists, built once per
+	// settings the window applied: the list is a directory of Ghostty's names
+	// and a sort of several hundred of them, which are not worth a frame. nil
+	// says the settings changed since it was built.
+	schemes []ui.Scheme
+	// settingsShown is the settings tab as the frame being drawn shows it: the
+	// frame and the page both need it, and building it twice costs a directory
+	// read and a sort of the color scheme names.
+	settingsShown ui.Settings
 	// content is the room the panes took in the last frame, which the keys
 	// that split and move between panes measure.
 	content layout.Rect
@@ -184,7 +193,6 @@ func Run() (err error) {
 		})
 		a.win.OnClosed(a.onClosed)
 		a.watchWindowButtons()
-		a.loadFontFamilies(a.settings.Font.Size)
 		a.openFirst()
 		if a.settingsNote() != "" {
 			a.OpenSettings()
@@ -305,6 +313,11 @@ func (a *App) appearance() {
 // where the compositor draws a title bar of its own.
 func (a *App) windowButtons() *ui.WindowButtons {
 	if !hideWindowButtons() {
+		return nil
+	}
+	// A strip that draws none is the same as a strip that hides them, and nil
+	// says so without building one every frame.
+	if len(a.buttons.Start) == 0 && len(a.buttons.End) == 0 {
 		return nil
 	}
 	return &ui.WindowButtons{Start: a.buttons.Start, End: a.buttons.End, Maximized: a.maximized}
@@ -545,8 +558,8 @@ func (a *App) view(c *myui.Context) {
 	st.Palette = a.paletteState()
 	st.Find = a.findState()
 	if a.settingsTab != nil {
-		state := a.settingsState()
-		st.Settings = &state
+		a.settingsShown = a.settingsState()
+		st.Settings = &a.settingsShown
 	}
 	for _, tab := range a.panes.Tabs {
 		st.Tabs = append(st.Tabs, a.uiTab(tab))
@@ -568,7 +581,7 @@ func (a *App) uiTab(tab *pane.Tab) ui.Tab {
 
 // settingsView is the settings tab's page.
 func (a *App) settingsView(c *myui.Context) myui.Element {
-	return ui.SettingsTab(c, a.settingsState(), a)
+	return ui.SettingsTab(c, a.settingsShown, a)
 }
 
 // bind gives the window the keys of the tabs, unless the settings wait for a
