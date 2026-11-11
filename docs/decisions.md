@@ -532,6 +532,31 @@ Windows 的默认值也随之改成 `Cascadia Mono,monospace`：没装 Cascadia 
 
 ---
 
+## ADR-031 设置页的控件用现成的，不手搓
+
+**背景**：设置页原先自己拼控件：下拉是 `myui.MenuButton` 打开的桌面原生菜单，字体栏是
+`myui.Combobox`（失焦会把没匹配到选项的输入退回原值），数字是 `-` / 输入框 / `+` 三个独立方块，
+标签左对齐固定 200 宽，说明文字单行截断。mygo v0.8.3 已经带了主题化的 `myui.Select`、
+`myui.NumberInput`、`myui.Form`、`myui.Field`。
+
+**决定**：
+
+- 控件先看有没有现成的：`internal/ui/form.go` 只留薄封装（`field` / `section` / `row` /
+  `choice` / `count` / `measure` / `ratio`），调用点签名不变，底下换成 `myui.Form`、
+  `myui.Field`、`myui.Select`、`myui.NumberInput`。
+- “现成的”不限于 mygo 自带：`D:\Sou\MyGO参考` 里能直接用的组件同样可用（`mygo-kit`
+  自己写 `Select` 是因为 v0.7.3 没有，v0.8.3 有了就不必再搬）。前提是不引新依赖、
+  不越过纯绘制边界（`internal/ui` 不碰 OS）。
+
+**理由**：自带的控件跟主题、键盘、读屏、`myui.NewTester` 一起演进，手搓的每一份都要自己
+维护这些；设置页的控件又不特殊。
+
+**代价**：`myui.Select` 的值与显示名是同一个字符串，`choice` 于是用显示名往返映射设置值
+（值不在选项里时原样显示，例如手写的字体族列表）。`myui.Field` 把标签排成右对齐的一列、
+说明移到控件下方：原来单行截断的长说明现在完整显示，但左侧标签列比原来的 200 宽窄一些。
+
+---
+
 ## 待定
 
 - 会话常驻：阶段 5 评估是否采用 ADR-009 所述的会话服务模型。

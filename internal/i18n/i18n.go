@@ -123,8 +123,6 @@ var zhCN = map[string]string{
 	"Blink":     "闪烁",
 	"Padding":   "内边距",
 	"The space inside the edges of a terminal, in DIPs.": "终端边缘内侧的空白，单位 DIP。",
-	"Across":     "横向",
-	"Down":       "纵向",
 	"Scrollback": "回滚缓冲",
 	"How much a terminal keeps to scroll back through, in MB.": "终端保留多少 MB 内容供回滚。",
 	"Duplicate":                        "复制",

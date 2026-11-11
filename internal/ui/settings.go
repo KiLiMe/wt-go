@@ -149,12 +149,12 @@ func startupPage(c *myui.Context, st Settings, act Actions) {
 			choice(c, &s.Language, []option{{"zh-CN", "简体中文"}, {"en-US", "English"}})
 		})
 		field(c, i18n.T("Start directory"), i18n.T("Where a new tab starts when its profile names no directory."), func() {
-			myui.TextInput(c, &s.StartDirectory).Width(320).Placeholder(store.DefaultHomeHint())
+			myui.TextInput(c, &s.StartDirectory).Placeholder(store.DefaultHomeHint())
 		})
 		field(c, i18n.T("Start size"), i18n.T("Columns and rows of the window when it opens; 0 keeps the size it opens with."), func() {
 			myui.Row(c).AlignItems(myui.Center).Gap(8).Children(func() {
 				count(c, &s.StartSize.Columns, 0, 400)
-				myui.Text(c, "x").TextColor(c.Theme().TextMuted)
+				myui.Text(c, "\u00d7").TextColor(c.Theme().TextMuted)
 				count(c, &s.StartSize.Rows, 0, 200)
 			})
 		})
@@ -232,11 +232,15 @@ func appearancePage(c *myui.Context, st Settings, act Actions) {
 
 // profilesPage is the settings a profile starts from, and the profiles.
 // fontOptions are the font setting's choices: the generic family every system
-// resolves to a monospace font, then the families installed.
-func fontOptions(families []string) []string {
-	out := make([]string, 0, len(families)+1)
-	out = append(out, "monospace")
-	return append(out, families...)
+// resolves to a monospace font, then the families installed, each called by
+// its own name.
+func fontOptions(families []string) []option {
+	out := make([]option, 0, len(families)+1)
+	out = append(out, option{"monospace", "monospace"})
+	for _, f := range families {
+		out = append(out, option{f, f})
+	}
+	return out
 }
 
 func profilesPage(c *myui.Context, st Settings, act Actions) {
@@ -247,7 +251,7 @@ func profilesPage(c *myui.Context, st Settings, act Actions) {
 			choice(c, &s.ColorScheme, schemeOptions(st.Schemes))
 		})
 		field(c, i18n.T("Font"), i18n.T("The monospaced families this machine has, as the terminal measures them."), func() {
-			myui.Combobox(c, &s.Font.Family, fontOptions(st.FontFamilies)).Width(220).Label(i18n.T("Font"))
+			choice(c, &s.Font.Family, fontOptions(st.FontFamilies))
 		})
 		field(c, i18n.T("Font size"), i18n.T("How tall the letters of a terminal are, in DIPs."), func() {
 			measure(c, &s.Font.Size, 6, 48, 1)
@@ -263,14 +267,13 @@ func profilesPage(c *myui.Context, st Settings, act Actions) {
 					{"underline", i18n.T("Underline")},
 				})
 				myui.Switch(c, &s.CursorBlink)
-				myui.Text(c, i18n.T("Blink")).FontSize(11).TextColor(t.TextMuted)
+				myui.Text(c, i18n.T("Blink")).TextColor(t.TextMuted)
 			})
 		})
 		field(c, i18n.T("Padding"), i18n.T("The space inside the edges of a terminal, in DIPs."), func() {
 			myui.Row(c).AlignItems(myui.Center).Gap(8).Children(func() {
-				myui.Text(c, i18n.T("Across")).FontSize(11).TextColor(t.TextMuted)
 				measure(c, &s.Padding.X, 0, 64, 1)
-				myui.Text(c, i18n.T("Down")).FontSize(11).TextColor(t.TextMuted)
+				myui.Text(c, "\u00d7").TextColor(t.TextMuted)
 				measure(c, &s.Padding.Y, 0, 64, 1)
 			})
 		})
@@ -280,14 +283,18 @@ func profilesPage(c *myui.Context, st Settings, act Actions) {
 	})
 	section(c, i18n.T("Profiles"), func() {
 		for _, p := range st.Profiles {
-			myui.Row(c).Height(32).AlignItems(myui.Center).Gap(8).Children(func() {
-				myui.Text(c, p.Name).Grow(1)
-				myui.Button(c, i18n.T("Duplicate")).OnClick(func() { act.DuplicateProfile(p.ID) })
-				myui.Button(c, i18n.T("Remove")).OnClick(func() { act.RemoveProfile(p.ID) })
+			row(c, func() {
+				myui.Row(c).Height(32).AlignItems(myui.Center).Gap(8).Children(func() {
+					myui.Text(c, p.Name).Grow(1)
+					myui.Button(c, i18n.T("Duplicate")).OnClick(func() { act.DuplicateProfile(p.ID) })
+					myui.Button(c, i18n.T("Remove")).OnClick(func() { act.RemoveProfile(p.ID) })
+				})
 			})
 		}
-		myui.Row(c).Children(func() {
-			myui.Button(c, i18n.T("Add profile")).OnClick(act.AddProfile)
+		row(c, func() {
+			myui.Row(c).Children(func() {
+				myui.Button(c, i18n.T("Add profile")).OnClick(act.AddProfile)
+			})
 		})
 	})
 }
@@ -301,16 +308,16 @@ func profilePage(c *myui.Context, st Settings, act Actions, id string) {
 	}
 	section(c, p.Name, func() {
 		field(c, i18n.T("Name"), "", func() {
-			myui.TextInput(c, &p.Name).Width(320)
+			myui.TextInput(c, &p.Name)
 		})
 		field(c, i18n.T("Command line"), i18n.T("The program the profile runs; empty runs the shell the system starts."), func() {
-			myui.TextInput(c, &p.Command).Width(320).Placeholder(store.DefaultShellHint())
+			myui.TextInput(c, &p.Command).Placeholder(store.DefaultShellHint())
 		})
 		field(c, i18n.T("Arguments"), i18n.T("The arguments of the command, one on each line."), func() {
 			myui.TextArea(c, st.Args).Lines(2, 6)
 		})
 		field(c, i18n.T("Start directory"), i18n.T("Where the profile starts; empty uses the setting."), func() {
-			myui.TextInput(c, &p.Dir).Width(320).Placeholder(store.DefaultHomeHint())
+			myui.TextInput(c, &p.Dir).Placeholder(store.DefaultHomeHint())
 		})
 		field(c, i18n.T("Icon color"), i18n.T("The color of the dot the tab strip marks the profile with."), func() {
 			colorField(c, &p.Color)

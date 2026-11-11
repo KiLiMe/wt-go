@@ -2,7 +2,6 @@ package ui
 
 import (
 	"math"
-	"strconv"
 
 	myui "github.com/egoist/mygo/ui"
 
@@ -17,50 +16,62 @@ type option struct {
 }
 
 // field is one setting: what it is called, what it does, and the control that
-// sets it.
+// sets it. The label names the control, so a click on it focuses the control
+// and assistive technology reads the two together.
 func field(c *myui.Context, title, description string, control func()) {
-	t := c.Theme()
-	myui.Row(c).AlignItems(myui.Start).Gap(16).Children(func() {
-		myui.Column(c).Width(200).Gap(2).Children(func() {
-			myui.Text(c, title).TextColor(t.Text)
-			if description != "" {
-				myui.Text(c, description).FontSize(11).TextColor(t.TextMuted).SingleLine()
-			}
-		})
-		myui.Column(c).Grow(1).Children(control)
-	})
+	myui.Field(c, title, control).Description(description)
 }
 
-// section is a heading and the fields under it.
+// section is a heading and the fields under it, which a form lines up: the
+// labels in a column of their own, as wide as the widest, level with the
+// first line of the control beside them.
 func section(c *myui.Context, title string, fields func()) {
 	myui.Column(c).Gap(12).Children(func() {
 		myui.Text(c, title).FontSize(13).TextColor(c.Theme().TextMuted)
-		fields()
+		myui.Form(c, fields)
 	})
 }
 
+// row is a line of a form that no label names, such as a button under the
+// fields, which lines up with the controls above it.
+func row(c *myui.Context, control func()) {
+	myui.Field(c, "", control)
+}
+
 // choice is a control that picks one of a few values: the string settings
-// hold, and the named types over one, such as store.Confirm.
+// hold, and the named types over one, such as store.Confirm. myui.Select
+// picks among the labels it shows, so it opens on the label of the value in
+// force, and a chosen label is written back as the value it stands for.
 func choice[T ~string](c *myui.Context, value *T, options []option) myui.Element {
-	label := string(*value)
-	for _, o := range options {
+	labels := make([]string, len(options))
+	shown := ""
+	for i, o := range options {
+		labels[i] = o.Label
 		if o.Value == string(*value) {
-			label = o.Label
+			shown = o.Label
 		}
 	}
-	return myui.MenuButton(c, label, func(m *myui.Menu) {
+	if shown == "" {
+		// A value no option names, such as a font family list typed into
+		// the file, shows as it is.
+		shown = string(*value)
+	}
+	label := shown
+	el := myui.Select(c, &label, labels)
+	if label != shown {
 		for _, o := range options {
-			if m.Item(o.Label).Checked(o.Value == string(*value)).Chosen() {
+			if o.Label == label {
 				*value = T(o.Value)
 			}
 		}
-	})
+	}
+	return el
 }
 
 // count is a control that picks a whole number.
 func count(c *myui.Context, value *int, lo, hi int) myui.Element {
 	v := float64(*value)
-	el := number(c, &v, float64(lo), float64(hi), 1)
+	el := myui.NumberInput(c, &v, float64(lo), float64(hi), 1)
 	*value = int(v)
 	return el
 }
@@ -68,40 +79,22 @@ func count(c *myui.Context, value *int, lo, hi int) myui.Element {
 // measure is a control that picks a measurement, in steps.
 func measure(c *myui.Context, value *float32, lo, hi, step float32) myui.Element {
 	v := float64(*value)
-	el := number(c, &v, float64(lo), float64(hi), float64(step))
+	el := myui.NumberInput(c, &v, float64(lo), float64(hi), whole(step))
 	*value = float32(v)
 	return el
 }
 
+// whole is a step as it was meant, without the noise of a float32: 0.1 as a
+// float32 is 0.10000000149011612, which asks the control for seventeen
+// decimals.
+func whole(step float32) float64 {
+	const places = 1e6
+	return math.Round(float64(step)*places) / places
+}
+
 // ratio is a control that picks a number from zero to one, in steps.
 func ratio(c *myui.Context, value *float64, lo, hi, step float64) myui.Element {
-	return number(c, value, lo, hi, step)
-}
-
-// number is a control that picks a number between lo and hi in steps: the
-// number, and the two buttons that step it.
-func number(c *myui.Context, value *float64, lo, hi, step float64) myui.Element {
-	nudge := func(delta float64) {
-		n := math.Round((*value+delta-lo)/step)*step + lo
-		*value = math.Min(hi, math.Max(lo, n))
-	}
-	return myui.Row(c).Gap(4).Children(func() {
-		myui.Button(c, "-").OnClick(func() { nudge(-step) })
-		myui.Text(c, formatNumber(*value, step)).Width(56).TextColor(c.Theme().Text)
-		myui.Button(c, "+").OnClick(func() { nudge(step) })
-	})
-}
-
-// formatNumber writes a number with the decimals its step asks for.
-func formatNumber(v, step float64) string {
-	switch {
-	case step >= 1:
-		return strconv.FormatFloat(v, 'f', 0, 64)
-	case step >= 0.1:
-		return strconv.FormatFloat(v, 'f', 1, 64)
-	default:
-		return strconv.FormatFloat(v, 'f', 2, 64)
-	}
+	return myui.NumberInput(c, value, lo, hi, step)
 }
 
 // colorField is a field that holds a color, and the color it holds.
@@ -112,6 +105,6 @@ func colorField(c *myui.Context, value *string) myui.Element {
 		if col, ok := theme.Color(*value); ok {
 			swatch.Background(col)
 		}
-		myui.TextInput(c, value).Width(120).Placeholder("#rrggbb")
+		myui.TextInput(c, value).Width(160).Placeholder("#rrggbb")
 	})
 }

@@ -19,8 +19,10 @@ func schemesPage(c *myui.Context, st Settings, act Actions) {
 		field(c, i18n.T("Scheme"), i18n.T("The colors a terminal paints with unless its profile names another."), func() {
 			choice(c, &s.ColorScheme, schemeOptions(st.Schemes))
 		})
-		myui.Row(c).Children(func() {
-			myui.Button(c, i18n.T("Copy as a custom scheme")).OnClick(act.CopyScheme)
+		row(c, func() {
+			myui.Row(c).Children(func() {
+				myui.Button(c, i18n.T("Copy as a custom scheme")).OnClick(act.CopyScheme)
+			})
 		})
 	})
 	names := search(st.Schemes, filter(st))
