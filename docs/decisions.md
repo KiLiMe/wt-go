@@ -502,6 +502,32 @@ header bar，比“留 GTK 标题栏再用 CSS 压掉 80px 空标题”（sshyar
 
 ---
 
+## ADR-030 字体族不是等宽就回落到 `monospace`
+
+**背景**：`font.family` 写了一个这台机器没有的族名（Linux 上常见：`Cascadia Mono`），
+fontconfig 按兜底链挑中一个**比例字体**（更纱黑体 SC）。mygo 的终端网格取“可打印 ASCII 里
+最宽字形的前进量”当格宽（`mygo/plugins/terminal/paint.go:93`），比例字体里最宽的字 17px、
+小写只有 3–8px，于是每格 17px、字形 7px、左右各空 5px：字距极宽、列数暴跌、本该一行的话提前折行。
+全程不报错，是静默降级。
+
+**决定**：
+
+- `internal/app/font.go` 的 `monospace(family, size)` 用 `ui.Shape` 量一遍可打印 ASCII，
+  前进量按 `Glyph.Runes` 归一化（`->` 这类连字是一个字形占两格），极差 < 0.5 DIP 才算等宽；
+  空族名按 `monospace` 算，与 mygo 的 `fontKey.key()` 一致（它把空族名与 0 号都换成默认值）。
+- `terminalFont()` 在不等宽时换成 `monospace`（每个系统都认这个通用族名），
+  并记一条 `E204`（`fault.BadFont`），同一个族名只记一次（`App.fontWarned`）。
+- 校验放在“把设置交给终端”的地方：开标签（`termOptions`）与改设置（`apply`）都走这一条路。
+
+**理由**：终端只能用等宽字体，比例字体下的网格必然是错的；与其让人面对错位，不如换成能用的字体
+并把原因写进日志（`wt-go diag` 的 `last fault:` 会抄出来）。不为这一个判断开新包：只有一处调用，
+放 `app` 里，`ui.State` 不必多字段。
+
+**代价**：设置里写的族名“看着生效了但没生效”，只能从日志/`diag` 看出来；设置页的字体栏
+暂不给“解析结果”提示（那要往 `ui.State` 加字段，属于新 UI 功能）。
+
+---
+
 ## 待定
 
 - 会话常驻：阶段 5 评估是否采用 ADR-009 所述的会话服务模型。

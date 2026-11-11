@@ -423,7 +423,7 @@ func (a *App) apply() {
 	a.appearance()
 	a.keys = bindings(s.Keybindings)
 	a.profiles = profile.Resolve(s.Profiles, a.found)
-	font := terminal.Font{Family: s.Font.Family, Size: s.Font.Size, LineHeight: s.Font.LineHeight}
+	font := a.terminalFont()
 	colors := theme.Terminal(s)
 	copyOnSelect := terminal.CopyOnSelectNone
 	if s.CopyOnSelect {

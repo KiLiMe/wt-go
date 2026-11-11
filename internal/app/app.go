@@ -64,6 +64,9 @@ type App struct {
 	// window is maximized, which the button that maximizes shows.
 	buttons   mygo.WindowButtons
 	maximized bool
+	// fontWarned is the family the log already said is not monospace, so that
+	// a settings file naming one leaves a line behind and not one a tab.
+	fontWarned string
 	// content is the room the panes took in the last frame, which the keys
 	// that split and move between panes measure.
 	content layout.Rect
@@ -612,7 +615,7 @@ func (a *App) termOptions(p profile.Profile, dir string) terminal.Options {
 	return terminal.Options{
 		Command:    p.CommandLine(),
 		Dir:        dir,
-		Font:       terminal.Font{Family: s.Font.Family, Size: s.Font.Size, LineHeight: s.Font.LineHeight},
+		Font:       a.terminalFont(),
 		Theme:      theme.Terminal(s),
 		Cursor:     cursor(s.CursorShape),
 		NoBlink:    !s.CursorBlink,
