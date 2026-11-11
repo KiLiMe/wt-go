@@ -3,16 +3,18 @@ package cli
 import (
 	"fmt"
 	"io"
+
+	"wtgo/internal/sys"
 )
 
 // Usage is what `wt-go help` prints: the window, and what runs without one.
 const Usage = `wt-go — a terminal multiplexer in one window
 
-  wt-go                     open the window
-  wt-go diag [--json]       what this machine is missing, and why
-  wt-go mcp                 answer the Model Context Protocol on stdin/stdout
-  wt-go version             print the build
-  wt-go help                this text
+  wt-go                            open the window
+  wt-go diag [--json] [--redact]   what this machine is missing, and why
+  wt-go mcp                        answer the Model Context Protocol on stdin/stdout
+  wt-go version                    print the build
+  wt-go help                       this text
 
 The report and the MCP tools read the same files the window reads, and every
 failure they name has a code with the checks and the fix in docs/故障排查.md.
@@ -42,19 +44,25 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) (handled bool, code
 }
 
 // diag prints the report: the lines a person reads, or with --json the same
-// report as a tool reads it.
+// report as a tool reads it. --redact replaces the account's own paths with
+// placeholders, which is what a report pasted into an issue wants.
 func diag(args []string, out, errOut io.Writer) int {
-	asJSON := false
+	asJSON, asRedacted := false, false
 	for _, a := range args {
 		switch a {
 		case "--json", "-json":
 			asJSON = true
+		case "--redact", "-redact":
+			asRedacted = true
 		default:
 			fmt.Fprintf(errOut, "wt-go diag: unknown flag %q\n", a)
 			return 2
 		}
 	}
 	r := Collect()
+	if asRedacted {
+		r = r.Redact(sys.Redactions())
+	}
 	if asJSON {
 		text, err := r.JSON()
 		if err != nil {

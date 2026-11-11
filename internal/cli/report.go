@@ -319,6 +319,50 @@ func checks(r Report) []Check {
 	return out
 }
 
+// Redact is the report with the machine's own paths replaced by the
+// placeholders that name them, so it can be pasted somewhere public: the
+// report still says which files matter without saying whose machine it is.
+func (r Report) Redact(pairs [][2]string) Report {
+	if len(pairs) == 0 {
+		return r
+	}
+	s := func(v string) string { return redact(v, pairs) }
+	r.Executable = s(r.Executable)
+	r.Settings.Path = s(r.Settings.Path)
+	r.Settings.Error = s(r.Settings.Error)
+	r.Native.Path = s(r.Native.Path)
+	profiles := make([]ProfileReport, len(r.Profiles))
+	for i, p := range r.Profiles {
+		p.Command = s(p.Command)
+		profiles[i] = p
+	}
+	r.Profiles = profiles
+	crashes := make([]CrashReport, len(r.Crashes))
+	for i, c := range r.Crashes {
+		c.Path, c.Fault = s(c.Path), s(c.Fault)
+		crashes[i] = c
+	}
+	r.Crashes = crashes
+	r.Log.Path = s(r.Log.Path)
+	r.Log.Fault = s(r.Log.Fault)
+	checks := make([]Check, len(r.Checks))
+	for i, c := range r.Checks {
+		c.Detail = s(c.Detail)
+		checks[i] = c
+	}
+	r.Checks = checks
+	return r
+}
+
+// redact replaces each path with its placeholder, longest first so a nested
+// directory wins over the home it sits under.
+func redact(s string, pairs [][2]string) string {
+	for _, p := range pairs {
+		s = strings.ReplaceAll(s, p[0], p[1])
+	}
+	return s
+}
+
 // Failed is the checks that did not pass.
 func (r Report) Failed() []Check {
 	out := make([]Check, 0, len(r.Checks))

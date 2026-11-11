@@ -2,7 +2,7 @@
 
 Windows Terminal 风格的终端，用 [mygo](https://github.com/egoist/mygo)（Go 原生 UI，无 webview）写：
 多标签、分栏、profile、配色方案、可配置快捷键，配置是一份手写友好的 `settings.json`。
-`go build` 产出单文件 exe，没有 Electron。
+`go build` 产出 exe 与同目录的原生库（2 MB 的 `ghostty-vt.dll`），没有 Electron。
 
 **完整文档：[docs/使用说明.md](docs/使用说明.md)**
 
@@ -28,6 +28,7 @@ pwsh .\build.ps1 -Package        # 等于 go tool mygo build -platform windows/a
 .\build\windows-amd64\wt-go.exe           # 不开参数就是窗口
 .\build\windows-amd64\wt-go.exe diag      # 这台机器上跑不跑得起来：路径、原生库、shell、检查项
 .\build\windows-amd64\wt-go.exe diag --json
+.\build\windows-amd64\wt-go.exe diag --redact  # 贴到 issue 里：个人路径换成 %USERPROFILE% 之类
 .\build\windows-amd64\wt-go.exe mcp       # MCP 服务器（stdin/stdout），给 AI 读现场
 ```
 

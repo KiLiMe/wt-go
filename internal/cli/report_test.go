@@ -84,6 +84,61 @@ func TestDiagFlag(t *testing.T) {
 	}
 }
 
+func TestRedact(t *testing.T) {
+	pairs := [][2]string{
+		{`C:\Users\me\AppData\Local`, `%LOCALAPPDATA%`},
+		{`C:\Users\me`, `%USERPROFILE%`},
+	}
+	r := Report{
+		Executable: `C:\Users\me\AppData\Local\wt-go\wt-go.exe`,
+		Settings:   SettingsReport{Path: `C:\Users\me\settings.json`},
+		Native:     NativeReport{Path: `C:\Users\me\AppData\Local\mygo\natives\x\ghostty-vt.dll`},
+		Profiles:   []ProfileReport{{ID: "pwsh", Command: `C:\Users\me\pwsh.exe`}},
+		Crashes:    []CrashReport{{Path: `C:\Users\me\AppData\Local\wt-go\crash-1.log`}},
+		Log:        LogReport{Path: `C:\Users\me\AppData\Local\wt-go\wt-go.log`, Fault: `E102 at C:\Users\me\x`},
+		Checks:     []Check{{Code: "E102", Detail: `no library under C:\Users\me`}},
+	}
+	got := r.Redact(pairs)
+	want := map[string]string{
+		"exe":      `%LOCALAPPDATA%\wt-go\wt-go.exe`,
+		"settings": `%USERPROFILE%\settings.json`,
+		"native":   `%LOCALAPPDATA%\mygo\natives\x\ghostty-vt.dll`,
+		"command":  `%USERPROFILE%\pwsh.exe`,
+		"crash":    `%LOCALAPPDATA%\wt-go\crash-1.log`,
+		"log":      `%LOCALAPPDATA%\wt-go\wt-go.log`,
+		"fault":    `E102 at %USERPROFILE%\x`,
+		"detail":   `no library under %USERPROFILE%`,
+	}
+	for what, got := range map[string]string{
+		"exe":      got.Executable,
+		"settings": got.Settings.Path,
+		"native":   got.Native.Path,
+		"command":  got.Profiles[0].Command,
+		"crash":    got.Crashes[0].Path,
+		"log":      got.Log.Path,
+		"fault":    got.Log.Fault,
+		"detail":   got.Checks[0].Detail,
+	} {
+		if got != want[what] {
+			t.Errorf("%s = %q, want %q", what, got, want[what])
+		}
+	}
+	// The report it was given is not rewritten under the caller.
+	if r.Executable != `C:\Users\me\AppData\Local\wt-go\wt-go.exe` {
+		t.Errorf("Redact() changed the report it was given: %q", r.Executable)
+	}
+}
+
+func TestDiagRedacted(t *testing.T) {
+	out, errOut, _, code := run(t, "diag", "--redact")
+	if code != 0 {
+		t.Fatalf("Run(diag --redact) = %d, %q", code, errOut)
+	}
+	if !strings.Contains(out, "settings:") {
+		t.Errorf("diag --redact = %q, want the report", out)
+	}
+}
+
 func TestExplainNamesTheDoc(t *testing.T) {
 	r := Report{Checks: []Check{{Code: "E102", Detail: "not found"}}}
 	text := r.Explain()
