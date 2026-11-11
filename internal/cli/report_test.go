@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"wtgo/internal/fault"
 )
 
 func run(t *testing.T, args ...string) (out, errOut string, handled bool, code int) {
@@ -44,15 +46,44 @@ func TestUnknownCommand(t *testing.T) {
 	}
 }
 
+// The command test only checks the wiring: what the report says belongs to
+// Report.Text, and on a machine without libghostty-vt this one would fail a
+// check and print differently.
 func TestDiagText(t *testing.T) {
 	out, _, handled, code := run(t, "diag")
 	if !handled || code != 0 {
 		t.Fatalf("Run(diag) = %v, %d", handled, code)
 	}
-	for _, want := range []string{"wt-go ", "settings:", "native:", "checks", "profile:"} {
+	for _, want := range []string{"wt-go ", "settings:", "native:"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("diag = %q, want %q", out, want)
 		}
+	}
+}
+
+func TestReportText(t *testing.T) {
+	r := Report{
+		Version:  "1.0.0",
+		Platform: "linux/amd64",
+		Checks:   []Check{{Code: fault.NoShell, OK: true, Detail: "1 profile"}},
+	}
+	var b strings.Builder
+	r.Text(&b)
+	if got := b.String(); !strings.Contains(got, "checks:   all 1 passed") {
+		t.Errorf("Text() = %q, want the passing line", got)
+	}
+
+	// A failed check replaces that line: the report lists what is wrong and
+	// stops claiming everything is fine.
+	r.Checks = append(r.Checks, Check{Code: fault.NativeLib, OK: false, Detail: "no libghostty-vt"})
+	b.Reset()
+	r.Text(&b)
+	got := b.String()
+	if !strings.Contains(got, "FAILED    E102 no libghostty-vt") {
+		t.Errorf("Text() = %q, want the failed check", got)
+	}
+	if strings.Contains(got, "checks:") {
+		t.Errorf("Text() = %q, want no passing line next to a failure", got)
 	}
 }
 
