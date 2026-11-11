@@ -420,15 +420,20 @@ func nameWidth(w float32) float32 {
 	return min(max(w, minTabName), maxTabName)
 }
 
-// tabMenu is the tab's context menu.
+// tabMenu is the tab's context menu. The tab that is not a terminal, the
+// settings, has no name of its own to keep and nothing to open a second time:
+// its menu offers only closing it, so it opens without the line that would
+// separate what it does not offer.
 func tabMenu(m *myui.Menu, st State, act Actions, i int) {
-	if m.Item(i18n.T("Rename")).Chosen() {
-		act.BeginRename(i)
+	if i >= 0 && i < len(st.Tabs) && st.Tabs[i].Page == nil {
+		if m.Item(i18n.T("Rename")).Chosen() {
+			act.BeginRename(i)
+		}
+		if m.Item(i18n.T("Duplicate Tab")).Chosen() {
+			act.DuplicateTab(i)
+		}
+		m.Separator()
 	}
-	if m.Item(i18n.T("Duplicate Tab")).Chosen() {
-		act.DuplicateTab(i)
-	}
-	m.Separator()
 	if m.Item(i18n.T("Close Tab")).Chosen() {
 		act.CloseTab(i)
 	}

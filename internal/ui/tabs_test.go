@@ -134,6 +134,36 @@ func TestTabMenu(t *testing.T) {
 	}
 }
 
+// TestTabMenuOfSettings covers the menu of the tab that is not a terminal: it
+// offers neither renaming nor a copy, which only a tab that runs a shell has.
+func TestTabMenuOfSettings(t *testing.T) {
+	at := &myui.ScrollState{}
+	settings := Tab{Name: i18n.T("Settings"), Page: func(c *myui.Context) myui.Element { return myui.Box(c) }}
+	st := &State{Tabs: []Tab{{Name: "PowerShell 7"}, settings}, TabsScroll: at}
+	tt := myui.NewTester(func(c *myui.Context) { strip(c, *st, &scrollActions{at: at}) }, 900, TitleBarHeight*2)
+	tt.Frame()
+	for _, tc := range []struct {
+		name string
+		own  bool
+	}{{"PowerShell 7", true}, {settings.Name, false}} {
+		box, ok := tt.Find(tc.name)
+		if !ok {
+			t.Fatalf("the strip does not draw %q: %q", tc.name, tt.Texts())
+		}
+		tt.RightClickAt(box.X+box.W/2, box.Y+box.H/2)
+		menu := tt.Menu()
+		tt.CloseMenu()
+		for _, label := range []string{i18n.T("Rename"), i18n.T("Duplicate Tab")} {
+			if got := slices.Contains(menu, label); got != tc.own {
+				t.Errorf("a right click on %q opens %q, want %q in it: %v", tc.name, menu, label, tc.own)
+			}
+		}
+		if !slices.Contains(menu, i18n.T("Close Tab")) {
+			t.Errorf("a right click on %q opens %q, want the tab's menu", tc.name, menu)
+		}
+	}
+}
+
 // TestStripButtons covers the buttons after the last tab: they follow it
 // rather than the far end of the strip, and the one that opens a tab comes
 // before the menu that picks the profile it runs.
