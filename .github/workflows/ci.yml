@@ -162,7 +162,7 @@ jobs:
 
   release:
     name: publish the release
-    needs: build
+    needs: [build, test]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     timeout-minutes: 15
