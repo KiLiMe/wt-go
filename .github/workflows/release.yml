@@ -1,5 +1,5 @@
 # Pushing a tag vX.Y.Z builds linux/amd64 and windows/amd64 and publishes a
-# GitHub release with one portable archive per platform plus SHA256SUMS: no
+# GitHub release with one portable .zip per platform plus SHA256SUMS: no
 # installer, no .deb. The tag is the release name; mygo.json carries the version
 # the artifacts are named after, and the two must agree.
 name: release
@@ -64,18 +64,24 @@ jobs:
           cache: true
       - name: package
         run: go tool mygo build -platform "${{ matrix.platforms }}" -skip-installer -skip-dmg -o dist
-      # A release carries one portable archive per platform: the executable
-      # with the native library beside it, unpacked anywhere. No installer,
-      # no .deb, no PKGBUILD: mygo build still writes those, they are just not
-      # release assets.
+      # A release carries one portable archive per platform, both .zip: the
+      # executable with the native library beside it, unpacked anywhere. No
+      # installer, no .deb, no PKGBUILD: mygo build still writes those, they are
+      # just not release assets.
       - name: portable (linux)
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           set -euo pipefail
           mkdir -p out
-          tar -czf "out/wt-go_${{ needs.preflight.outputs.version }}_linux-amd64_portable.tar.gz" \
-            -C dist/linux-amd64 .
-          tar -tzf "out/wt-go_${{ needs.preflight.outputs.version }}_linux-amd64_portable.tar.gz"
+          root="$PWD"
+          zip="out/wt-go_${{ needs.preflight.outputs.version }}_linux-amd64_portable.zip"
+          (cd dist/linux-amd64 && zip -qr "$root/$zip" .)
+          # The archive has to hold the executable and the native library, or
+          # it is not portable: fail rather than publish an empty one.
+          unzip -l "$zip"
+          for need in wt-go libghostty-vt.so; do
+            unzip -Z1 "$zip" | grep -qx "$need" || { echo "::error::$zip has no $need"; exit 1; }
+          done
       - name: portable (windows)
         if: startsWith(matrix.os, 'windows')
         shell: pwsh
