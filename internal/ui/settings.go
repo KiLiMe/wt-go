@@ -252,9 +252,6 @@ func profilesPage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
 	t := c.Theme()
 	section(c, i18n.T("Defaults"), func() {
-		field(c, i18n.T("Color scheme"), i18n.T("The colors a terminal paints with unless its profile names another."), func() {
-			choice(c, &s.ColorScheme, schemeOptions(st.Schemes))
-		})
 		field(c, i18n.T("Font"), i18n.T("The monospaced families this machine has, as the terminal measures them."), func() {
 			choice(c, &s.Font.Family, fontOptions(st.FontFamilies))
 		})
