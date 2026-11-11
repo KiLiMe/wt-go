@@ -96,3 +96,12 @@ docs/              使用说明 / 故障排查 / 代码导读 / ADR / 阶段计�
 - Windows 10 1809+ / Windows 11（主要支持与验证目标，ConPTY）
 - Linux / macOS：有 pty 与平台路径实现，可交叉编译，属实验性
 - Go 1.27+、mygo v0.8.3+
+
+## 许可证
+
+wt-go 本身是 [MIT](LICENSE)。随包发布的东西另有出处：
+
+| 组件 | 许可 |
+| --- | --- |
+| 终端内核 `ghostty-vt.dll`（libghostty-vt，来自 [Ghostty](https://github.com/ghostty-org/ghostty)） | MIT，Copyright (c) 2024 Mitchell Hashimoto |
+| UI 框架与终端插件 [mygo](https://github.com/egoist/mygo) | MIT |
