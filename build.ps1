@@ -4,7 +4,7 @@
     pwsh .\build.ps1            -> mygo 打包到 build\windows-amd64\wt-go.exe（真机测试就用它）
     pwsh .\build.ps1 -Test      -> 编译前先跑 go vet 与 go test
     pwsh .\build.ps1 -Clean     -> 先删掉 build 目录再编译
-    pwsh .\build.ps1 -Package   -> 只出分发包：go tool mygo build -o dist
+    pwsh .\build.ps1 -Package   -> 只出分发包：go tool mygo build -o dist（不造安装器）
 
   图标、版本信息、manifest 与 native 库由 mygo 在打包时注入（go build 带不了资源），
   所以本地构建的产物与发布版一致。产物目录由 mygo.json 的 out 决定（build\），
@@ -41,7 +41,7 @@ try {
     }
 
     if ($Package) {
-        & go tool mygo build -platform windows/amd64 -o dist
+        & go tool mygo build -platform windows/amd64 -skip-installer -skip-dmg -o dist
         if ($LASTEXITCODE -ne 0) { Write-Host '  [ERR] 打包失败。' -ForegroundColor Red; exit $LASTEXITCODE }
         Write-Host "  [OK] $(Join-Path $Root 'dist')" -ForegroundColor Green
         return

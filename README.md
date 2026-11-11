@@ -16,8 +16,11 @@ pwsh .\build.ps1                 # 编译到 build\windows-amd64\wt-go.exe
 发布包用 mygo 自己的构建命令，一次产出可执行文件、原生库与 Linux 包：
 
 ```pwsh
-pwsh .\build.ps1 -Package        # 等于 go tool mygo build -platform windows/amd64 -o dist
+pwsh .\build.ps1 -Package        # 等于 go tool mygo build -platform windows/amd64 -skip-installer -o dist
 ```
+
+发布页只放便携包（Windows 是 `wt-go_<version>_windows-amd64_portable.zip`，里面是
+`wt-go.exe` 与 `ghostty-vt.dll`）：解压双击即可运行，不需要安装器。
 
 ## 命令行
 
