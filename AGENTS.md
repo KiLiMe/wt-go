@@ -26,6 +26,7 @@
 | `internal/theme/` | 配色：设置里的方案 > 内置 > Ghostty 的 617 套（纯函数） |
 | `internal/sys/` | 全部 OS 副作用：路径、原子写、坏配置归档、Job Object、shell 探测、打开路径、崩溃日志 |
 | `internal/i18n/` | 中英文案，缺条目回落原文 |
+| `internal/icons/` | 界面图标：Remix Icon v4.8.0（Apache-2.0）的 SVG，`//go:embed` 打进二进制，由 `ui.Icon` 画（纯函数） |
 | `internal/fault/` | 故障码与一行含义：日志、`wt-go diag`、文档共用一套编号（纯函数） |
 | `internal/cli/` | 不开窗口的那部分：`wt-go diag` 的报告、`wt-go mcp` 的工具（不碰 OS，全走 `internal/sys`） |
 | `internal/mcp/` | 精简的 Model Context Protocol 服务器：JSON-RPC 2.0 + tools/resources（只用标准库） |

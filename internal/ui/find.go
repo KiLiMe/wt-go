@@ -7,6 +7,7 @@ import (
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/i18n"
+	"wtgo/internal/icons"
 )
 
 // The find bar's size.
@@ -61,9 +62,9 @@ func findBar(c *myui.Context, st State, act Actions) {
 				act.Find(f.Text)
 			}
 			myui.Text(c, status(f.Status)).FontSize(11).TextColor(t.TextMuted).SingleLine()
-			findButton(c, "\u25b2", i18n.T("Previous match"), act.FindPrevious)
-			findButton(c, "\u25bc", i18n.T("Next match"), act.FindNext)
-			findButton(c, "\u00d7", i18n.T("Close"), act.EndFind)
+			findButton(c, icons.Up, i18n.T("Previous match"), act.FindPrevious)
+			findButton(c, icons.Chevron, i18n.T("Next match"), act.FindNext)
+			findButton(c, icons.Close, i18n.T("Close"), act.EndFind)
 			// Enter picks the next match, Shift+Enter the one before it. The
 			// field takes Enter as its submit, and the bar cannot see the key
 			// itself, so the modifiers held say which one it was.
@@ -80,8 +81,8 @@ func findBar(c *myui.Context, st State, act Actions) {
 	})
 }
 
-// findButton is one of the bar's buttons: a mark, and what a click does.
-func findButton(c *myui.Context, mark, tooltip string, onClick func()) {
+// findButton is one of the bar's buttons: an icon, and what a click does.
+func findButton(c *myui.Context, ic *icons.Icon, tooltip string, onClick func()) {
 	myui.Box(c).
 		Size(22, 22).
 		Radius(4).
@@ -91,7 +92,7 @@ func findButton(c *myui.Context, mark, tooltip string, onClick func()) {
 		Tooltip(tooltip).
 		OnClick(onClick).
 		Children(func() {
-			myui.Text(c, mark).FontSize(11).TextColor(c.Theme().TextMuted)
+			myui.Icon(c, ic.SVG).Size(12, 12).TextColor(c.Theme().TextMuted)
 		})
 }
 

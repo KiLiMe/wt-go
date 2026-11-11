@@ -5,12 +5,22 @@ import (
 
 	"wtgo/internal/action"
 	"wtgo/internal/i18n"
+	"wtgo/internal/icons"
 )
 
 // TitleBarHeight is the height of the tab strip, which is the title bar: the
 // window keeps it clear of its window controls, and the strip runs under
 // them.
 const TitleBarHeight = 36
+
+// tabHeight is the height of a tab, less than the strip's: the tab in front
+// floats clear of the window's top edge, so that its rounded top corners are
+// drawn rather than cut off, the way Windows Terminal's are.
+const tabHeight float32 = 30
+
+// stripGutter is the room the strip keeps between the window's left edge and
+// the first tab, for the same reason.
+const stripGutter float32 = 8
 
 // tabWidth is how wide a tab is while the settings make them all alike.
 const tabWidth float32 = 176
@@ -61,23 +71,20 @@ type tabMove struct {
 }
 
 // strip is the title bar: the window's buttons where the window draws them,
-// the tabs, the menu that opens tabs, the button that opens one, and the room
-// that moves the window.
+// the tabs with the buttons that open one, and the room that moves the window.
 func strip(c *myui.Context, st State, act Actions) {
 	t := c.Theme()
 	bar := c.TitleBar()
 	myui.Row(c).
 		Height(TitleBarHeight).
 		Background(t.Surface).
-		Padding(0, bar.Right, 0, bar.Left).
+		Padding(0, bar.Right, 0, bar.Left+stripGutter).
 		DragWindow().
 		Children(func() {
 			if b := st.WindowButtons; b != nil && len(b.Start) > 0 {
 				windowButtonGroup(c, b, act, b.Start, false)
 			}
 			stripTabs(c, st, act)
-			profilesMenu(c, st, act)
-			newTabButton(c, act)
 			myui.Box(c).Width(dragRoom).Height(TitleBarHeight)
 			if b := st.WindowButtons; b != nil && len(b.End) > 0 {
 				windowButtonGroup(c, b, act, b.End, true)
@@ -105,9 +112,10 @@ func windowButtonGroup(c *myui.Context, b *WindowButtons, act Actions, names []s
 	})
 }
 
-// windowButton is one of the window's buttons. It draws its icon from boxes
-// rather than from glyphs: the glyphs for these are missing from some fonts,
-// or wide in the fonts that draw them.
+// windowButton is one of the window's buttons. It draws each mark itself, in
+// 1px lines at the size the title bar asks: the glyphs for these are missing
+// from some fonts, or wide in the fonts that draw them, and the strokes of an
+// icon set come out bold at this size.
 func windowButton(c *myui.Context, b *WindowButtons, act Actions, name string) {
 	t := c.Theme()
 	label := ""
@@ -136,7 +144,14 @@ func windowButton(c *myui.Context, b *WindowButtons, act Actions, name string) {
 	case "close":
 		label = i18n.T("Close Window")
 		icon = func(color myui.Color, bg myui.Color) {
-			myui.Text(c, "\u00d7").FontSize(15).TextColor(color)
+			// A cross of 1px lines, as Windows draws it: the icon set's close
+			// is a 2-unit stroke on a 24 grid, which comes out bold beside a
+			// 1px minus and box.
+			myui.Box(c).Size(windowIcon, windowIcon).Draw(func(p *myui.Painter, r myui.Rect) {
+				const in = 0.5
+				p.Line(r.X+in, r.Y+in, r.X+r.W-in, r.Y+r.H-in, 1, color)
+				p.Line(r.X+r.W-in, r.Y+in, r.X+in, r.Y+r.H-in, 1, color)
+			})
 		}
 	default:
 		return
@@ -183,7 +198,7 @@ func stripTabs(c *myui.Context, st State, act Actions) {
 	// they are in keeps them: what they take is what makes the tabs
 	// outgrow the strip.
 	scrolls := st.TabsScroll.MaxX > 0
-	myui.Row(c).Height(TitleBarHeight).Grow(1).Children(func() {
+	myui.Row(c).Height(TitleBarHeight).Grow(1).AlignItems(myui.Center).Children(func() {
 		if scrolls {
 			stepButton(c, st, act, -1)
 		}
@@ -228,11 +243,12 @@ func viewport(c *myui.Context, st State, act Actions) {
 // is harmless, the window keeps the offset in the strip.
 func stepButton(c *myui.Context, st State, act Actions, dir int) myui.Element {
 	t := c.Theme()
-	// The heavy angle quotes carry more weight than the single guillemets,
-	// which read as specks at this size.
-	glyph, tip := "\u276f", i18n.T("Scroll the tabs right")
+	// The arrows come from the icon set: the angle quotes that would stand
+	// for them read as specks at this size, and some fonts have no such
+	// glyph at all.
+	ic, tip := icons.Right, i18n.T("Scroll the tabs right")
 	if dir < 0 {
-		glyph, tip = "\u276e", i18n.T("Scroll the tabs left")
+		ic, tip = icons.Left, i18n.T("Scroll the tabs left")
 	}
 	at := st.TabsScroll
 	color := t.Text
@@ -246,27 +262,43 @@ func stepButton(c *myui.Context, st State, act Actions, dir int) myui.Element {
 		AlignItems(myui.Center).
 		Justify(myui.Center).
 		Cursor(myui.CursorPointer).
+		Label(tip).
 		Tooltip(tip).
 		OnClick(func() { act.ScrollTabs(float32(dir) * tabStep) }).
 		Children(func() {
-			myui.Text(c, glyph).FontSize(18).TextColor(color)
+			myui.Icon(c, ic.SVG).Size(16, 16).TextColor(color)
 		})
 }
 
-// tabs are the tabs, in order, each a place another tab may be dropped on.
+// tabs are the tabs, in order, each a place another tab may be dropped on,
+// and the buttons that open a tab after the last of them.
 func tabs(c *myui.Context, st State, act Actions) {
 	var move *tabMove
-	myui.Row(c).Height(TitleBarHeight).Children(func() {
+	myui.Row(c).Height(TitleBarHeight).AlignItems(myui.End).Children(func() {
 		for i := range st.Tabs {
 			el := tab(c, st, act, i)
 			if d, ok := myui.Drop[tabDrag](el); ok && move == nil {
 				move = &tabMove{from: d.from, to: i}
 			}
 		}
+		stripButtons(c, st, act)
 	})
 	if move != nil {
 		act.MoveTab(move.from, move.to)
 	}
+}
+
+// stripButtons are the buttons after the last tab: the one that opens a tab
+// and the menu that picks the profile it runs, with the line Windows Terminal
+// draws between them. They scroll with the tabs, so that they stay beside the
+// tab they open next to rather than drift to the far end of a wide window.
+func stripButtons(c *myui.Context, st State, act Actions) myui.Element {
+	t := c.Theme()
+	return myui.Row(c).Height(TitleBarHeight).AlignItems(myui.Center).Gap(2).Children(func() {
+		newTabButton(c, act)
+		myui.Box(c).Width(1).Height(16).Margin(0, 4).Background(t.Border)
+		profilesMenu(c, st, act)
+	})
 }
 
 // tab is one tab: the dot of the profile it runs, its name, and the button
@@ -275,15 +307,16 @@ func tab(c *myui.Context, st State, act Actions, i int) myui.Element {
 	t := c.Theme()
 	tb := st.Tabs[i]
 	active := i == st.Active
+	menu := func(m *myui.Menu) { tabMenu(m, st, act, i) }
 	el := myui.Row(c).
-		Height(TitleBarHeight).
+		Height(tabHeight).
 		AlignItems(myui.Center).
 		Gap(8).
 		Padding(0, 8, 0, 12).
 		Cursor(myui.CursorPointer).
 		OnClick(func() { act.FocusTab(i) }).
 		Drag(tabDrag{from: i}).
-		ContextMenu(func(m *myui.Menu) { tabMenu(m, st, act, i) })
+		ContextMenu(menu)
 	name := measuredName(c, tb.Name)
 	if st.EqualTabs {
 		// Every tab as wide as the others, whatever its name takes.
@@ -319,8 +352,13 @@ func tab(c *myui.Context, st State, act Actions, i int) myui.Element {
 			nameColor = t.Text
 		}
 		// The name is a label, not text to select: pressing it starts a drag
-		// of the tab, the way pressing the rest of the tab does.
-		myui.Text(c, tb.Name).SingleLine().MaxWidth(name).Ellipsis("…").TextColor(nameColor).Unselectable()
+		// of the tab, the way pressing the rest of the tab does. It carries
+		// the tab's menu itself: an unselectable element ends the search for
+		// one above it, so a menu only on the row would not open over the
+		// name, the widest part of the tab.
+		myui.Text(c, tb.Name).
+			SingleLine().MaxWidth(name).Ellipsis("…").TextColor(nameColor).
+			Unselectable().ContextMenu(menu)
 		if active || el.Hovered() {
 			closeButton(c, act, i, active)
 		} else {
@@ -378,7 +416,7 @@ func closeButton(c *myui.Context, act Actions, i int, active bool) myui.Element 
 		Tooltip(i18n.T("Close Tab")).
 		OnClick(func() { act.CloseTab(i) }).
 		Children(func() {
-			myui.Text(c, "\u00d7").FontSize(13).TextColor(color)
+			myui.Icon(c, icons.Close.SVG).Size(14, 14).TextColor(color)
 		})
 }
 
@@ -391,7 +429,8 @@ func profilesMenu(c *myui.Context, st State, act Actions) myui.Element {
 		AlignItems(myui.Center).
 		Justify(myui.Center).
 		Cursor(myui.CursorPointer).
-		Tooltip(i18n.T("New Tab")).Menu(func(m *myui.Menu) {
+		Label(i18n.T("Profiles")).
+		Tooltip(i18n.T("Profiles")).Menu(func(m *myui.Menu) {
 		for i, p := range st.Profiles {
 			it := m.Item(p.Name)
 			if i < 9 {
@@ -409,7 +448,7 @@ func profilesMenu(c *myui.Context, st State, act Actions) myui.Element {
 		}
 	}).
 		Children(func() {
-			myui.Text(c, "\u25be").FontSize(12).TextColor(t.TextMuted)
+			myui.Icon(c, icons.Chevron.SVG).Size(14, 14).TextColor(t.TextMuted)
 		})
 }
 
@@ -434,9 +473,10 @@ func newTabButton(c *myui.Context, act Actions) myui.Element {
 		AlignItems(myui.Center).
 		Justify(myui.Center).
 		Cursor(myui.CursorPointer).
+		Label(i18n.T("New Tab")).
 		Tooltip(i18n.T("New Tab")).
 		OnClick(func() { act.NewTab("") }).
 		Children(func() {
-			myui.Text(c, "+").FontSize(16).TextColor(t.TextMuted)
+			myui.Icon(c, icons.Add.SVG).Size(14, 14).TextColor(t.TextMuted)
 		})
 }

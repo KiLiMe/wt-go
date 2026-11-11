@@ -139,6 +139,47 @@ func TestUITheme(t *testing.T) {
 	}
 }
 
+// TestChrome covers the window's theme where the settings name none of their
+// own: the terminal's colors, so that the tab in front carries the pane's
+// background up into the strip, with shades derived between them.
+func TestChrome(t *testing.T) {
+	s := store.Default()
+	for _, appearance := range []string{"", "system", "light", "dark"} {
+		s.Theme = appearance
+		th := Terminal(s)
+		ui := Chrome(s)
+		if ui == nil {
+			t.Fatalf("Chrome with the %q appearance is no theme", appearance)
+		}
+		if ui.Background != th.Background || ui.Text != th.Foreground {
+			t.Errorf("the %q appearance draws %v on %v, want the terminal's %v on %v",
+				appearance, ui.Text, ui.Background, th.Foreground, th.Background)
+		}
+		if want := luminance(th.Background) < 0.5; ui.Dark != want {
+			t.Errorf("the %q appearance is dark = %v, want %v", appearance, ui.Dark, want)
+		}
+		// The strip stands behind a tab that carries the background itself, so
+		// the surfaces and the borders have to read as such.
+		if ui.Surface == ui.Background || ui.Border == ui.Background || ui.Border == ui.Surface {
+			t.Errorf("the %q appearance draws %v on %v with %v between them",
+				appearance, ui.Surface, ui.Background, ui.Border)
+		}
+	}
+
+	// A colorScheme of its own is what the terminal, and so the window, draws
+	// with.
+	s = store.Default()
+	s.Theme = "system"
+	s.ColorScheme = "Catppuccin Latte"
+	th, ok := Scheme(s, s.ColorScheme)
+	if !ok {
+		t.Fatalf("%q is no scheme", s.ColorScheme)
+	}
+	if got := Chrome(s).Background; got != th.Background {
+		t.Errorf("the window draws on %v, want the scheme's %v", got, th.Background)
+	}
+}
+
 // TestUILightTheme covers the colors the terminal falls back to: those of a
 // light theme of the settings' own, where they name one.
 func TestUILightTheme(t *testing.T) {

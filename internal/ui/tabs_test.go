@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"image/color"
 	"slices"
 	"testing"
 
@@ -108,6 +109,82 @@ func TestWindowButtons(t *testing.T) {
 	}
 }
 
+// TestTabMenu covers the tab's menu: a right click anywhere on the tab opens
+// it, over the name too, which is most of the tab.
+func TestTabMenu(t *testing.T) {
+	tt, _, _ := stripOf(t, 1, 0, 900)
+	name, ok := tt.Find("PowerShell 7")
+	if !ok {
+		t.Fatal("the tab does not draw its name")
+	}
+	at := []struct {
+		what string
+		x, y float32
+	}{
+		{"the name", name.X + name.W/2, name.Y + name.H/2},
+		{"the tab's left end", stripGutter + 4, TitleBarHeight / 2},
+	}
+	for _, p := range at {
+		tt.RightClickAt(p.x, p.y)
+		menu := tt.Menu()
+		tt.CloseMenu()
+		if !slices.Contains(menu, i18n.T("Rename")) {
+			t.Errorf("a right click on %s opens %q, want the tab's menu", p.what, menu)
+		}
+	}
+}
+
+// TestStripButtons covers the buttons after the last tab: they follow it
+// rather than the far end of the strip, and the one that opens a tab comes
+// before the menu that picks the profile it runs.
+func TestStripButtons(t *testing.T) {
+	tt, _, _ := stripOf(t, 1, 0, 900)
+	name, ok := tt.Find("PowerShell 7")
+	if !ok {
+		t.Fatal("the tab does not draw its name")
+	}
+	open, ok := tt.Find(i18n.T("New Tab"))
+	if !ok {
+		t.Fatalf("the strip draws no button to open a tab: %q", tt.Texts())
+	}
+	menu, ok := tt.Find(i18n.T("Profiles"))
+	if !ok {
+		t.Fatalf("the strip draws no menu of profiles: %q", tt.Texts())
+	}
+	if !(name.X < open.X && open.X < menu.X) {
+		t.Errorf("the buttons sit at %v and %v after a name at %v", open.X, menu.X, name.X)
+	}
+	// They belong beside the tab they open next to, not at the far end of a
+	// wide window, where the buttons that move the window are.
+	if menu.X > 300 {
+		t.Errorf("the buttons sit at %v and %v in a 900 DIP strip, want them beside the tab at %v",
+			open.X, menu.X, name.X)
+	}
+}
+
+// TestTabFloats covers the tab in front: it is shorter than the strip and
+// starts in from the window's edge, so that its rounded top corners are drawn
+// rather than cut off by the window's edge.
+func TestTabFloats(t *testing.T) {
+	tt, _, _ := stripOf(t, 1, 0, 900)
+	img := tt.Image()
+	px := func(x, y int) color.RGBA { return img.RGBAAt(x, y) }
+	// The far end of the strip is the surface, with nothing drawn over it.
+	surface := px(890, 2)
+	if surface.A != 0xff {
+		t.Fatalf("the strip draws %v at its far end", surface)
+	}
+	if got := px(int(stripGutter)+2, 2); got != surface {
+		t.Errorf("the strip draws %v above the tab, want the surface %v", got, surface)
+	}
+	if got := px(int(stripGutter)/2, TitleBarHeight-1); got != surface {
+		t.Errorf("the strip draws %v left of the tab, want the surface %v", got, surface)
+	}
+	if got := px(int(stripGutter)+20, TitleBarHeight-1); got == surface {
+		t.Errorf("the tab does not reach the bottom of the strip: it draws %v", got)
+	}
+}
+
 // windowActions is the window as the strip's buttons see it: it records what
 // each button asked for.
 type windowActions struct {
@@ -155,7 +232,7 @@ func TestStripFits(t *testing.T) {
 	if at.MaxX != 0 {
 		t.Fatalf("two tabs in 900 DIPs scroll: MaxX = %v", at.MaxX)
 	}
-	if tt.HasText("\u276e") || tt.HasText("\u276f") {
+	if tt.HasText(i18n.T("Scroll the tabs left")) || tt.HasText(i18n.T("Scroll the tabs right")) {
 		t.Errorf("the strip shows buttons to move tabs that all fit: %q", tt.Texts())
 	}
 	one, _, _ := stripOf(t, 1, 0, 900)
@@ -196,7 +273,7 @@ func TestStripScrolls(t *testing.T) {
 	// The buttons take room from the tabs, so they only show once the tabs
 	// outgrow the strip: a frame later, as the strip is measured first.
 	tt.Frame()
-	if !tt.HasText("\u276e") || !tt.HasText("\u276f") {
+	if !tt.HasText(i18n.T("Scroll the tabs left")) || !tt.HasText(i18n.T("Scroll the tabs right")) {
 		t.Errorf("the strip does not show buttons to move the tabs: %q", tt.Texts())
 	}
 

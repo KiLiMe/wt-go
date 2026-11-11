@@ -67,8 +67,9 @@ type App struct {
 	// fontWarned is the family the log already said is not monospace, so that
 	// a settings file naming one leaves a line behind and not one a tab.
 	fontWarned string
-	// uiTheme is the theme of its own the settings name, in place of the
-	// appearance's light or dark one; nil when they name the appearance.
+	// uiTheme is the theme the window draws with: the one the settings name,
+	// else the terminal's own colors, so that the strip and the panes below it
+	// are one surface. nil until the settings are read.
 	uiTheme *myui.Theme
 	// families are the installed families the terminal can draw with, which
 	// the font setting lists; they take a moment to list, so they arrive after
@@ -248,7 +249,8 @@ func newApp() *App {
 }
 
 // background is the color the window fills what the page has not painted yet:
-// the theme's own where the settings name one, else the terminal's.
+// the theme the window draws with, which is the terminal's own unless the
+// settings name a theme.
 func (a *App) background() myui.Color {
 	if a.uiTheme != nil {
 		return a.uiTheme.Background
@@ -269,7 +271,11 @@ func (a *App) appearance() {
 		}
 		return
 	}
-	a.uiTheme = nil
+	// No theme of its own: the window still draws in the terminal's colors, so
+	// that the tab in front carries the pane's background up into the strip.
+	// What the settings name as the appearance is what the desktop's own
+	// window, menus and dialogs follow.
+	a.uiTheme = theme.Chrome(a.settings)
 	switch a.settings.Theme {
 	case "light":
 		mygo.Theme.SetSource(mygo.ThemeLight)

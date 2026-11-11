@@ -614,6 +614,64 @@ Mayoi 用 13 个写死的主题表。
 "Drop it once MyGo forces grayscale itself"），这段可以整块删掉。
 
 ---
+## ADR-034 没选方案时窗口也用终端配色，标签浮在栏上
+
+**背景**：2026-11-11 拿 `build\bin\Release\wt-go.exe` 的实机截图与 Windows Terminal 逐像素比：
+`theme` 为 `system` / `light` / `dark`（默认）时 `theme.UITheme` 返回 `nil`，`app.appearance()`
+就让窗口落回 mygo 内置的 `DarkTheme`——栏 `#272729`、活动标签 `#18181a`、终端底 `#0c0c0c`，
+标签与它下面的窗格之间一道色阶断层，用 Dracula 的终端配 VS Code 灰的栏。同时标签与栏同高、
+贴死窗口左上沿，`Radius(8,8,0,0)` 的两个圆角被窗口边缘裁掉；`+` 与 `▾` 被 `Grow(1)` 推到最右
+（紧贴窗口按钮），`▾` 还在 `+` 前面，中间没有分隔线。目标是：栏比内容亮一档、活动标签就是内容
+底色且浮在栏上（距上沿 6、距左边 8、四角圆润）、`+` `|` `▾` 紧跟最后一个标签。
+
+**决定**：
+
+- 新增 `theme.Chrome(s)`：没选自选方案时，窗口也用 `theme.Terminal(s)` 的颜色按同一个 `window()`
+  推导（表面/悬停/按下/边框 = 底色往前景混 16% / 22% / 28% / 32%）。`UITheme` 对
+  `""` / `system` / `light` / `dark` 仍返回 `nil`——设置页的下拉和 `mygo.Theme.SetSource` 的明暗
+  判断都靠它——只是 `appearance()` 在 `nil` 时不再留空，而是取 `Chrome`。
+- 表面色由 7% / 11% / 15% / 20% 提到 16% / 22% / 28% / 32%：活动标签自己就是内容底色，
+  栏要亮一档才分得开（`#0c0c0c` 上 7% 只有 `#171717`）。
+- 标签条：`tabHeight = 30`（栏 `TitleBarHeight = 36`），标签在栏内底对齐；`stripGutter = 8` 的
+  左内边距；`+`、1px 分隔线、`▾` 移进标签行，随标签一起滚动，紧跟最后一个标签后面。
+
+**理由**：ADR-032 的「窗口与终端同源」只在选了方案时成立，没选时反而最不像——默认配置下
+用户看到的恰好是两套颜色。让 chrome 也走 `Terminal(s)`，默认与显式选方案走同一条推导路径，
+没有第二套规则。
+
+**代价**：`theme: light` 但 `colorScheme` 是深色方案时窗口是深色的——栏与内容同源优先于
+`theme` 字段的字面值；原生菜单/对话框仍按 `SetSource` 跟随系统，极端组合下会一深一浅。
+`+`/`▾` 随标签滚动，标签多到溢出时它们会被滚出视口（与 Windows Terminal 一致）。
+
+---
+## ADR-035 界面图标用打进二进制的 SVG，不用字体字形
+
+**背景**：标签条上的 `+`、`▾`、标签的 `×`、滚动标签的 `❮`/`❯`、查找栏的 `▲`/`▼`/`×`
+原本都是 `myui.Text` 画的字形。字形不可靠：有些字体没有这些码位，按钮就空白；有的字体把它们
+画得很宽，记号会顶出按钮的框（`internal/ui/tabs.go` 里 `windowButton` 的注释早为此写过，
+最小化/最大化/还原才改用盒子画）。`+` 在不同字体里宽窄差一倍，`▾` 在等宽字体里常被拉扁。
+十个参考项目里 sshyard 的做法是：把图标做成 SVG 打进二进制，用 `ui.Icon` 画（`ui.MustParseSVG`
+在启动时解析，`fill` 取当前色，颜色因此跟随周围文字），一个字形都不用。
+
+**决定**：新增 `internal/icons`——`//go:embed svg/*.svg` 带进 6 个 **Remix Icon v4.8.0** 的 SVG
+（`add-line` `arrow-down-s-line` `arrow-up-s-line` `arrow-left-s-line` `arrow-right-s-line`
+`close-line`），`load(name)` 解析成 `*ui.SVG`，以语义命名（`Add`/`Chevron`/`Up`/`Left`/`Right`/`Close`）。
+`internal/ui` 的 `+`、`▾`、标签的 `×`、滚动按钮、查找栏三个按钮、窗口的关闭按钮都改用它。
+版本钉在 **v4.8.0**：Remix Icon 从 v4.9.0（2026-01）起改用 “Remix Icon License v1.0”，
+v4.8.0 是最后一个 **Apache-2.0** 版本，与 wt-go 的许可证相容；`svg/` 原样拷贝，同目录放
+`LICENSE`（Apache-2.0 全文）与 `NOTICE`（出处、版本、换证说明）。
+
+**理由**：矢量、抗锯齿、按按钮要的尺寸缩放，不受用户装的字体影响；颜色走 `TextColor`，
+主题一换就跟着换，不需要第二套图。`ui.Icon`/`ui.MustParseSVG` 是 mygo 自带的，没有新增依赖，
+也不需要图片文件或 webview。
+
+**代价**：二进制多约 1 KB 的 SVG 与一张解析表；每个图标要在 `internal/icons` 里有一行变量
+（加图标 = 拷一个 SVG + 加一行）。最小化/最大化/还原/关闭**四个窗口按钮仍用线画**：
+它们要的是 1px 直线，与系统画法一致；24 网格的图标笔画在小尺寸上会被抗锯齿磨成灰糊、
+还比旁边的 1px 横线粗一倍（先试过 `icons.Close`，截图里那一个叉明显发胖），所以关闭按钮
+用 `Painter.Line` 画两道 1px 斜线（`internal/ui/tabs.go` 的 `windowButton`）。
+
+---
 ## 待定
 
 - 会话常驻：阶段 5 评估是否采用 ADR-009 所述的会话服务模型。

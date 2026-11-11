@@ -34,7 +34,8 @@ func UIThemes() []string { return uiThemes }
 // UITheme is the theme the window draws with when the settings name one: the
 // colors of the scheme called name, with the surfaces, borders and muted text
 // a window needs derived from them. The appearance the settings name ("system",
-// "light", "dark") is none, and so is a name no scheme has.
+// "light", "dark") is none, and so is a name no scheme has: those windows
+// draw with Chrome.
 func UITheme(s store.Settings, name string) (*myui.Theme, bool) {
 	switch strings.ToLower(name) {
 	case "", "system", "light", "dark":
@@ -45,6 +46,14 @@ func UITheme(s store.Settings, name string) (*myui.Theme, bool) {
 		return nil, false
 	}
 	return window(th), true
+}
+
+// Chrome is the theme of the window when the settings name no theme of their
+// own: the colors of the terminal the window shows. The strip then takes the
+// terminal's background up into the tab in front, so that the tab and the
+// pane below it read as one surface rather than two shades of gray.
+func Chrome(s store.Settings) *myui.Theme {
+	return window(Terminal(s))
 }
 
 // window is the theme of a window drawn in a scheme's colors: the scheme's
@@ -62,10 +71,13 @@ func window(th *terminal.Theme) *myui.Theme {
 	}
 	t.Dark = dark
 	t.Background = bg
-	t.Surface = bg.MixOklab(fg, 0.07)
-	t.SurfaceHover = bg.MixOklab(fg, 0.11)
-	t.SurfacePressed = bg.MixOklab(fg, 0.15)
-	t.Border = bg.MixOklab(fg, 0.2)
+	// The surfaces are far enough from the background to read as surfaces:
+	// the strip has to stand out behind a tab that carries the background
+	// itself, which a 7% shade of a #0c0c0c background does not do.
+	t.Surface = bg.MixOklab(fg, 0.16)
+	t.SurfaceHover = bg.MixOklab(fg, 0.22)
+	t.SurfacePressed = bg.MixOklab(fg, 0.28)
+	t.Border = bg.MixOklab(fg, 0.32)
 	t.Text = fg
 	t.TextMuted = fg.MixOklab(bg, 0.38)
 	t.Accent = accent
