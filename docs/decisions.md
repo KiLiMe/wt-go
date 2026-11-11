@@ -1,10 +1,54 @@
 # 设计决策
 
-按时间记录。后加的决定追加在末尾，不覆盖旧的。
+按时间记录，后加的决定追加在末尾，不覆盖旧的。状态只有三种：**有效**（照此实现）、
+**已被 ADR-NN 修订**（新条目说明了变在哪）、**归档**（记录当时的结论或数字，代码已不在或不再变）。
+
+| # | 主题 | 状态 |
+| --- | --- | --- |
+| ADR-01 | 用 mygo 而不是 WPF/Electron/Tauri | 有效 |
+| ADR-02 | 终端内核用 libghostty-vt，不自研 VT | 有效 |
+| ADR-03 | 只接管自己创建的进程 | 有效 |
+| ADR-04 | 配置格式自定，不兼容 WT 的 settings.json | 有效 |
+| ADR-05 | 界面与动作分离 | 有效 |
+| ADR-06 | 先不到 sshterm 里改 | 有效 |
+| ADR-07 | 窗格树独立为 `internal/pane` | 有效 |
+| ADR-08 | OS 副作用集中到 `internal/sys`，纯解析包不做 IO | 有效 |
+| ADR-09 | 会话常驻（应用退出后进程不结束）暂不采用 | 有效 |
+| ADR-10 | 配色方案：自定义 > 内置 > Ghostty 主题 | 有效（内置方案现为 7 套） |
+| ADR-11 | 标签栏兼作标题栏 | Windows/macOS 有效；Linux 例外已由 ADR-28 取消 |
+| ADR-12 | 窗格几何与焦点移动用矩形判定，不用树序 | 有效 |
+| ADR-13 | 键盘焦点每帧用 `Element.Focus()` 保持 | 有效 |
+| ADR-14 | 设置页实时预览：改了就应用，保存只负责写盘 | 有效 |
+| ADR-15 | profile 编辑用工作副本，保存时才写回 `profiles` | 有效 |
+| ADR-16 | 热重载以文件字节为准，有未保存改动时不覆盖 | 有效 |
+| ADR-17 | 多行粘贴确认在 `terminal.Options.OnPaste` 里拦 | 有效 |
+| ADR-18 | 启动大小（列×行）用两次测量，不估算单元格尺寸 | 有效 |
+| ADR-19 | 子进程收尾用“把本进程加进 Job Object” | 有效（`BREAKAWAY_OK` 已用于重置，见 ADR-35） |
+| ADR-20 | 崩溃日志写在配置目录，写完后重新 panic | 有效 |
+| ADR-21 | 失败给编号，日志写文件，`diag` 一次说完 | 有效 |
+| ADR-22 | 排查接口用 MCP 走 stdio，不做 HTTP | 有效 |
+| ADR-23 | 设置页列出动作目录的每一条，录制以动作 id 为键 | 有效 |
+| ADR-24 | 标签宽度用 `Context.MeasureText` 量，不再估算 | 有效 |
+| ADR-25 | 关闭确认：按进程判断，三个答案不是一个 | 有效 |
+| ADR-26 | 标签条自己滚动：溢出了才出现的箭头 + 视口接管滚轮 | 有效 |
+| ADR-27 | `diag --redact`：报告要能贴出去，但不说明这台机器属于谁 | 有效 |
+| ADR-28 | Linux 也用自绘标题栏，按钮跟随桌面布局 | 有效 |
+| ADR-29 | 字体族不是等宽就回落到 `monospace` | 有效 |
+| ADR-30 | 设置页的控件用现成的，不手搓 | 有效 |
+| ADR-31 | 界面主题从配色方案推导 | 有效 |
+| ADR-32 | Linux 用 fontconfig 规则保住文字颜色 | 有效 |
+| ADR-33 | 界面图标用打进二进制的 SVG，不用字体字形 | 有效 |
+| ADR-34 | 自定义配色按「基名 + (custom)」命名，行尾给删除 | 有效 |
+| ADR-35 | 启动时发现的 shell 写进 settings.json，探测只在写第一份文件时 | 有效 |
+| ADR-36 | 字体下拉的族列表按需枚举，等宽判定按 `(family, size)` 记忆化 | 有效 |
+| ADR-37 | 不做进程内 `malloc_trim` | 结论：不做（别再试） |
+| ADR-38 | 设置页一帧取一次快照，配色列表随 `apply` 失效 | 有效 |
+| ADR-39 | 等 shell 出现时读内核的 children 文件，不再全量扫进程表 | 有效 |
+| ADR-40 | 性能基线（2026-11-11 单机实测，一次性记录） | 归档（数字为单机实测） |
 
 ---
 
-## ADR-001 用 mygo 而不是 WPF/Electron/Tauri
+## ADR-01 用 mygo 而不是 WPF/Electron/Tauri
 
 **决定**：Go + mygo。
 
@@ -16,7 +60,7 @@ Win32 API 要手写 syscall。
 
 ---
 
-## ADR-002 终端内核用 libghostty-vt，不自研 VT
+## ADR-02 终端内核用 libghostty-vt，不自研 VT
 
 **决定**：`github.com/egoist/mygo/plugins/terminal`。
 
@@ -29,7 +73,7 @@ Windows ConPTY 接入。
 
 ---
 
-## ADR-003 只接管自己创建的进程
+## ADR-03 只接管自己创建的进程
 
 **决定**：不做"附加到已存在的终端窗口/ConPTY 会话"。
 
@@ -41,7 +85,7 @@ Windows ConPTY 接入。
 
 ---
 
-## ADR-004 配置格式自定，不兼容 WT 的 settings.json
+## ADR-04 配置格式自定，不兼容 WT 的 settings.json
 
 **决定**：wt-go 用自己的扁平结构。
 
@@ -53,7 +97,7 @@ Windows ConPTY 接入。
 
 ---
 
-## ADR-005 界面与动作分离
+## ADR-05 界面与动作分离
 
 **决定**：`internal/ui` 只实现 `Actions` 接口的调用方，不直接改状态里的进程/文件。
 
@@ -62,7 +106,7 @@ Windows ConPTY 接入。
 
 ---
 
-## ADR-006 先不到 sshterm 里改
+## ADR-06 先不到 sshterm 里改
 
 **曾被尝试**：在 sshterm 里给本地 shell 加"管道模式"跑 pi。
 
@@ -72,9 +116,7 @@ sshterm 分支未提交，不影响 wt-go。
 
 ---
 
----
-
-## ADR-007 窗格树独立为 `internal/pane`
+## ADR-07 窗格树独立为 `internal/pane`
 
 **决定**：`Tab` / `Node` / `Pane` 与切分、焦点、关闭补位逻辑放在 `internal/pane`，不放进 `internal/ui`，也不放进 `internal/app`。
 
@@ -86,7 +128,7 @@ sshterm 分支未提交，不影响 wt-go。
 
 ---
 
-## ADR-008 OS 副作用集中到 `internal/sys`，纯解析包不做 IO
+## ADR-08 OS 副作用集中到 `internal/sys`，纯解析包不做 IO
 
 **背景**：原文档“只有 `internal/app` 能碰文件系统和进程”与 `store`（读写 `settings.json`、热重载）、`profile`（阶段 1 读注册表发现 WSL）的职责冲突。
 
@@ -99,24 +141,24 @@ sshterm 分支未提交，不影响 wt-go。
 
 ---
 
-## ADR-009 会话常驻（应用退出后进程不结束）暂不采用
+## ADR-09 会话常驻（应用退出后进程不结束）暂不采用
 
 **背景**：`egoist/gorex` 用独立的会话服务进程（经 Unix socket 通信，JSON 行协议）持有 ConPTY，应用退出后进程继续运行，重开窗口时恢复标签与窗格。
 
-**决定**：阶段 0–4 不做，保持 ADR-003 的“自己创建、自己管理生命周期”模型，应用退出 = 关闭所有标签。
+**决定**：阶段 0–4 不做，保持 ADR-03 的“自己创建、自己管理生命周期”模型，应用退出 = 关闭所有标签。
 
-**理由**：会话服务带来多进程、版本匹配（gorex 为此做了 `staleServer` 检测）、Windows 上分离进程等复杂度，超出阶段 0–4 的范围。ADR-003 不冲突（进程仍是自己创建的），但会改变生命周期模型。
+**理由**：会话服务带来多进程、版本匹配（gorex 为此做了 `staleServer` 检测）、Windows 上分离进程等复杂度，超出阶段 0–4 的范围。ADR-03 不冲突（进程仍是自己创建的），但会改变生命周期模型。
 
 **约束**：`internal/sys` 与 `internal/pane` 的接口不得假设“进程随窗口结束”，以便阶段 5 的“启动恢复”可以再评估。
 
 ---
 
-## ADR-010 配色方案：自定义 > 内置 > Ghostty 主题
+## ADR-10 配色方案：自定义 > 内置 > Ghostty 主题
 
 **背景**：`plugins/terminal` 自带 Ghostty 的 617 套主题（`GhosttyTheme(name)`），但 WT 的
 Campbell / Solarized / Tango / Vintage 都不在其中。
 
-**决定**：`internal/theme` 按 `settings.schemes` → 内置（手写 9 套 WT 取值）→ Ghostty →
+**决定**：`internal/theme` 按 `settings.schemes` → 内置（手写 7 套 WT 取值：Campbell 与它的 Powershell 变体、Solarized Dark/Light、Tango Dark/Light、Vintage）→ Ghostty →
 `theme` 对应的默认配色（`terminal.DarkTheme()` / `LightTheme()`）的顺序解析；自定义方案只写
 部分字段时，未写的字段沿用同名内置/Ghostty 方案的值。
 
@@ -127,26 +169,21 @@ Campbell / Solarized / Tango / Vintage 都不在其中。
 
 ---
 
-## ADR-011 标签栏兼作标题栏
+## ADR-11 标签栏兼作标题栏
 
-**决定**：Windows/macOS 上窗口用 `mygo.TitleBarHidden` + `TitleBarHeight = ui.TitleBarHeight`（36dp），
-标签栏自己就是拖窗区域（空白处 `DragWindow`），不再单独画 40dp 标题栏。
-Linux 上改用 `mygo.TitleBarDefault`（`internal/app/titlebar_linux.go`）。
+**决定**：Windows / macOS 上窗口用 `mygo.TitleBarHidden` + `TitleBarHeight = ui.TitleBarHeight`（40 DIP），
+标签栏自己就是拖窗区域（空白处 `DragWindow`），不再单独画一条标题栏。
 
 **理由**：与 Windows Terminal 一致（用户提供的参考图即如此），省掉一行高度；
 `mygo` 的 `DragWindow` 放在容器上不影响子元素点击（`ui/input.go:481`）。
-Linux 除外，是因为 mygo 的 hidden 在 Wayland 上靠合成器补标题栏，在 X11 上只做
-`gtk_window_set_decorated(false)`，既没有服务端装饰也没有 CSD，窗口于是无边框、
-无按钮、拖不动；交给平台画标题栏后，X11 由窗口管理器装饰，Wayland 与之前一样由合成器装饰。
 
-**代价**：标签栏右侧必须留空白给拖窗，标签放不下时没有横向滚动（已知退化，待做文本测量）。
-Linux 上多一行合成器/窗口管理器的标题栏，标签栏不再顶到窗口上缘。
+**代价**：标签栏右侧必须留空白给拖窗；标签放不下时没有横向滚动（后来由 ADR-26 的滚动视口补上）。
 
-**后续**：Linux 的例外在 ADR-029 取消。
+**状态**：Windows / macOS 有效。最初 Linux 例外地交给平台画标题栏，那条例外已由 ADR-28 取消。
 
 ---
 
-## ADR-012 窗格几何与焦点移动用矩形判定，不用树序
+## ADR-12 窗格几何与焦点移动用矩形判定，不用树序
 
 **背景**：切分出来的窗格树里，树的顺序不等于视觉相邻：`A | (B1 / B2)` 中 B2 的“左边”
 在视觉上是 A，在树里却先遇到 B1。
@@ -162,7 +199,7 @@ Linux 上多一行合成器/窗口管理器的标题栏，标签栏不再顶到�
 
 ---
 
-## ADR-013 键盘焦点每帧用 `Element.Focus()` 保持
+## ADR-13 键盘焦点每帧用 `Element.Focus()` 保持
 
 **背景**：`mygo` 的 `AutoFocus()` 只在元素“出现的那一帧”生效；窗格切分后旧窗格已经在树上，
 只给它 `AutoFocus` 并不会把焦点从别的窗格拿回来（实测：`Alt+←` 后输入仍进原窗格）。
@@ -178,7 +215,7 @@ Linux 上多一行合成器/窗口管理器的标题栏，标签栏不再顶到�
 
 ---
 
-## ADR-014 设置页实时预览：改了就应用，保存只负责写盘
+## ADR-14 设置页实时预览：改了就应用，保存只负责写盘
 
 **背景**：WT 的设置页是“改完保存才生效”，但它能预览是因为它的设置模型是“重启式”的；
 而字体、配色、透明度这些项的预览价值很高，等保存才看到效果会很别扭。
@@ -194,7 +231,7 @@ Linux 上多一行合成器/窗口管理器的标题栏，标签栏不再顶到�
 
 ---
 
-## ADR-015 profile 编辑用工作副本，保存时才写回 `profiles`
+## ADR-15 profile 编辑用工作副本，保存时才写回 `profiles`
 
 **背景**：设置页要能看/改自动发现的 profile，但自动发现的结果只在内存里（不落盘）。
 若直接绑到 `a.settings.Profiles[i]`，翻一遍页面就会把发现项写成用户配置。
@@ -208,7 +245,7 @@ Linux 上多一行合成器/窗口管理器的标题栏，标签栏不再顶到�
 
 ---
 
-## ADR-016 热重载以文件字节为准，有未保存改动时不覆盖
+## ADR-16 热重载以文件字节为准，有未保存改动时不覆盖
 
 **背景**：设置页自己也会写文件，若把“文件变了”当成外部修改，会和自己的保存打架。
 
@@ -223,7 +260,7 @@ Linux 上多一行合成器/窗口管理器的标题栏，标签栏不再顶到�
 
 ---
 
-## ADR-017 多行粘贴确认在 `terminal.Options.OnPaste` 里拦
+## ADR-17 多行粘贴确认在 `terminal.Options.OnPaste` 里拦
 
 **背景**：要问“确定粘贴 N 行？”，需要拿到粘贴内容并在写入前取消它。
 
@@ -236,7 +273,7 @@ Linux 上多一行合成器/窗口管理器的标题栏，标签栏不再顶到�
 
 ---
 
-## ADR-018 启动大小（列×行）用两次测量，不估算单元格尺寸
+## ADR-18 启动大小（列×行）用两次测量，不估算单元格尺寸
 
 **背景**：终端只报告“能放下多少格”，不报告一格多宽；mygo 也没有字体度量接口。
 第一版用“内容区宽 ÷ 列数”估算，实测 100×30 得到 97×29（还漏算了 36dp 标题栏）。
@@ -251,7 +288,7 @@ Linux 上多一行合成器/窗口管理器的标题栏，标签栏不再顶到�
 
 ---
 
-## ADR-019 子进程收尾用“把本进程加进 Job Object”
+## ADR-19 子进程收尾用“把本进程加进 Job Object”
 
 **背景**：窗格的 shell 是本进程的子进程。窗口被强杀（任务管理器、崩溃、`Stop-Process -Force`）时，
 `Terminal.Close()` 不会跑，`pwsh.exe` 与它起的进程会留在系统里。
@@ -264,12 +301,12 @@ Windows 关句柄 → 作业里的进程全部终止。
 也不会漏掉 shell 后来自己起的子进程；一个调用覆盖所有窗格、所有切分。
 
 **代价**：本进程自己也在作业里，所以“脱离父作业”这类能力（`BREAKAWAY_OK`）用不上；
-如果以后要把某个窗格做成“关窗后继续跑”（会话常驻，ADR-009），这条规则要重新考虑。
+如果以后要把某个窗格做成“关窗后继续跑”（会话常驻，ADR-09），这条规则要重新考虑。
 实测：强杀 wt-go 后 `pwsh.exe` 与两个 `conhost.exe` 全部退出。
 
 ---
 
-## ADR-020 崩溃日志写在配置目录，写完后重新 panic
+## ADR-20 崩溃日志写在配置目录，写完后重新 panic
 
 **背景**：上一阶段的空指针崩溃只能靠 `Start-Process -RedirectStandardError` 才看到，
 用户那边就是一个窗口消失了。
@@ -283,15 +320,17 @@ Windows 关句柄 → 作业里的进程全部终止。
 
 ---
 
-## ADR-021 失败给编号，日志写文件，`diagnose` 一次说完
+## ADR-21 失败给编号，日志写文件，`diag` 一次说完
 
 **背景**：用户看到的症状是“窗口不开”“某个快捷键没反应”；打包的 exe 是 GUI 子系统，
 没有控制台，`log.Printf` 就这么消失了。设备上的事实（哪个 dll、哪个 shell、哪行键位）
 只有机器自己知道。
 
 **决定**：
-1. `internal/fault` 定义八个码（`E101` 无可用 profile、`E102` 找不到 libghostty-vt、`E103` 配置目录不可用、
-   `E201` 设置不是合法 JSON、`E202` 字段越界、`E203` 键位字符串读不懂、`E301` shell 起不来、`E302` panic），
+1. `internal/fault` 定义 16 个码：`E101` 无可用 profile、`E102` 找不到 libghostty-vt、`E103` 配置目录不可用；
+   `E201` 设置不是合法 JSON、`E202` 字段越界、`E203` 键位字符串读不懂、`E204` 字体不是等宽、`E205` 写不进配置、
+   `E206` 删不掉配置、`E207` 重启失败、`E208` 打不开目录；`E301` shell 起不来、`E302` panic、`E303` 读不到进程列表、
+   `E304` 没认出标签的 shell、`E305` 找不到 fontconfig，
    每码一行英文含义；日志里用 `fault.Line(code, detail)` 打印，不再写自由文本。
 2. `app.Run` 一开始把日志接到 `%LOCALAPPDATA%\wt-go\wt-go.log`（超过 1 MiB 下次启动轮换成 `.log.1`）。
 3. `wt-go diag` 打印同一套事实：版本/提交、exe、设置文件、原生库、每个 profile 能不能启动、
@@ -305,7 +344,7 @@ Windows 关句柄 → 作业里的进程全部终止。
 
 ---
 
-## ADR-022 排查接口用 MCP 走 stdio，不做 HTTP
+## ADR-22 排查接口用 MCP 走 stdio，不做 HTTP
 
 **背景**：“把问题交给 AI”需要机器可读的现场。候选是本地 HTTP 端口与 MCP（Model Context Protocol）。
 
@@ -321,7 +360,7 @@ Windows 关句柄 → 作业里的进程全部终止。
 
 ---
 
-## ADR-023 设置页列出动作目录的每一条，录制以动作 id 为键
+## ADR-23 设置页列出动作目录的每一条，录制以动作 id 为键
 
 **背景**：旧实现只渲染 `settings.json` 里已有的键位，于是没有默认键的动作（例如「关闭标签」）
 在设置页里根本不存在，永远无法绑定；录制状态还是以“行号”记的，而行的意义来自文件数组。
@@ -337,7 +376,7 @@ Windows 关句柄 → 作业里的进程全部终止。
 
 ---
 
-## ADR-024 标签宽度用 `Context.MeasureText` 量，不再估算
+## ADR-24 标签宽度用 `Context.MeasureText` 量，不再估算
 
 **背景**：标签条按 `float32(220)` 换算宽度，中文名、长短不一的名字都会留下过大或过小的空隙。
 
@@ -351,75 +390,53 @@ Windows 关句柄 → 作业里的进程全部终止。
 
 ---
 
-## ADR-025 关闭确认按进程树判断，`confirmClose` 改三态
+## ADR-25 关闭确认：按进程判断，三个答案不是一个
 
-**背景**：`pane.Tab.Running()` 只看终端本身是否结束，停在提示符的 shell 也不算结束，
-于是关任何一个活标签都弹「这个标签里的程序还在运行。」——用户一眼就看穿："实际上并没有程序"。
+**背景**：最初关标签只看终端本身有没有结束（`pane.Tab.Running()`），停在提示符的 shell 也算“在跑”，
+于是关任何一个活标签都弹「这个标签里的程序还在运行」——用户一眼就看穿：“实际上并没有程序”。
 插件不给 PID（`terminal.Terminal` 没有进程句柄，`internal/pty` 是 internal 且 Windows 上返回 0），
-所以「程序在跑」只能自己看进程树。
+所以“程序在跑”只能自己看进程树。
+
+落地一版之后又发现三处说不通：macOS 没有 `/proc`，采集必然失败，退回“终端还在”于是空闲 shell 也提示；
+两个标签同时启动时按“最大 Pid”认领会把两个标签认成同一个 shell；“读不到进程列表”和“确实没程序”
+共用一句话，用户没法区分。另外 scoop 这类包管理器在 `PATH` 上放的是 **shim**
+（`…\shims\pwsh.exe`），它再启动真正的 `…\apps\pwsh\current\pwsh.exe`，于是每个标签底下永远有一个
+同名子进程，空闲标签也被判成“忙”。
 
 **决定**：
 
-- `internal/sys/process.go` 枚举全机进程（Windows 走 Toolhelp32，其它读 `/proc/<pid>/stat`）：
-  `Children`、`Descendants`（BFS，防环）、`Spawned`（两次快照里新增的、父进程是本进程的子进程）。
-  创建终端时 `before`/`after` 各取一次快照，记下 `App.shells[term]`；关标签时该 PID 有子孙才算「还在跑」。
-- `Spawned` 跳过 pty 的后台宿主（`conhost.exe` / `OpenConsole.exe`）：ConPTY 会把它和 shell 一起
-  作为本进程的子进程拉起，pid 更大，不排除就会认错。
-- 插件在 goroutine 里启动程序，`terminal.New` 返回时进程还没起来，所以等待放到后台
-  （50 × 10ms 轮询），结果经 `App.Do` 回到 UI 线程写入 `shells`。
-- `confirmClose` 从 bool 变三态字符串：`running`（默认）/ `always` / `never`；
-  `UnmarshalJSON` 仍接受旧的 `true`（= `running`）与 `false`（= `never`）。
+- `internal/sys` 把判断做成纯函数：`Proc{Pid, Parent, Name, State}`、`ShellProc{Pid, Name}`、
+  `ShellProc.Activity(all []Proc) Activity`，三态 `Idle` / `Busy` / `Unknown`。shell 自己的 Pid 找不到
+  （已退出）或名字对不上（PID 被复用）→ `Idle`；有非僵尸、非 pty 宿主的子孙 → `Busy`；
+  拿不到 shell 的 Pid → `Unknown`。
+- 采集分平台，`Activity` 自己不认识平台：Windows 走 Toolhelp32，Linux 读 `/proc/<pid>/stat`，
+  macOS 走 `unix.SysctlKinfoProcSlice("kern.proc.all")`（`P_stat` 映射成 Linux 风格的 `State` 字母）。
+- `Spawned(before, after, parent, taken)` 在两次快照里找出“父进程是本进程、且还没被认领”的新进程，
+  取**最小 Pid**；`taken` 是 `map[int]*terminal.Terminal`，多个标签同时启动时先看的先认领，
+  `forget` 按终端清掉它的全部 Pid（否则 shim 的 Pid 会永久占位，将来被系统复用后新标签就认不出自己的 shell）。
+- 认领时跟着“同名重执行链”往下走一层：`sys.Reexec(all, p)` 找出 p 唯一的同名子进程，认领后再看最多
+  250ms（`shellSettle`），有就 `reclaim` 到子进程上。跳过 pty 的后台宿主（`conhost.exe` / `OpenConsole.exe`）：
+  ConPTY 会把它和 shell 一起作为本进程的子进程拉起，pid 更大，不排除就会认错。
+- 插件在 goroutine 里启动程序，`terminal.New` 返回时进程还没起来，所以等待放到后台：
+  3 秒截止（`start.Add(3 * time.Second)`），10ms 起每次翻倍、上限 100ms 的自适应轮询，结果经 `App.Do` 回 UI 线程。
+- `confirmClose` 三态：`running`（默认，`Activity != Idle` 才问）/ `always` / `never`；
+  `UnmarshalJSON` 仍接受旧的 `true`（= `running`）与 `false`（= `never`）。`Unknown` 时说另一句话
+  （“wt-go 无法判断这个标签里是否还有程序在运行”），读不到进程列表时打 `E303`，认不到 shell 打 `E304`。
+- 提示点名：`ShellProc.Programs(all)` 列出让标签忙的程序名（去重、去掉 `.exe`、跳过僵尸与 pty 宿主），
+  `Activity` 就是 `len(Programs) > 0`；`app` 用 `tabActivity{act, programs}` 把两者一起交给对话框，
+  文案是「还在运行：PING」。用户问的是“为什么 pwsh 会提示”，点名程序比任何解释都短。
 
-**理由**：只有进程树能区分"提示符"和"正在跑东西"；三态让不想被问的人一次关掉，也让喜欢确认的人保留旧行为，
-而旧的 bool 无法表达"有程序才问"这个默认意图。
+**理由**：产品要回答的是“关了会不会杀掉用户还在用的东西”，这个问题有三个答案，不是一个。
+把 `Unknown` 单独拿出来，既不会把误报推给用户（假阳性），也不会在真的不知道时说“没事”（假阴性）。
+纯函数化之后，macOS 的采集错误不可能再伪装成“有程序在跑”；点名程序则把“为什么”直接写在提示里。
 
-**代价**：每次关标签枚举一次全机进程（几百条，微秒级）；快照拿不到 PID 时退回"总是问"（宁可多问，不可误杀）；
-Windows 上靠进程名排除 conhost 是启发式，改名后就会退化成"总是问"。
-
----
-
-## ADR-026 关闭提示改用 `Activity` 三态，认不出就不假装没程序
-
-**背景**：ADR-025 的判断是"有子孙进程就算在跑"，但落地后有三处说不通：
-macOS 没有 `/proc`，`Processes()` 必然失败，退回 `tab.Running()` 于是空闲 shell 也提示；
-两个标签同时启动时 `Spawned` 取"最大 Pid"会把两个标签认成同一个 shell；
-"读不到进程列表"和"确实没程序"共用一句话，用户没法区分。
-
-**决定**：
-
-- `internal/sys` 把判断抽成纯函数：`Proc{Pid, Parent, Name, State}` + `ShellProc{Pid, Name}` + `ShellProc.Activity(all []Proc) Activity`，
-  三态 `Idle` / `Busy` / `Unknown`。shell 自己的 Pid 找不到（已退出）→ `Idle`；
-  名字对不上（PID 被复用）→ `Idle`；有非僵尸、非 pty 宿主的子孙 → `Busy`；
-  拿不到 shell 的 Pid → `Unknown`。`Tab.Running()` 随之删掉。
-- macOS 走 `unix.SysctlKinfoProcSlice("kern.proc.all")`（`P_stat` 映射成 Linux 风格的 `State` 字母），
-  与 Linux 的 `/proc/<pid>/stat` 解析同构，`Activity` 不再知道平台。
-- `Spawned(before, after, parent, taken)` 返回 `Proc` 并新增 `taken`：多个标签同时启动时，
-  先看的那次先认领，后看的跳过已被认领的 Pid；选择规则从"最大 Pid"改成"最小 Pid"（更早启动的更可能是这次的那个）。
-- 认领表 `App.taken`（`spawnMu` 保护）随 `forget` 释放；等待窗口从"50×10ms"改成"3 秒自适应轮询"（10ms 起每次翻倍，上限 100ms）。
-- `confirmClose` 仍是三态，但 `running` 的语义变成 `Activity != Idle`；`Unknown` 时说另一句话
-  （"wt-go 无法判断……"），`always` 仍用"关闭即结束"那句。读不到进程列表时打 `E303`。
-- 提示会点名：`ShellProc.Programs(all)` 列出让标签忙的程序名（去重、去掉 `.exe`、跳过僵尸与 pty 宿主），
-  `Activity` 就是 `len(Programs) > 0`，两处共用同一套过滤。`app` 用 `tabActivity{act, programs}` 把两者一起传给对话框，
-  文案变成「还在运行：PING」。理由：用户问的是"为什么 pwsh 会提示"，点名程序比任何解释都短，
-  而程序名恰好就是 `ping`/`vim` 这类用户自己起的。
-- 认领时跟着"同名重执行链"往下走一层：`sys.Reexec(all, p)` 找出 p 唯一一个同名子进程，
-  `spawned` 找到候选后最多再看 250ms（`shellSettle`），有就用 `reclaim` 把认领的 Pid 换到子进程上。
-  理由：scoop 这类包管理器在 `PATH` 上放的是 **shim**（`…\shims\pwsh.exe`），它再启动真正的 `…\apps\pwsh\current\pwsh.exe`；
-  于是标签的 shell 底下永远有一个同名子进程，空闲标签也被判成 `Busy`，提示「还在运行：pwsh」。
-  实测：从资源管理器双击启动（`PATH` 命中 shim）必现，从带真 exe 的 `PATH` 启动则复现不出来。
-  `taken` 随之从 `map[int]bool` 变成 `map[int]*terminal.Terminal`，`forget` 按终端清掉它的全部 Pid，
-  否则 shim 的 Pid 会永久占位，将来被系统复用后新标签就认不出自己的 shell。
-
-**理由**：产品要回答的是"关了会不会杀掉用户还在用的东西"，这个问题有三个答案，不是一个。
-把 `Unknown` 单独拿出来，既不会把误报推给用户（假阳性），也不会在真的不知道时说"没事"（假阴性）。
-纯函数化之后，macOS 的采集错误不可能再伪装成"有程序在跑"。
-
-**代价**：shell 内置的长命令（`Start-Sleep`）看不到，这是进程树的固有盲区（插件内部的 OSC 133 提示符状态没有导出）；
-只在文档里说明，不为此引入新的采集层。启动器若只在一个短暂窗口内启动子进程（超过 `shellSettle`），仍会被当成 shell 本身。
+**代价**：每次关标签枚举一次进程（几百条，微秒级）；快照拿不到 PID 时退回“总是问”（宁可多问，不可误杀）。
+shell 内置的长命令（`Start-Sleep 300`）看不到——这是进程树的固有盲区（插件内部的 OSC 133 提示符状态没有导出），
+只在文档里说明，不为此引入新的采集层；启动器若在 `shellSettle` 之后才启动子进程，仍会被当成 shell 本身。
 
 ---
 
-## ADR-027 标签条自己滚动：溢出了才出现的箭头 + 视口接管滚轮
+## ADR-26 标签条自己滚动：溢出了才出现的箭头 + 视口接管滚轮
 
 **背景**：标签多到放不下时，原来是把标签压窄（名字截断、`×` 被挤掉），再往后连标题栏的拖动区都没了。
 计划要求：统一的最小宽度、独立的可视范围、`<`/`>` 指示、滚轮横向浏览，且不能改 `internal/ui` 的纯绘制职责。
@@ -451,7 +468,7 @@ macOS 没有 `/proc`，`Processes()` 必然失败，退回 `tab.Running()` 于�
 
 ---
 
-## ADR-028 `diag --redact`：报告要能贴出去，但不说明这台机器属于谁
+## ADR-27 `diag --redact`：报告要能贴出去，但不说明这台机器属于谁
 
 **背景**：`wt-go diag` 的全部价值在于把现场交给别人看（issue、聊天、AI），而报告里的每一行都带着
 绝对路径：`C:\Users\<名字>\AppData\Local\wt-go\settings.json`。贴出去等于连账号名一起贴。
@@ -471,9 +488,9 @@ macOS 没有 `/proc`，`Processes()` 必然失败，退回 `tab.Running()` 于�
 
 ---
 
-## ADR-029 Linux 也用自绘标题栏，按钮跟随桌面布局
+## ADR-28 Linux 也用自绘标题栏，按钮跟随桌面布局
 
-**背景**：ADR-011 让 Linux 把标题栏交给平台，因为 mygo 的 `TitleBarHidden` 在 X11 上只做
+**背景**：ADR-11 让 Linux 把标题栏交给平台，因为 mygo 的 `TitleBarHidden` 在 X11 上只做
 `gtk_window_set_decorated(false)`。代价是 Linux 上多一行 GTK/窗口管理器的标题栏，它的配色来自
 桌面主题（GTK3 主题），与终端配色是两套：切深浅色、换配色方案时这一行都不跟。
 
@@ -502,7 +519,7 @@ header bar，比“留 GTK 标题栏再用 CSS 压掉 80px 空标题”（sshyar
 
 ---
 
-## ADR-030 字体族不是等宽就回落到 `monospace`
+## ADR-29 字体族不是等宽就回落到 `monospace`
 
 **背景**：`font.family` 写了一个这台机器没有的族名（Linux 上常见：`Cascadia Mono`），
 fontconfig 按兜底链挑中一个**比例字体**（更纱黑体 SC）。mygo 的终端网格取“可打印 ASCII 里
@@ -532,7 +549,7 @@ Windows 的默认值也随之改成 `Cascadia Mono,monospace`：没装 Cascadia 
 
 ---
 
-## ADR-031 设置页的控件用现成的，不手搓
+## ADR-30 设置页的控件用现成的，不手搓
 
 **背景**：设置页原先自己拼控件：下拉是 `myui.MenuButton` 打开的桌面原生菜单，字体栏是
 `myui.Combobox`（失焦会把没匹配到选项的输入退回原值），数字是 `-` / 输入框 / `+` 三个独立方块，
@@ -557,38 +574,50 @@ Windows 的默认值也随之改成 `Cascadia Mono,monospace`：没装 Cascadia 
 
 ---
 
-## ADR-032 界面主题从配色方案推导
+## ADR-31 界面主题从配色方案推导
 
-**背景**：`theme` 原先只有 `system` / `light` / `dark`，整个窗口是 mygo 的两套默认 token，
-与终端里选的配色方案无关——用 Dracula 的终端配 VS Code 灰的标签栏。mygo v0.8.3 的
-`ui.Theme` 有完整 token 集、`Context.SetTheme` 可以整棵替换，`mygo.Theme.SetSource` 只管
-原生窗口（Linux 的 CSD、Windows 的标题栏）。参考项目里 kero 就是这么做的：拿终端方案的
-背景与光标推导整套 UI 颜色（`kero/theme.go:334 ghosttyLook`）；dgopher 用 JSON 主题文件，
-Mayoi 用 13 个写死的主题表。
+**背景**：`theme` 原先只有 `system` / `light` / `dark`，整个窗口是 mygo 的两套默认 token，与终端里选的
+配色方案无关——用 Dracula 的终端配 VS Code 灰的标签栏。mygo v0.8.3 的 `ui.Theme` 有完整 token 集、
+`Context.SetTheme` 可以整棵替换，参考项目里 kero 就是这么做的：拿终端方案的背景与光标推导整套 UI 颜色
+（`kero/theme.go:334 ghosttyLook`）；dgopher 用 JSON 主题文件，Mayoi 用 13 个写死的主题表。
+更要命的是默认配置：`theme` 为 `system` / `light` / `dark` 时 `theme.UITheme` 返回 `nil`，
+`app.appearance()` 就让窗口落回 mygo 内置的 `DarkTheme`——栏 `#272729`、活动标签 `#18181a`、
+终端底 `#0c0c0c`，标签与它下面的窗格之间一道色阶断层。2026-11-11 拿实机截图与 Windows Terminal 逐像素比，
+还量出标签与栏同高、贴死窗口左上沿（`Radius(8,8,0,0)` 的两个圆角被窗口边缘裁掉），`+` 与 `▾` 被 `Grow(1)`
+推到最右紧贴窗口按钮，`▾` 还在 `+` 前面、中间没有分隔线。
 
 **决定**：
 
-- `theme` 可以是 `system` / `light` / `dark`，也可以是任意方案名（内置、Ghostty 617 套、
-  `schemes` 里自己写的）。方案名时整个窗口换成那个方案的颜色。
-- 界面 token 不手写，从方案的背景 `bg`、前景 `fg`、强调色推导（`internal/theme/ui.go`
-  `window()`）：表面色是 `bg` 往 `fg` 混 7%/11%/15%，边框 20%，次要文字 38%；强调色取
-  方案调色板第 5 色（各家的蓝），没有就用光标，再没有用前景；强调色上的文字按 WCAG 对比度
-  取 `bg` 或 `fg`。
-- 明暗不由 `theme` 字段的字面值决定，由方案自己的背景亮度决定：选了 `Catppuccin Latte`
-  就是浅色窗口，终端没指定 `colorScheme` 时也跟着落到浅色底。
+- `theme` 可以是 `system` / `light` / `dark`，也可以是任意方案名（内置、Ghostty 617 套、`schemes` 里自己写的）。
+  方案名时整个窗口换成那个方案的颜色。
+- 界面 token 不手写，从方案的背景 `bg`、前景 `fg` 推导（`internal/theme/ui.go` 的 `window()`）：
+  表面 / 悬停 / 按下 / 边框 = `bg` 往 `fg` 混 16% / 22% / 28% / 32%；次要文字 38%；
+  强调色取方案调色板第 5 色（各家的蓝），没有就用光标、再没有用前景；强调色上的文字按 WCAG 对比度取 `bg` 或 `fg`。
+- 新增 `theme.Chrome(s)`：没选方案时窗口也走同一个 `window()`，只是底色换成 `theme.Terminal(s)` 的。
+  `UITheme` 对 `""` / `system` / `light` / `dark` 仍返回 `nil`（设置页的下拉与 `mygo.Theme.SetSource` 的明暗判断
+  都靠它），只是 `appearance()` 在 `nil` 时不再留空，而是取 `Chrome`。
+- 明暗不由 `theme` 字段的字面值决定，由方案自己的背景亮度决定：选了 `Catppuccin Latte` 就是浅色窗口，
+  终端没指定 `colorScheme` 时也跟着落到浅色底。
 - 设置页的下拉列 11 个挑过的方案（`UIThemes()`）；写别的名字照样生效，只是不在下拉里。
+- 标签条的几何与配色：栏高 40 DIP、标签高 32（与 Windows Terminal 一样高），标签之间留 4 DIP，
+  活动标签在栏内底对齐、距窗口上沿 6、距左边 8、四角圆润；活动标签顶边画一道 2 DIP 的强调线
+  （`t.Accent` 往文字色混 20%，两端各内缩 4 DIP，避开圆角）——它本来就是窗格底色，靠这道线才一眼分得清。
+  `+`、`▾`、滚动按钮、标签的 `×` 悬停时浮出 `SurfaceHover`；窗口的关闭按钮悬停用 `t.Danger`。
+  `+`、一条竖分隔线、`▾` 移到滚动视口之外、`❯` 右边：标签放得下时仍紧贴最后一个标签，放不下时固定在右端
+  （最初它们跟着标签一起滚动，标签一多就滚出视口，新建标签得先滚到末尾）。
 
-**理由**：一份配色方案已经写好了「这个主题该长什么样」，界面再挑一遍颜色只会打架；推导出来的
-窗口与终端同源，换方案时两边一起变。挑 11 个而不是 617 个，是因为下拉里滚 617 项没人受得了，
-且多数方案的背景对比度撑不起一套可用的 UI。
+**理由**：一份配色方案已经写好了「这个主题该长什么样」，界面再挑一遍颜色只会打架；推导出来的窗口与终端同源，
+换方案时两边一起变——默认配置尤其如此，否则用户看到的恰好是两套颜色。挑 11 个而不是 617 个，是因为
+下拉里滚 617 项没人受得了，且多数方案的背景对比度撑不起一套可用的 UI。
 
-**代价**：推导只能保证「能看」，不保证与方案作者给的 UI 版一致（比如 Catppuccin 官方给 UI 的
-表面色是另算的）。强调色固定取调色板第 5 色，是因为几乎所有方案的光标都是灰的，先取光标会让
-强调色变成无彩度。`mygo.WindowOptions.BackgroundColor` 在主题生效时取该主题的底色，页面画满
-后看不到差别。
+**代价**：推导只能保证「能看」，不保证与方案作者给的 UI 版一致（Catppuccin 官方给 UI 的表面色是另算的）；
+强调色固定取调色板第 5 色，是因为几乎所有方案的光标都是灰的。`theme: light` 但 `colorScheme` 是深色方案时
+窗口是深色的——栏与内容同源优先于 `theme` 字段的字面值；原生菜单与对话框仍按 `SetSource` 跟随系统，
+极端组合下会一深一浅。
 
 ---
-## ADR-033 Linux 用 fontconfig 规则保住文字颜色
+
+## ADR-32 Linux 用 fontconfig 规则保住文字颜色
 
 **背景**：Linux 上（X11 与 Wayland 都会）文字整体发白、发绿，浅色底与提示框上几乎看不清。
 原因是 mygo 的 Linux 文字后端先把字形按灰度光栅化，再把「通道值不一致」的字形判为彩色字形
@@ -614,47 +643,8 @@ Mayoi 用 13 个写死的主题表。
 "Drop it once MyGo forces grayscale itself"），这段可以整块删掉。
 
 ---
-## ADR-034 没选方案时窗口也用终端配色，标签浮在栏上
 
-**背景**：2026-11-11 拿 `build\bin\Release\wt-go.exe` 的实机截图与 Windows Terminal 逐像素比：
-`theme` 为 `system` / `light` / `dark`（默认）时 `theme.UITheme` 返回 `nil`，`app.appearance()`
-就让窗口落回 mygo 内置的 `DarkTheme`——栏 `#272729`、活动标签 `#18181a`、终端底 `#0c0c0c`，
-标签与它下面的窗格之间一道色阶断层，用 Dracula 的终端配 VS Code 灰的栏。同时标签与栏同高、
-贴死窗口左上沿，`Radius(8,8,0,0)` 的两个圆角被窗口边缘裁掉；`+` 与 `▾` 被 `Grow(1)` 推到最右
-（紧贴窗口按钮），`▾` 还在 `+` 前面，中间没有分隔线。目标是：栏比内容亮一档、活动标签就是内容
-底色且浮在栏上（距上沿 6、距左边 8、四角圆润）、`+` `|` `▾` 紧跟最后一个标签。
-
-**决定**：
-
-- 新增 `theme.Chrome(s)`：没选自选方案时，窗口也用 `theme.Terminal(s)` 的颜色按同一个 `window()`
-  推导（表面/悬停/按下/边框 = 底色往前景混 16% / 22% / 28% / 32%）。`UITheme` 对
-  `""` / `system` / `light` / `dark` 仍返回 `nil`——设置页的下拉和 `mygo.Theme.SetSource` 的明暗
-  判断都靠它——只是 `appearance()` 在 `nil` 时不再留空，而是取 `Chrome`。
-- 表面色由 7% / 11% / 15% / 20% 提到 16% / 22% / 28% / 32%：活动标签自己就是内容底色，
-  栏要亮一档才分得开（`#0c0c0c` 上 7% 只有 `#171717`）。
-- 标签条：`tabHeight = 30`（栏 `TitleBarHeight = 36`），标签在栏内底对齐；`stripGutter = 8` 的
-  左内边距；`+`、1px 分隔线、`▾` 移进标签行，随标签一起滚动，紧跟最后一个标签后面。
-
-**理由**：ADR-032 的「窗口与终端同源」只在选了方案时成立，没选时反而最不像——默认配置下
-用户看到的恰好是两套颜色。让 chrome 也走 `Terminal(s)`，默认与显式选方案走同一条推导路径，
-没有第二套规则。
-
-**代价**：`theme: light` 但 `colorScheme` 是深色方案时窗口是深色的——栏与内容同源优先于
-`theme` 字段的字面值；原生菜单/对话框仍按 `SetSource` 跟随系统，极端组合下会一深一浅。
-`+`/`▾` 随标签滚动，标签多到溢出时它们会被滚出视口（与 Windows Terminal 一致）。
-
-**后续（2026-11-11）**：照 Windows 11 的标题栏补细节，上面定的层次不变：栏高由 36 提到
-**40**、标签由 30 提到 **32**（与 Windows Terminal 一样高）；标签之间留 4 DIP；活动标签顶边
-画一道 2 DIP 的强调线（`t.Accent` 往文字色混 20%，两端各内缩 4 DIP，避开圆角）——活动标签
-本来就是窗格底色，靠这道线才一眼分得清；`+`、`▾`、滚动按钮、标签的 `×` 悬停时浮出
-`SurfaceHover` 底色；窗口的关闭按钮悬停改用 `t.Danger`（Windows 的红）。
-
-**后续（2026-11-11）之二**：修正上段留下的问题——`+`/`▾` 在滚动的标签里，标签一多就滚出视口，
-新建标签得先滚到末尾。改成：`viewport` 不再 `Grow(1)`，靠收缩钳到可用宽度；`+`/`▾` 移到滚动区外、
-`❯` 右边，标签放得下时仍紧贴最后一个标签（`MaxX = 0` 时视口宽度就是内容宽），放不下时固定在右端。
-
----
-## ADR-035 界面图标用打进二进制的 SVG，不用字体字形
+## ADR-33 界面图标用打进二进制的 SVG，不用字体字形
 
 **背景**：标签条上的 `+`、`▾`、标签的 `×`、滚动标签的 `❮`/`❯`、查找栏的 `▲`/`▼`/`×`
 原本都是 `myui.Text` 画的字形。字形不可靠：有些字体没有这些码位，按钮就空白；有的字体把它们
@@ -682,7 +672,8 @@ v4.8.0 是最后一个 **Apache-2.0** 版本，与 wt-go 的许可证相容；`s
 用 `Painter.Line` 画两道 1px 斜线（`internal/ui/tabs.go` 的 `windowButton`）。
 
 ---
-## ADR-036 自定义配色按「基名 + (custom)」命名，行尾给删除
+
+## ADR-34 自定义配色按「基名 + (custom)」命名，行尾给删除
 
 **背景**：设置页「配色方案」页的「复制为自定义」早先拿**当前方案名**当前缀
 （`a.settings.ColorScheme + " (custom)"`）。当前方案可能就是一份副本，于是每复制一次多套一层：
@@ -707,82 +698,54 @@ v4.8.0 是最后一个 **Apache-2.0** 版本，与 wt-go 的许可证相容；`s
 
 ---
 
-## ADR-037 启动时发现的 shell 写进 settings.json，删除即隐藏
+## ADR-35 启动时发现的 shell 写进 settings.json，探测只在写第一份文件时
 
-**背景**：以前 `sys.Discover()` 每次启动重新探测，名字（`"PowerShell 7"`）和颜色硬编码在
-`internal/sys` 与 `internal/profile` 两处，结果只在内存里，`settings.json` 的 `profiles` 一直是空的。
-于是：改名/改色下次启动会被探测结果盖住、菜单里永远无法真正删掉一个条目、
-用户在别处装的 shell（Scoop 之外的 `nu.exe` 之类）不会出现且改了名字也留不住。
+**背景**：最早 `sys.Discover()` 每次启动都重新探测，名字（`"PowerShell 7"`）和颜色硬编码在 `internal/sys`
+与 `internal/profile` 两处，结果只在内存里，`settings.json` 的 `profiles` 一直是空的。于是改名/改色下次启动
+被探测结果盖住、菜单里永远无法真正删掉一个条目、用户自己装的 shell（Scoop 之外的 `nu.exe` 之类）不会出现。
+改成“每次启动都并进文件”之后又有两个新问题：一次启动就可能覆盖用户改过的命令行（只靠“只加不改”挡着），
+且 `settings.json` 已是唯一来源了，再每次探测等于把“文件说了算”打折。另外用户需要两个维护动作：
+机器上装了新 shell 想让它出现、设置改坏了想从头来；底栏的「打开 settings.json」在 Linux 上要靠桌面有 JSON 关联。
 
 **决定**：
 
-1. 启动时把探测到的 shell **写进** `settings.json` 的 `profiles`，作为带 `"discovered": true` 的普通条目，
-   插在最后一个 `discovered` 条目之后（没有则插在最前）。
+1. 探测只在**写第一份 `settings.json`** 时做：`load()` 多返回“文件原本不存在”，`newApp()` 只在这个条件下
+   `found()` + `adopt` + 回写；此后 `a.found` 为空，`profile.Resolve` 全按文件。探测结果作为带
+   `"discovered": true` 的普通条目写进 `profiles`，插在最后一个 `discovered` 条目之后（没有则插在最前）。
 2. **只加不改**：文件里已有同 `id` 的条目原样保留，改过的名字、颜色、命令行不会被覆盖。
-3. 发现只查 **PATH**（`exec.LookPath`）与 WSL 注册表，不猜安装位置：猜错的路径比没有更糟。
-4. 名字与颜色上移到纯包 `internal/profile` 的一张表；`sys.Shell` 只剩 `id`/`command`/`args`。
-5. 「删除」对 `discovered` 条目是**置 `hidden`**：下次启动还会找到它，真删也会被加回；
-   设置页因此给这些行「内置」徽标与「隐藏」，并加「显示隐藏的配置文件」+「显示」。
-6. 探测到的条目的程序文件不在了（卸载/挪走），启动时自动置 `hidden`；重装之后在设置页点「显示」回来。
+3. 发现只查 **PATH**（`sys.LookCommand`）与 WSL 注册表，不猜安装位置：猜错的路径比没有更糟。
+   名字与颜色上移到纯包 `internal/profile` 的一张表，`sys.Shell` 只剩 `id`/`command`/`args`。
+4. 「删除」对 `discovered` 条目是**置 `hidden`**：下次探测还会找到它，真删也会被加回；设置页给这些行
+   「内置」徽标与「隐藏」，并加「显示隐藏的配置文件」+「显示」。程序文件不在了（卸载/挪走）则置 `hidden`。
+5. 设置页加 **高级** 页（左栏在「操作」之后），改的是**文件**而不是草稿，所以没有保存、都先二次确认：
+   - **重新探测**（`adoptAgain`）：把内置条目的 `command`/`args` 换成现在探测到的（这是唯一一处会覆盖
+     用户改过的命令行的路径），探不到的置 `hidden`、回来的取消 `hidden`；`name`/`color`/`dir` 保留；
+     新增的按 `adopt` 的位置插入；立即写文件。
+   - **重置**：`sys.RemoveSettings()` → `sys.Relaunch()` → 关窗；新窗口找不到文件，写入默认值并探测，
+     等于第一次启动。
+   - 重启的新进程要活过旧窗口：进程本身在 `KILL_ON_JOB_CLOSE` 的作业里，所以作业加
+     `JOB_OBJECT_LIMIT_BREAKAWAY_OK`，新进程用 `CREATE_BREAKAWAY_FROM_JOB` 起。
+     别的子进程（panic 里的 shell）不请求 breakaway，仍随窗口结束。
+   - 底栏按钮「打开 settings.json」改成「打开设置目录」，另有「设置目录」「程序目录」：打开**目录**在
+     各桌面都能用，打开文件则要关联的编辑器。
 
-**理由**：文件是唯一来源，与其它设置一致；用户改一次就永久生效，不用跟启动时的探测结果打架；
-名字与颜色不再散在两边；`sys` 只做 OS 事实（PATH 答不答应），`profile` 负责叫法。
+**理由**：文件是唯一来源这件事要彻底；探测变成一个显式动作，用户改过的命令行不会在某次重启里被悄悄换掉；
+重置是唯一的“从头来”出口，删文件最直白，不需要写一套默认值合并逻辑；`sys` 只做 OS 事实，`profile` 负责叫法。
 
-**代价**：
+**代价**：首次启动会写文件（配置目录不可写时记 `E205`，本次仍按内存里的列表工作）；新装的 shell 不会自己出现，
+要手动点一次「重新探测」；卸载的 shell 不再自动隐藏（`diag` 里仍显示 `missing`）；自动隐藏是单向的，
+装回来要在设置页点一次「显示」；`reset` 先删文件再启动，启动失败时文件已经没了（旧窗口留着，提示 `E207`），
+顺序换过来则会启动一个读到旧设置的窗口，更糟；命令写成裸名字（`pwsh.exe`，靠 PATH 解析）的条目不会被判为“不见了”。
 
-- 首次启动会写文件（配置目录不可写时记 `E205`，本次仍按内存里的列表工作）。
-- `settings.json` 不再是空 `profiles`；第一次启动就有人在文件里看到五个条目。
-- 自动隐藏是单向的：卸载后再装回来不会自动显示，需要在设置页点一次「显示」。
-- 命令写成裸名字（`pwsh.exe`，靠 PATH 解析）的条目不会被判为“不见了”。
-
-**测试**：`internal/sys/shell_windows_test.go` 用注入的 `lookPath` 钉住候选顺序、
-`System32\bash.exe` 不算 Bash、WSL 项在最后；`internal/app/adopt_test.go` 钉住插入位置、
-只加不改、程序不见了就隐藏、第二次启动不改动；`internal/app/removeprofile_test.go`
-钉住“删除探测条目=隐藏、删除自己写的=真删、能恢复”。
-
-**后续（2026-11-11）**：探测从「每次启动」收窄成「只在写第一份 `settings.json` 时」，
-重新探测与重置搬进设置页的「高级」页 —— 见 ADR-038。第 1、6 条里的“启动时”按此理解。
+**测试**：`internal/sys/shell_windows_test.go` 用注入的 `lookPath` 钉住候选顺序、`System32\bash.exe` 不算 Bash、
+WSL 项在最后；`internal/app/adopt_test.go` 钉住插入位置、只加不改、程序不见了就隐藏、第二次启动不改动；
+`internal/app/removeprofile_test.go` 钉住“删除探测条目=隐藏、删除自己写的=真删、能恢复”；
+`internal/app/advanced_test.go` 钉住“有文件就不探测、文件原样”、`adoptAgain` 的覆盖/隐藏/恢复/幂等、
+`reset` 删文件并调用 `relaunch`；`internal/ui/advanced_test.go` 钉住两个按钮都先问再动、目录按钮的接线。
 
 ---
-## ADR-038 探测只在写第一份文件时，重新探测与重置放到「高级」页
 
-**背景**：ADR-037 让每次启动都探测并把结果并进文件。问题有两个：一是一次启动就会覆盖掉
-用户改过的命令行里的路径（文件在，探测结果也在，两者打架时只能靠“只加不改”的规则挡），
-二是 `settings.json` 已经是唯一来源了，再每次探测等于把“文件说了算”打折。同时用户需要
-两个维护动作：机器上装了新 shell 想让它出现、设置改坏了想从头来。另外底栏的
-「打开 settings.json」在 Linux 上要靠桌面有 JSON 编辑器关联，很多桌面没有。
-
-**决定**：
-
-1. `load()` 多返回“文件原本不存在”，`newApp()` 只在这个条件下 `found()` + `adopt` + 回写：
-   第一份文件就是探测的那一刻，此后文件说了算，`a.found` 为空，`profile.Resolve` 全按文件。
-2. 设置页加 **高级** 页（左栏在「操作」之后），改的是**文件**而不是草稿，所以没有保存：
-   - **重新探测**：`adoptAgain` 把内置条目的 `command`/`args` 换成现在探测到的（这是唯一
-     一处会覆盖用户改过的命令行的路径）、探不到的置 `hidden`、回来的取消 `hidden`；
-     `name`/`color`/`dir` 保留；新增的按 `adopt` 的位置插入；立即写文件。
-   - **重置**：`sys.RemoveSettings()` → `sys.Relaunch()` → 关窗；新窗口找不到文件，写入默认值
-     并探测，等于第一次启动。两个动作都先经 `a.ask(ui.Confirm{…})` 二次确认。
-3. 重启的新进程要活过旧窗口：进程本身在 `KILL_ON_JOB_CLOSE` 的 Job 里，所以 Job 加
-   `JOB_OBJECT_LIMIT_BREAKAWAY_OK`，新进程用 `CREATE_BREAKAWAY_FROM_JOB` 起（`sys.Relaunch`）。
-   别的子进程（panic 里的 shell）不请求 breakaway，仍随窗口结束。
-4. 底栏按钮「打开 settings.json」改成「打开设置目录」，高级页另有「设置目录」「程序目录」：
-   打开**目录**在各桌面都能用，打开文件则要关联的编辑器。
-
-**理由**：文件是唯一来源这件事要彻底；探测变成一个显式动作，用户改过的命令行不会在
-某次重启里被悄悄换掉；重置是唯一的“从头来”出口，删文件最直白，不需要写一套默认值合并逻辑。
-
-**代价**：
-
-- 新装的 shell 不会自己出现，要手动点一次「重新探测」。
-- 卸载的 shell 不再自动隐藏，要探测一次才隐藏（`diag` 里仍会显示 `missing`）。
-- `reset` 先删文件再启动：启动失败时文件已经没了（旧窗口留着，提示 `E207`）。
-  顺序换过来则会启动一个读到旧设置的窗口，更糟。
-
-**测试**：`internal/app/advanced_test.go` 钉住“有文件就不探测、文件原样”、`adoptAgain` 的
-覆盖/隐藏/恢复/幂等、`reset` 删文件并调用 `relaunch`；`internal/ui/advanced_test.go` 钉住
-两个按钮都先问再动、目录按钮的接线。
-
-## ADR-039 字体下拉的族列表按需枚举，等宽判定按 `(family, size)` 记忆化
+## ADR-36 字体下拉的族列表按需枚举，等宽判定按 `(family, size)` 记忆化
 
 **背景**：`Run` 在首帧前调 `loadFontFamilies`：主线程枚举 261 个族，对其中 5 个等宽族各
 整一遍 95 个 ASCII 字符，23–26 ms；而这份列表只服务设置页「配置文件 → 默认值」的字体下拉。
@@ -807,7 +770,7 @@ v4.8.0 是最后一个 **Apache-2.0** 版本，与 wt-go 的许可证相容；`s
 
 ---
 
-## ADR-040 不做进程内 `malloc_trim`
+## ADR-37 不做进程内 `malloc_trim`
 
 **背景**：`[heap]` 21.9 MB 里约 7 MB 是已释放、glibc 留着复用的页。探针里用 `LD_PRELOAD`
 调 `malloc_trim(0)`，3 秒空闲 RSS 从 ~154 MB 降到 ~143 MB，看起来值得在首帧后调一次。
@@ -825,7 +788,7 @@ v4.8.0 是最后一个 **Apache-2.0** 版本，与 wt-go 的许可证相容；`s
 
 ---
 
-## ADR-041 设置页一帧取一次快照，配色列表随 `apply` 失效
+## ADR-38 设置页一帧取一次快照，配色列表随 `apply` 失效
 
 **背景**：`view()` 与 `settingsView()` 各算一次 `settingsState()`，每次含两件贵事：
 `theme.Schemes()`（`uiSchemes`）与 `store.Equal` 的 `reflect.DeepEqual`。前者实测
@@ -846,7 +809,7 @@ v4.8.0 是最后一个 **Apache-2.0** 版本，与 wt-go 的许可证相容；`s
 
 ---
 
-## ADR-042 等 shell 出现时读内核的 children 文件，不再全量扫进程表
+## ADR-39 等 shell 出现时读内核的 children 文件，不再全量扫进程表
 
 **背景**：`spawned` 每 10–100 ms 调一次 `sys.Processes()`（读整台机器 356 个
 `/proc/<pid>/stat`），最久 3 秒；`reexec` 在 250 ms 里同样反复扫。启动后 4 秒内
@@ -874,12 +837,26 @@ v4.8.0 是最后一个 **Apache-2.0** 版本，与 wt-go 的许可证相容；`s
 
 ---
 
-## 待定
+## ADR-40 性能基线（2026-11-11 单机实测，一次性记录）
 
-- 会话常驻：阶段 5 评估是否采用 ADR-009 所述的会话服务模型。
-- 验证 mygo `plugins/terminal` 是否支持外部字节流作为终端连接（gorex 即如此接入）。注意：gorex 依赖的是 mygo v0.3.5 伪版本，wt-go 锁定 v0.8.3，API 未核对，需阶段 0 实测。
-- 多窗口：独立进程还是单进程多窗？前者简单，后者才能共享设置热重载。
-- 是否内置 SSH（参考 sshterm 可直接拿）：暂定不做，外部调用 `ssh` 即可。
-- 控制接口（HTTP/MCP）供自动化测试：阶段 3 之后仍未决定。已部分回答——诊断入口选了 MCP/stdio（ADR-022）；**给自动化测试用的控制接口仍未决定**（需要能驱动标签/窗格、读终端内容）。
+**背景**：2026-11-12 做过一轮启动与内存优化（原计划文件已完成并删除），数字留在这里备查。
+环境：Arch Linux + KDE Plasma（Wayland），12 CPU，amdgpu，同机对照 konsole。
 
+**数字**：
 
+- 常驻：RSS 约 150 MB（konsole 约 105），PSS 约 80 MB（konsole 约 40），线程 36（konsole 8–10；其中 17 个是 Go 运行时
+  的，12 个是 GC worker）。
+- 启动：exec → shell 可用约 150 ms（早期探针 183–190 ms；konsole 141 ms）；首帧 139 ms，分解为 GTK 初始化 40–47、
+  `NewWindow` 31–34、`Theme.SetSource` 13、字体枚举 23–26、首次 `Shape` 9–10、`sys.Processes()` 5.6–6.6。
+- PSS 归因：glibc `[heap]` 21.9 MB、Go arena 21.9 MB（live 1–4 MB）、二进制 11.4 MB、`libLLVM.so.23.1` 6.5、
+  `libgallium` 4.1、GTK3 2.5、字体 2.3。
+- `theme.Schemes()`（`uiSchemes`）单次 2.19 ms / 745 KB / 39 153 次分配，设置页每帧付两次；启动后 4 秒内
+  `/proc/<pid>/stat` 被打开 2098 次。
+
+**结果**：首帧 153.5 → 124.5 ms，常驻 RSS 不变；`/proc/<pid>/stat` 打开次数 2098 → 9。
+逐条的取舍见 ADR-36（字体枚举记忆化）、ADR-37（不做 `malloc_trim`）、ADR-38（设置页一帧一次快照）、
+ADR-39（等 shell 时读内核的 children）。
+
+**代价**：这些数字绑在当时的 mygo v0.8.3 与这台机器上；换机器、换 mygo 版本要重测，不要把绝对毫秒当承诺。
+
+**状态**：归档。方案文件已删，新的测量另开记录。
