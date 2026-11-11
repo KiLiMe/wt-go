@@ -37,8 +37,8 @@ func (a *App) CloseTab(i int) {
 		a.askCloseSettings(tab)
 		return
 	}
-	if a.settings.ConfirmClose.Ask(a.running(tab)) {
-		a.askCloseTab(tab)
+	if act := a.activity(tab); a.asksClose(act) {
+		a.askCloseTab(tab, act)
 		return
 	}
 	a.closeTab(tab)
@@ -63,6 +63,7 @@ func (a *App) closeTab(tab *pane.Tab) {
 	}
 	closeTerminals(tab)
 	a.forget(tab.Terminals()...)
+	a.revealTab()
 	a.syncTitle()
 	a.redraw()
 }
@@ -88,56 +89,132 @@ func (a *App) newTerminal(opts terminal.Options) (*terminal.Terminal, error) {
 		// child is not there the moment New returns: wait for it off the UI
 		// thread, and hand the answer back when it comes.
 		go func() {
-			pid, ok := spawned(before)
-			if ok {
-				a.Do(func() { a.shells[term] = pid })
+			if shell, ok := a.spawned(before); ok {
+				a.Do(func() { a.shells[term] = shell })
 			}
 		}()
 	}
 	return term, nil
 }
 
-// spawned waits a moment for the process a terminal started: the child of this
-// process that was not there before.
-func spawned(before []sys.Proc) (int, bool) {
-	for i := 0; i < 50; i++ {
+// spawned waits for the process a terminal started: the child of this process
+// that was not there before, and that no other terminal took. A shell that
+// reads its startup files takes a while to appear, so the window keeps looking
+// for a few seconds, less and less often.
+func (a *App) spawned(before []sys.Proc) (sys.ShellProc, bool) {
+	deadline := time.Now().Add(3 * time.Second)
+	wait := 10 * time.Millisecond
+	for time.Now().Before(deadline) {
 		if after, err := sys.Processes(); err == nil {
-			if pid, ok := sys.Spawned(before, after, sys.OwnPID()); ok {
-				return pid, true
+			if p, ok := sys.Spawned(before, after, sys.OwnPID(), a.claimed()); ok && a.claim(p.Pid) {
+				return sys.ShellProc{Pid: p.Pid, Name: p.Name}, true
 			}
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(wait)
+		if wait < 100*time.Millisecond {
+			wait *= 2
+		}
 	}
-	return 0, false
+	return sys.ShellProc{}, false
 }
 
-// running reports whether a program other than the shell itself still runs in
-// the tab: a tab at its prompt does not ask before it closes. A terminal whose
-// process the window did not learn counts as running, since guessing wrong
-// would end a program someone was in the middle of.
-func (a *App) running(tab *pane.Tab) bool {
-	all, err := sys.Processes()
-	if err != nil {
-		return tab.Running()
+// claimed is the processes the window already gave to terminals.
+func (a *App) claimed() map[int]bool {
+	a.spawnMu.Lock()
+	defer a.spawnMu.Unlock()
+	out := make(map[int]bool, len(a.taken))
+	for pid := range a.taken {
+		out[pid] = true
 	}
+	return out
+}
+
+// claim takes a process for a terminal, and reports whether no other terminal
+// had it.
+func (a *App) claim(pid int) bool {
+	a.spawnMu.Lock()
+	defer a.spawnMu.Unlock()
+	if a.taken == nil {
+		a.taken = make(map[int]bool)
+	}
+	if a.taken[pid] {
+		return false
+	}
+	a.taken[pid] = true
+	return true
+}
+
+// release gives a process back, so that the id can be found again once the
+// system hands it out to the next shell.
+func (a *App) release(pid int) {
+	a.spawnMu.Lock()
+	defer a.spawnMu.Unlock()
+	delete(a.taken, pid)
+}
+
+// tabActivity is what a tab does: whether it runs something, and what that is,
+// so that the question the window asks can name it.
+type tabActivity struct {
+	act      sys.Activity
+	programs []string
+}
+
+// activity is what a tab does, as the processes of the shells it runs say. A
+// shell that ended runs nothing, and neither does the console the pty runs
+// behind. A shell the window did not learn is one it cannot speak for, and
+// saying so beats guessing either way.
+func (a *App) activity(tab *pane.Tab) tabActivity {
+	var live []*terminal.Terminal
 	for _, term := range tab.Terminals() {
 		select {
 		case <-term.Done():
-			continue
 		default:
-		}
-		pid, ok := a.shells[term]
-		if !ok || len(sys.Descendants(all, pid)) > 0 {
-			return true
+			live = append(live, term)
 		}
 	}
-	return false
+	if len(live) == 0 {
+		return tabActivity{}
+	}
+	all, err := sys.Processes()
+	if err != nil {
+		log.Printf("wt-go: %s", fault.Line(fault.NoProcessList, err.Error()))
+		return tabActivity{act: sys.Unknown}
+	}
+	out := tabActivity{}
+	for _, term := range live {
+		shell, ok := a.shells[term]
+		if !ok {
+			out.act = sys.Unknown
+			continue
+		}
+		switch shell.Activity(all) {
+		case sys.Busy:
+			out.act = sys.Busy
+			out.programs = append(out.programs, shell.Programs(all)...)
+		case sys.Unknown:
+			if out.act == sys.Idle {
+				out.act = sys.Unknown
+			}
+		}
+	}
+	if out.act != sys.Busy {
+		out.programs = nil
+	}
+	return out
+}
+
+// asksClose reports whether the settings ask before a tab that does act closes.
+func (a *App) asksClose(act tabActivity) bool {
+	return a.settings.ConfirmClose.Ask(act.act != sys.Idle)
 }
 
 // forget drops the processes of the terminals that close, so that the map of
 // terminals to processes does not grow with every tab that ever opened.
 func (a *App) forget(terms ...*terminal.Terminal) {
 	for _, term := range terms {
+		if shell, ok := a.shells[term]; ok {
+			a.release(shell.Pid)
+		}
 		delete(a.shells, term)
 	}
 }
@@ -174,21 +251,42 @@ func (a *App) CloseOtherTabs(i int) {
 		return
 	}
 	tab := a.panes.Tabs[i]
-	if a.settings.ConfirmClose.Ask(a.othersRunning(tab)) {
-		a.askCloseOtherTabs(tab)
+	if act := a.othersActivity(tab); a.asksClose(act) {
+		a.askCloseOtherTabs(tab, act)
 		return
 	}
 	a.closeOtherTabs(tab)
 }
 
-// othersRunning reports whether a program still runs in a tab but keep.
-func (a *App) othersRunning(keep *pane.Tab) bool {
+// othersActivity is what the tabs but keep do, one answer for the question
+// that closes them all: a program that still runs outranks a tab the window
+// cannot speak for.
+func (a *App) othersActivity(keep *pane.Tab) tabActivity {
+	out := tabActivity{}
+	seen := make(map[string]bool)
 	for _, tab := range a.panes.Tabs {
-		if tab != keep && a.running(tab) {
-			return true
+		if tab == keep {
+			continue
+		}
+		act := a.activity(tab)
+		if act.act == sys.Busy {
+			out.act = sys.Busy
+			for _, name := range act.programs {
+				if !seen[name] {
+					seen[name] = true
+					out.programs = append(out.programs, name)
+				}
+			}
+			continue
+		}
+		if act.act == sys.Unknown && out.act == sys.Idle {
+			out.act = sys.Unknown
 		}
 	}
-	return false
+	if out.act != sys.Busy {
+		out.programs = nil
+	}
+	return out
 }
 
 // closeOtherTabs closes every tab but keep.
@@ -219,9 +317,28 @@ func (a *App) FocusTab(i int) {
 		return
 	}
 	a.panes.Active = i
+	a.revealTab()
 	a.syncTitle()
 	a.redraw()
 }
+
+// ScrollTabs moves the tabs the strip shows by by DIPs, as the wheel over the
+// strip and the buttons that move it ask.
+func (a *App) ScrollTabs(by float32) {
+	a.tabsScroll.X = max(0, min(a.tabsScroll.X+by, a.tabsScroll.MaxX))
+	a.redraw()
+}
+
+// revealFrames is how many frames a reveal lasts. The strip shows the buttons
+// that scroll it only once it knows the tabs do not fit, and they take their
+// room on the frame after that, so the tab in front can be out of view again
+// when one frame ends.
+const revealFrames = 2
+
+// revealTab asks the strip to bring the tab in front into view, and to keep it
+// in view while the strip settles; asking on every frame would keep the user
+// from scrolling the strip away from the tab in front.
+func (a *App) revealTab() { a.revealTabs = revealFrames }
 
 // BeginRename opens the dialog that renames the tab at i, with the name the
 // tab has in its field.

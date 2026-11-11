@@ -12,6 +12,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/plugins/terminal"
@@ -47,7 +48,17 @@ type App struct {
 	shownTitle string
 	// shells is the process each terminal runs, when the window learned it,
 	// which is how it tells a shell at its prompt from a program running.
-	shells map[*terminal.Terminal]int
+	shells map[*terminal.Terminal]sys.ShellProc
+	// spawnMu guards taken, the processes the window already gave to
+	// terminals: two shells that start at once would each be found by the
+	// other's search.
+	spawnMu sync.Mutex
+	taken   map[int]bool
+	// tabsScroll is where the strip shows its tabs, which the wheel over the
+	// strip and the buttons that move it change; revealTabs counts the frames
+	// left in which the strip brings the tab in front into view.
+	tabsScroll myui.ScrollState
+	revealTabs int
 	// content is the room the panes took in the last frame, which the keys
 	// that split and move between panes measure.
 	content layout.Rect
@@ -189,7 +200,7 @@ func opacity(v float64) float64 {
 // newApp reads the settings and finds the shells, and says what went wrong
 // when it could not: the window opens with the defaults.
 func newApp() *App {
-	a := &App{settings: store.Default(), shells: map[*terminal.Terminal]int{}, watchStop: make(chan struct{})}
+	a := &App{settings: store.Default(), shells: map[*terminal.Terminal]sys.ShellProc{}, watchStop: make(chan struct{})}
 	settings, data, err := load()
 	if err == nil {
 		a.settings = settings
@@ -304,11 +315,21 @@ func (a *App) view(c *myui.Context) {
 	a.apply()
 	a.bind(c)
 	st := ui.State{
-		Active:    a.panes.Active,
-		Profiles:  a.menuProfiles(),
-		Rename:    a.renaming,
-		EqualTabs: a.settings.TabWidth == "equal",
-		Shortcut:  a.shortcut,
+		Active:     a.panes.Active,
+		Profiles:   a.menuProfiles(),
+		Rename:     a.renaming,
+		EqualTabs:  a.settings.TabWidth == "equal",
+		Shortcut:   a.shortcut,
+		TabsScroll: &a.tabsScroll,
+		RevealTab:  a.revealTabs > 0,
+	}
+	// The strip brings the tab in front into view for the frames the window
+	// asked for, and no more: asking on every frame would keep the user from
+	// scrolling the strip away from that tab. Two frames are what it takes,
+	// because the buttons that scroll the strip take their room only on the
+	// frame after they first appear, and the strip is narrower by then.
+	if a.revealTabs > 0 {
+		a.revealTabs--
 	}
 	if a.confirm != nil {
 		st.Confirm = &a.confirm.Confirm
@@ -516,6 +537,7 @@ func (a *App) openTab(p profile.Profile, dir string) {
 	tab := pane.New(term)
 	tab.ProfileID, tab.ProfileName, tab.Color = p.ID, p.Name, p.Color
 	a.insertTab(tab)
+	a.revealTab()
 	a.syncTitle()
 	a.redraw()
 }

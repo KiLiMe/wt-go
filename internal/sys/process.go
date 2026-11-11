@@ -3,11 +3,117 @@ package sys
 import "strings"
 
 // Proc is a process the machine runs: its id, the id of the process that
-// started it, and its name.
+// started it, its name, and what it does.
 type Proc struct {
 	Pid    int
 	Parent int
 	Name   string
+	// State is what the system says the process does: 'R' running, 'S'
+	// sleeping, 'Z' a zombie that has ended and waits to be reaped. It is 0
+	// where the system does not say, as on Windows, which lists no zombie.
+	State byte
+}
+
+// ShellProc is the program a terminal runs, as the window learned it: the id
+// the process list gave it, and the name it had, so that a number the system
+// hands out again is not taken for it.
+type ShellProc struct {
+	Pid  int
+	Name string
+}
+
+// Activity is what the processes under a shell say about the tab that runs it.
+type Activity int
+
+const (
+	// Idle is a shell at its prompt: it runs, and nothing runs under it.
+	Idle Activity = iota
+	// Busy is a shell that runs something else: a command in front, a job in
+	// the background, a helper a startup file left behind.
+	Busy
+	// Unknown is a shell the window cannot read the processes of. Asking is
+	// the only safe answer, and the question does not claim to know.
+	Unknown
+)
+
+// String makes an activity print as itself, for the tests and the log.
+func (a Activity) String() string {
+	switch a {
+	case Idle:
+		return "idle"
+	case Busy:
+		return "busy"
+	}
+	return "unknown"
+}
+
+// Activity reports what the processes say a shell does: Busy while something
+// other than the shell runs under it, Idle while only the shell does, and
+// Unknown when the window does not know which process the shell is.
+//
+// A shell that ended, and one whose id the system handed to another program,
+// have nothing under them, so they are Idle. Neither is a process that ended
+// and waits to be reaped, or the console the pty runs behind: they run nothing,
+// so they leave a shell at its prompt Idle.
+func (s ShellProc) Activity(all []Proc) Activity {
+	if s.Pid <= 0 {
+		return Unknown
+	}
+	self, ok := findProc(all, s.Pid)
+	if !ok {
+		return Idle
+	}
+	if s.Name != "" && !sameProgram(self.Name, s.Name) {
+		return Idle
+	}
+	if len(s.Programs(all)) > 0 {
+		return Busy
+	}
+	return Idle
+}
+
+// Programs names what a shell runs besides itself: the programs under it that
+// keep a tab from closing quietly, each once, in the order the tree lists them.
+// It is what the window tells the user when it asks, so that the question says
+// which program it means.
+func (s ShellProc) Programs(all []Proc) []string {
+	if s.Pid <= 0 {
+		return nil
+	}
+	var out []string
+	seen := make(map[string]bool)
+	for _, pid := range Descendants(all, s.Pid) {
+		p, ok := findProc(all, pid)
+		if !ok {
+			continue
+		}
+		if p.State == 'Z' || ptyHost(p.Name) {
+			continue
+		}
+		name := programName(p.Name)
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		out = append(out, name)
+	}
+	return out
+}
+
+// findProc is the process with an id, when the list holds it.
+func findProc(all []Proc, pid int) (Proc, bool) {
+	for _, p := range all {
+		if p.Pid == pid {
+			return p, true
+		}
+	}
+	return Proc{}, false
+}
+
+// sameProgram reports whether two names name the same program, which the
+// systems write with and without ".exe", in either case.
+func sameProgram(a, b string) bool {
+	return strings.EqualFold(programName(a), programName(b))
 }
 
 // Children are the processes parent started.
@@ -46,34 +152,46 @@ func Descendants(all []Proc, root int) []int {
 }
 
 // Spawned is the program a terminal begins with: a child of parent that
-// started between the two lists. The pty the terminal reads was made by a host
-// process of its own, which starts beside the program and is not it, so the
-// host is passed over. It reports false when no program started, and takes the
-// newest when the lists name more than one, which is rare enough that a wrong
-// answer only makes the window ask before it closes.
-func Spawned(before, after []Proc, parent int) (int, bool) {
+// started between the two lists, and that taken does not name. The pty the
+// terminal reads was made by a host process of its own, which starts beside the
+// program and is not it, so the host is passed over.
+//
+// Two terminals may start their programs so close together that each list holds
+// both: the older one is then the one that looked first, and the one that looks
+// second is told which programs the window already gave away. It reports false
+// when no program started.
+func Spawned(before, after []Proc, parent int, taken map[int]bool) (Proc, bool) {
 	old := make(map[int]bool, len(before))
 	for _, p := range before {
 		old[p.Pid] = true
 	}
-	newest := 0
+	var oldest Proc
 	for _, p := range after {
-		if old[p.Pid] || p.Parent != parent || ptyHost(p.Name) {
+		if old[p.Pid] || p.Parent != parent || ptyHost(p.Name) || taken[p.Pid] {
 			continue
 		}
-		if p.Pid > newest {
-			newest = p.Pid
+		if oldest.Pid == 0 || p.Pid < oldest.Pid {
+			oldest = p
 		}
 	}
-	return newest, newest != 0
+	return oldest, oldest.Pid != 0
 }
 
 // ptyHost reports whether a process is the console the pty runs behind rather
 // than the program the terminal shows.
 func ptyHost(name string) bool {
-	switch strings.ToLower(strings.TrimSuffix(name, ".exe")) {
+	switch strings.ToLower(programName(name)) {
 	case "conhost", "openconsole":
 		return true
 	}
 	return false
+}
+
+// programName is a process name without the extension Windows gives programs.
+// The systems do not agree on the case of it: a name may come as PING.EXE.
+func programName(name string) string {
+	if n := len(name); n > 4 && strings.EqualFold(name[n-4:], ".exe") {
+		return name[:n-4]
+	}
+	return name
 }

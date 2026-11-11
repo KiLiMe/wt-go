@@ -26,6 +26,8 @@ type Actions interface {
 	MoveTab(from, to int)
 	// FocusTab brings the tab at i in front.
 	FocusTab(i int)
+	// ScrollTabs moves the tabs the strip shows by by DIPs.
+	ScrollTabs(by float32)
 	// BeginRename opens the dialog that renames the tab at i.
 	BeginRename(i int)
 	// RenameTab gives the tab at i a name; "" keeps the one it had.
@@ -178,6 +180,12 @@ type State struct {
 	// EqualTabs makes every tab as wide as the others, rather than as wide
 	// as its name.
 	EqualTabs bool
+	// TabsScroll is where the strip shows its tabs, which the strip scrolls
+	// when they outgrow the title bar. nil shows them all, unscrolled.
+	TabsScroll *myui.ScrollState
+	// RevealTab asks the strip to bring the tab in front into view in this
+	// frame, which the window asks once as it changes that tab.
+	RevealTab bool
 	// Shortcut is the key the settings bind an action to, as a keybinding
 	// writes it, and "" when none binds it. nil shows no shortcut.
 	Shortcut func(action string) string

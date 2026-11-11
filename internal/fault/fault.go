@@ -25,8 +25,9 @@ const (
 	BadKeybinding Code = "E203" // a keybinding names a key that cannot be read
 
 	// While it runs.
-	ChildFailed Code = "E301" // a shell could not be started
-	Crashed     Code = "E302" // the window stopped with a panic
+	ChildFailed   Code = "E301" // a shell could not be started
+	Crashed       Code = "E302" // the window stopped with a panic
+	NoProcessList Code = "E303" // the process list could not be read
 )
 
 // about is the one line the program shows for a code.
@@ -39,6 +40,7 @@ var about = map[Code]string{
 	BadKeybinding: "A keybinding names a key wt-go cannot read; that one binding is dropped, the rest work",
 	ChildFailed:   "A shell could not be started, so the tab has nothing in it",
 	Crashed:       "The window stopped with a panic; the stack is in the crash log",
+	NoProcessList: "The process list could not be read, so whether a tab still runs a program is unknown",
 }
 
 // doc is where the details for a code are kept, from the project root.

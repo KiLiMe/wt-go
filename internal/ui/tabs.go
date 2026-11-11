@@ -26,6 +26,18 @@ const (
 // Windows Terminal.
 const mouseMiddle = 2
 
+// The room the strip keeps whatever the tabs do: the buttons that move them,
+// and the part of the title bar that moves the window. A strip of many tabs
+// never takes the last of either.
+const (
+	stepWidth float32 = 24
+	dragRoom  float32 = 56
+)
+
+// tabStep is how far the buttons beside the tabs move what the strip shows:
+// about one tab, so that a press brings the next tabs into view.
+const tabStep float32 = 176
+
 // tabDrag is a tab on its way to another place in the strip.
 type tabDrag struct {
 	from int
@@ -47,10 +59,93 @@ func strip(c *myui.Context, st State, act Actions) {
 		Padding(0, bar.Right, 0, bar.Left).
 		DragWindow().
 		Children(func() {
-			tabs(c, st, act)
+			stripTabs(c, st, act)
 			profilesMenu(c, st, act)
 			newTabButton(c, act)
-			myui.Spacer(c)
+			myui.Box(c).Width(dragRoom).Height(TitleBarHeight)
+		})
+}
+
+// stripTabs is the room the tabs take: the buttons that move them, and the
+// tabs themselves, which scroll sideways when they outgrow the room.
+func stripTabs(c *myui.Context, st State, act Actions) {
+	if st.TabsScroll == nil {
+		tabs(c, st, act)
+		return
+	}
+	// The buttons take room from the tabs, so they only show once the tabs
+	// outgrow it. The viewport is measured every frame whether they show or
+	// not, so the frame after a tab no longer fits has them, and a frame
+	// they are in keeps them: what they take is what makes the tabs
+	// outgrow the strip.
+	scrolls := st.TabsScroll.MaxX > 0
+	myui.Row(c).Height(TitleBarHeight).Grow(1).Children(func() {
+		if scrolls {
+			stepButton(c, st, act, -1)
+		}
+		viewport(c, st, act)
+		if scrolls {
+			stepButton(c, st, act, 1)
+		}
+	})
+}
+
+// viewport is what the strip shows of the tabs: it scrolls them sideways when
+// they outgrow it, which the wheel over it does too.
+func viewport(c *myui.Context, st State, act Actions) {
+	myui.ScrollHorizontal(c).
+		Height(TitleBarHeight).
+		Grow(1).
+		Scrollbars(false).
+		TrackScroll(st.TabsScroll).
+		HandleInput(func(ev myui.InputEvent) bool {
+			if ev.Kind != myui.InputScroll {
+				return false
+			}
+			by := ev.DX
+			if by == 0 {
+				by = ev.DY
+			}
+			if by == 0 {
+				return false
+			}
+			// The strip has no height to scroll in, so the wheel goes
+			// sideways: it is the only way to reach the tabs past the
+			// edge with a wheel.
+			act.ScrollTabs(by)
+			return true
+		}).
+		Children(func() { tabs(c, st, act) })
+}
+
+// stepButton moves what the strip shows by a tab's worth, toward the start
+// with -1 and toward the end with 1. It fades when there is nothing that way,
+// rather than going Disabled, which would take the press with it: the press
+// is harmless, the window keeps the offset in the strip.
+func stepButton(c *myui.Context, st State, act Actions, dir int) myui.Element {
+	t := c.Theme()
+	// The heavy angle quotes carry more weight than the single guillemets,
+	// which read as specks at this size.
+	glyph, tip := "\u276f", i18n.T("Scroll the tabs right")
+	if dir < 0 {
+		glyph, tip = "\u276e", i18n.T("Scroll the tabs left")
+	}
+	at := st.TabsScroll
+	color := t.Text
+	if at == nil || dir < 0 && at.X <= 0 || dir > 0 && at.X >= at.MaxX {
+		color = t.TextMuted
+		color.A = uint8(float32(color.A) * 0.45)
+	}
+	return myui.Box(c).
+		Size(stepWidth, 28).
+		Radius(6).
+		AlignItems(myui.Center).
+		Justify(myui.Center).
+		Cursor(myui.CursorPointer).
+		Tooltip(tip).
+		OnClick(func() { act.ScrollTabs(float32(dir) * tabStep) }).
+		Children(func() {
+			myui.Text(c, glyph).FontSize(18).TextColor(color)
 		})
 }
 
@@ -91,12 +186,20 @@ func tab(c *myui.Context, st State, act Actions, i int) myui.Element {
 		el = el.Width(tabWidth)
 		name = tabWidth - 60
 	}
+	// A tab keeps its width when the strip is short of room: it is the strip
+	// that scrolls, not the name and the close button that go.
+	el = el.Shrink(0)
 	if active {
 		// The tab in front carries the terminal's background up into the
 		// strip, rounded at the top the way Windows Terminal does.
 		el = el.Background(t.Background).Radius(8, 8, 0, 0)
 	} else if el.Hovered() {
 		el = el.Background(t.SurfaceHover)
+	}
+	if active && st.RevealTab {
+		// The strip shows the tab in front when it changes, once: asking
+		// every frame would keep the user from scrolling it away.
+		el = el.ScrollIntoView()
 	}
 	el = el.ObserveInput(func(ev myui.InputEvent) {
 		if ev.Kind == myui.InputPointerDown && ev.Button == mouseMiddle {
@@ -111,7 +214,9 @@ func tab(c *myui.Context, st State, act Actions, i int) myui.Element {
 		if active {
 			nameColor = t.Text
 		}
-		myui.Text(c, tb.Name).SingleLine().MaxWidth(name).Ellipsis("…").TextColor(nameColor)
+		// The name is a label, not text to select: pressing it starts a drag
+		// of the tab, the way pressing the rest of the tab does.
+		myui.Text(c, tb.Name).SingleLine().MaxWidth(name).Ellipsis("…").TextColor(nameColor).Unselectable()
 		if active || el.Hovered() {
 			closeButton(c, act, i, active)
 		} else {

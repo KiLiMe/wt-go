@@ -1,4 +1,4 @@
-//go:build !windows
+//go:build !windows && !darwin
 
 package sys
 
@@ -44,7 +44,11 @@ func Processes() ([]Proc, error) {
 		if err != nil {
 			continue
 		}
-		out = append(out, Proc{Pid: pid, Parent: parent, Name: name})
+		var state byte
+		if fields[0] != "" {
+			state = fields[0][0]
+		}
+		out = append(out, Proc{Pid: pid, Parent: parent, Name: name, State: state})
 	}
 	return out, nil
 }

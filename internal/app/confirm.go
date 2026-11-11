@@ -10,6 +10,7 @@ import (
 	"wtgo/internal/i18n"
 	"wtgo/internal/pane"
 	"wtgo/internal/store"
+	"wtgo/internal/sys"
 	"wtgo/internal/ui"
 )
 
@@ -85,29 +86,43 @@ func (a *App) askCloseSettings(tab *pane.Tab) {
 // askCloseTab asks whether to close a tab whose program still runs, and closes
 // it when the answer is yes. It says what still runs, which is a shell at its
 // prompt only when the settings ask about every tab.
-func (a *App) askCloseTab(tab *pane.Tab) {
+func (a *App) askCloseTab(tab *pane.Tab, act tabActivity) {
 	a.ask(ui.Confirm{
 		Title: i18n.T("Close the tab?"),
-		Text:  a.closeText("The program in this tab is still running.", "Closing the tab ends the shell it runs."),
-		Yes:   i18n.T("Close"),
+		Text: a.closeText(act,
+			"The program in this tab is still running.",
+			"wt-go cannot tell whether this tab still runs a program.",
+			"Closing the tab ends the shell it runs."),
+		Yes: i18n.T("Close"),
 	}, func() { a.closeTab(tab) }, nil)
 }
 
 // askCloseOtherTabs asks whether to close the other tabs whose programs still
 // run, and closes them when the answer is yes.
-func (a *App) askCloseOtherTabs(keep *pane.Tab) {
+func (a *App) askCloseOtherTabs(keep *pane.Tab, act tabActivity) {
 	a.ask(ui.Confirm{
 		Title: i18n.T("Close the other tabs?"),
-		Text:  a.closeText("Programs in the other tabs are still running.", "Closing the other tabs ends the shells they run."),
-		Yes:   i18n.T("Close"),
+		Text: a.closeText(act,
+			"Programs in the other tabs are still running.",
+			"wt-go cannot tell whether the other tabs still run programs.",
+			"Closing the other tabs ends the shells they run."),
+		Yes: i18n.T("Close"),
 	}, func() { a.closeOtherTabs(keep) }, nil)
 }
 
-// closeText is what the question says: what still runs, or, when the settings
-// ask about every tab, what closing it ends.
-func (a *App) closeText(running, always string) string {
-	if a.settings.ConfirmClose == store.ConfirmAlways {
+// closeText is what the question says: which programs still run, or, when the
+// settings ask about every tab, what closing it ends. What the window cannot
+// tell is said as that, and not as a program it found.
+func (a *App) closeText(act tabActivity, running, unsure, always string) string {
+	switch {
+	case a.settings.ConfirmClose == store.ConfirmAlways:
 		return i18n.T(always)
+	case act.act == sys.Unknown:
+		return i18n.T(unsure)
+	case len(act.programs) > 0:
+		// Naming the programs is what makes the question answerable: a
+		// shell at its prompt is not, and a program the user forgot is.
+		return strings.Replace(i18n.T("Still running: %s"), "%s", strings.Join(act.programs, ", "), 1)
 	}
 	return i18n.T(running)
 }

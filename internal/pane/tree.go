@@ -68,20 +68,6 @@ func (t *Tab) Terminals() []*terminal.Terminal {
 	return out
 }
 
-// Running reports whether a pane still runs its program. A terminal that has
-// ended answers at once on Done, so a tab of ended shells does not ask before
-// it closes.
-func (t *Tab) Running() bool {
-	for _, term := range t.Terminals() {
-		select {
-		case <-term.Done():
-		default:
-			return true
-		}
-	}
-	return false
-}
-
 // each calls fn for each pane of the tree, in the order they take room.
 func (n *Node) each(fn func(*Node)) {
 	if n == nil {
