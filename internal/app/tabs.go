@@ -80,7 +80,7 @@ func closeTerminals(tab *pane.Tab) {
 // the plugin keeps the process to itself, so the window learns it from the one
 // child that starts between the two lists.
 func (a *App) newTerminal(opts terminal.Options) (*terminal.Terminal, error) {
-	before, berr := sys.Processes()
+	before, berr := sys.Subtree(sys.OwnPID())
 	term, err := terminal.New(opts)
 	if err != nil {
 		return nil, err
@@ -118,12 +118,22 @@ func (a *App) spawned(term *terminal.Terminal, before []sys.Proc) (sys.ShellProc
 	deadline := start.Add(3 * time.Second)
 	wait := 10 * time.Millisecond
 	for time.Now().Before(deadline) {
-		if after, err := sys.Processes(); err == nil {
+		// The children of this process are the ones the kernel names for it, so
+		// looking again costs a few small reads instead of a list of every
+		// process the machine runs, which this would throw away each time.
+		if after, err := sys.Subtree(sys.OwnPID()); err == nil {
 			if p, ok := sys.Spawned(before, after, sys.OwnPID(), a.claimed()); ok && a.claim(p.Pid, term) {
 				return sys.ShellProc{Pid: p.Pid, Name: p.Name}, true
 			}
 		}
-		time.Sleep(wait)
+		select {
+		case <-term.Done():
+			// The program ended, or could not start: no process is coming, so
+			// the wait is over before its three seconds are.
+			log.Printf("wt-go: %s", fault.Line(fault.UnknownShell, "the terminal ended before a child process appeared"))
+			return sys.ShellProc{}, false
+		case <-time.After(wait):
+		}
 		if wait < 100*time.Millisecond {
 			wait *= 2
 		}
@@ -147,7 +157,7 @@ func (a *App) reexec(shell sys.ShellProc, term *terminal.Terminal) (sys.ShellPro
 	cur := sys.Proc{Pid: shell.Pid, Name: shell.Name}
 	moved := false
 	for time.Now().Before(deadline) {
-		if all, err := sys.Processes(); err == nil {
+		if all, err := sys.Subtree(cur.Pid); err == nil {
 			if next, ok := sys.Reexec(all, cur); ok {
 				if a.adopt(cur.Pid, next.Pid, term) {
 					cur, moved = next, true
@@ -156,7 +166,11 @@ func (a *App) reexec(shell sys.ShellProc, term *terminal.Terminal) (sys.ShellPro
 				break
 			}
 		}
-		time.Sleep(wait)
+		select {
+		case <-term.Done():
+			return shell, false
+		case <-time.After(wait):
+		}
 		if wait < 100*time.Millisecond {
 			wait *= 2
 		}

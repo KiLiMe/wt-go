@@ -151,6 +151,22 @@ func Descendants(all []Proc, root int) []int {
 	return out
 }
 
+// SubtreeOf is root and the processes under it, taken from a list of the whole
+// machine: what Subtree answers with on the systems that name no child list.
+func SubtreeOf(all []Proc, root int) []Proc {
+	self, ok := findProc(all, root)
+	if !ok {
+		return nil
+	}
+	out := []Proc{self}
+	for _, pid := range Descendants(all, root) {
+		if p, ok := findProc(all, pid); ok {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
 // Spawned is the program a terminal begins with: a child of parent that
 // started between the two lists, and that taken does not name. The pty the
 // terminal reads was made by a host process of its own, which starts beside the

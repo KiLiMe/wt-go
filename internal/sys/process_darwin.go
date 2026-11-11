@@ -42,3 +42,14 @@ func stateLetter(stat int8) byte {
 	}
 	return 0
 }
+
+// Subtree is root and the processes under it, narrowed from a list of the
+// machine: this system hands out the whole table at once and names no child
+// list of its own.
+func Subtree(root int) ([]Proc, error) {
+	all, err := Processes()
+	if err != nil {
+		return nil, err
+	}
+	return SubtreeOf(all, root), nil
+}

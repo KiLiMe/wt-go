@@ -47,6 +47,27 @@ func TestDescendantsCycle(t *testing.T) {
 	}
 }
 
+// TestSubtreeOf covers the root and its whole tree, which is what the window
+// asks of a machine that lists every process at once.
+func TestSubtreeOf(t *testing.T) {
+	got := SubtreeOf(tree, 100)
+	if len(got) != 4 || got[0].Pid != 100 {
+		t.Fatalf("SubtreeOf = %v, want 100 and its three", got)
+	}
+	seen := map[int]bool{}
+	for _, p := range got {
+		seen[p.Pid] = true
+	}
+	for _, want := range []int{100, 200, 300, 400} {
+		if !seen[want] {
+			t.Errorf("SubtreeOf misses %d", want)
+		}
+	}
+	if got := SubtreeOf(tree, 999); got != nil {
+		t.Errorf("SubtreeOf of a process not in the list = %v, want nil", got)
+	}
+}
+
 // TestSpawned covers the process a terminal started: the one that appeared
 // between the two lists as a child of this one.
 func TestSpawned(t *testing.T) {

@@ -141,6 +141,27 @@ GC 调参、懒加载 617 套配色表、缩小图标这类实测无收益的事
 **风险**：标签之间共享同一份快照，与原来「每个标签各取一次」的差异在毫秒级，
 只影响「某个标签刚刚起进程」的极端时序，属于原有语义的容差。
 
+### 2.8 等 shell 出现时读 children 文件，不再全量扫 `/proc`（第二轮补做）
+
+**为什么**：`spawned` 每 10–100 ms 调一次 `sys.Processes()`（读 356 个
+`/proc/<pid>/stat`），最久等 3 秒；`reexec` 在 250 ms 里同样反复扫。实测启动后 4 秒内
+`/proc/<pid>/stat` 被打开 **2098** 次，全在后台线程上。
+
+**做法**：
+- `internal/sys` 加 `Subtree(root)`：Linux 读 `/proc/<pid>/task/<tid>/children`
+  （内核自己维护的子女表，每个线程一份，逐个 task 读），只 stat 子树里的进程；
+  Windows/macOS 没有这个文件，读一次整张表再用纯函数 `SubtreeOf` 筛。
+- `internal/app/tabs.go`：`spawned` 的 `before`/每次轮询、`reexec` 的每次轮询改走
+  `sys.Subtree`；两处 `select` 上 `term.Done()`，程序没起来（`E304`）不再白等 3 秒。
+- 「一次问好几个标签」的 `othersActivity`/`CloseTab` 仍用一张表：问题跨标签，
+  一张表比每个标签各读一棵树便宜（Windows 上尤其），这也是 2.7 的结论。
+
+**验收**：启动后 4 秒内 `/proc/<pid>/stat` 打开次数从 2098 降到个位数；开标签仍然认得
+shell（不等宽、启动后没有 `E304`）。
+
+**风险**：`children` 文件是 Linux 特有的；别的平台读整张表，与改动前同价。进程在
+「内核报了名字」与「读它的 stat」之间结束时会读失败，跳过即可（本来就允许）。
+
 ## 3. 明确不做（含理由）
 
 | 事项 | 为什么不做 |
@@ -150,7 +171,7 @@ GC 调参、懒加载 617 套配色表、缩小图标这类实测无收益的事
 | 懒加载 617 套配色表 | 编译期字面量，启动成本≈0 |
 | scrollback 默认调小、裁剪图标/主题、延迟日志 | 实测 ±0 |
 | `Theme.SetSource` 移到 `NewWindow` 之后 | 省 6–8 ms，但首帧 GTK chrome 可能先闪一下系统色，收益不抵不确定 |
-| `/proc` 全量扫描换 `children` 查询 | 需要三平台对等实现，且要重做「启动的 shell 是谁」的判定；单独一阶段做（见 plan.md 阶段 6 的后续项） |
+| 把 `activity` 也改成每棵子树各读一次 | 跨标签的问题用一张表更便宜（Windows/macOS 读子树就是读整张表）；见 2.8 |
 | 进程内 `malloc_trim(0)` | 见 2.6：一次性只值 3–4 MB 且被后续分配吃掉，周期性要往 UI 循环里加定时器 |
 | 向 mygo 要 `Terminal.Pid()` | 上游能力，做了能删掉整套快照/轮询/claimed 逻辑，但不在本仓库范围内 |
 
@@ -215,5 +236,21 @@ go tool mygo build -platform linux/amd64 -skip-dmg -skip-installer
 - **多标签**：关闭「其它标签」时进程表取一次，标签数与 `/proc` 扫描次数解耦；
   具体耗时未单独计时（4 个标签约省 14–20 ms，且发生在 UI 线程）。
 - 交叉检查：`GOOS=windows/darwin/linux-arm64 go vet ./...` 通过，`go test ./...` 通过。
+
+### 第二轮（2.8，2026-11-12 补做）
+
+| 指标 | before（6aa6f38） | after |
+| --- | --- | --- |
+| 启动后 4 s 内 `/proc/<pid>/stat` 打开次数 | 2098 | 9 |
+| 同上，`/proc` 下任意打开 | 2098 | 106（children 与 task 目录） |
+| exec → shell | 123 / 134 / 132 ms | 115 / 116 / 116 ms |
+| 线程（3 s） | 37 / 39 / 37 | 32 / 34 / 34 |
+| RSS / PSS | 154.1–155.9 MB / 82.7–84.6 MB | 153.9–155.9 MB / 82.5–84.5 MB |
+
+- `/proc` 的读从「每次轮询一台机器」变成「每次轮询几棵子树」，2098 → 9 次 stat。
+- 线程少了 3–5 个：轮询不再产生成片的阻塞读，runtime 留下的 M 线程随之变少（观察到的
+  相关性，未单独做归因实验）。RSS/PSS 不变，说明这些线程本来就不带映射。
+- `spawned`/`reexec` 现在等 `term.Done()`：程序起不来（`E304`）当场记一行日志，
+  不再空转 3 秒。
 - 遗留：`/proc` 全量扫描换 `children` 查询、`Theme.SetSource` 推迟、向 mygo 要
   `Terminal.Pid()`、渲染路径的 pango/atlas 成本，都留给后续（见 `docs/plan.md` 阶段 6）。

@@ -154,8 +154,9 @@ Linux 上冷启动的 150 MB RSS 里 Go 代码只占约 9 MB，大头是 MyGo �
 **验收**：`go vet` / `go test` / 交叉 `go vet` 全过；实测首帧 153.5 → 124.5 ms、
 常驻 RSS 不变，见计划的第 7 节；设置页停留时每帧不再读目录、不再排序 617 个名字。
 
-**后续项**（要上游或单独一阶段）：`/proc/<pid>/task/<tid>/children` 代替全量扫描、
-`Theme.SetSource` 延迟、向 mygo 要 `Terminal.Pid()`。
+**后续项**（要上游或单独一阶段）：`Theme.SetSource` 延迟、向 mygo 要 `Terminal.Pid()`。
+等 shell 出现与跟随 launcher 的轮询已改用内核的 children 文件（计划的 2.8），启动后
+4 秒内的 `/proc/<pid>/stat` 打开次数从 2098 降到 9。
 
 ---
 

@@ -846,6 +846,34 @@ v4.8.0 是最后一个 **Apache-2.0** 版本，与 wt-go 的许可证相容；`s
 
 ---
 
+## ADR-042 等 shell 出现时读内核的 children 文件，不再全量扫进程表
+
+**背景**：`spawned` 每 10–100 ms 调一次 `sys.Processes()`（读整台机器 356 个
+`/proc/<pid>/stat`），最久 3 秒；`reexec` 在 250 ms 里同样反复扫。启动后 4 秒内
+`/proc/<pid>/stat` 被打开 2098 次——为了找一个刚起来的子进程。
+
+**决定**：
+
+1. `internal/sys` 加 `Subtree(root)`：Linux 读 `/proc/<pid>/task/<tid>/children`
+   （内核为每个线程维护的子女表），只 stat 子树里的进程；Windows/macOS 读一次整张表，
+   再用纯函数 `SubtreeOf` 筛。
+2. `internal/app/tabs.go` 的 `spawned`（含 `before` 快照）与 `reexec` 走 `Subtree`，
+   并在轮询里 `select` 上 `term.Done()`：程序起不来就不等满 3 秒。
+3. 「一次问好几个标签」的 `othersActivity`/`CloseTab` 仍读一张整表。
+
+**理由**：问题本身是「这个进程下面有什么」，而内核已经知道答案，问它比读一台机器便宜
+两个数量级；跨标签的问题反过来，一张表比每个标签各读一棵树便宜（在 Windows/macOS 上
+「读一棵树」就是「读整张表」）。所以两种形状各留一个入口，而不是把一种套到所有调用点。
+
+**代价**：`children` 是 Linux 的接口，别的平台退化成整张表（与改动前同价）。进程在
+「内核报道名字」与「读它的 stat」之间结束时会读失败——原有实现同样允许这种跳跃。
+
+**测试**：`internal/sys/process_test.go` 的 `TestSubtreeOf` 钉住纯函数、未知根返回空；
+`internal/sys/process_linux_test.go` 起一个真的子进程，钉住 `Subtree` 装在 Linux 上能看见它、
+父 id 对得上、不存在的 pid 报错。
+
+---
+
 ## 待定
 
 - 会话常驻：阶段 5 评估是否采用 ADR-009 所述的会话服务模型。
