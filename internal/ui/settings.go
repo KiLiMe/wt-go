@@ -6,6 +6,7 @@ import (
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/i18n"
+	"wtgo/internal/icons"
 	"wtgo/internal/store"
 	"wtgo/internal/theme"
 )
@@ -49,20 +50,30 @@ func SettingsTab(c *myui.Context, st Settings, act Actions) myui.Element {
 func nav(c *myui.Context, st Settings, act Actions) myui.Element {
 	t := c.Theme()
 	return myui.Column(c).Width(220).Padding(12, 8, 12, 8).Gap(2).Background(t.Surface).Children(func() {
-		for _, it := range []struct{ page, label string }{
-			{PageStartup, i18n.T("Startup")},
-			{PageInteraction, i18n.T("Interaction")},
-			{PageAppearance, i18n.T("Appearance")},
-			{PageSchemes, i18n.T("Color schemes")},
-			{PageActions, i18n.T("Actions")},
-		} {
-			navItem(c, st.Page, it.page, it.label, act)
-		}
-		myui.Text(c, i18n.T("Profiles")).FontSize(11).TextColor(t.TextMuted).Padding(12, 8, 4, 8)
-		navItem(c, st.Page, PageProfiles, i18n.T("Defaults"), act)
-		for _, p := range st.Profiles {
-			navItem(c, st.Page, ProfilePage(p.ID), p.Name, act)
-		}
+		// The pages scroll, so that adding profiles never pushes the row that
+		// adds the next one out of reach.
+		myui.Scroll(c).Grow(1).MinHeight(0).Children(func() {
+			myui.Column(c).Gap(2).Children(func() {
+				for _, it := range []struct{ page, label string }{
+					{PageStartup, i18n.T("Startup")},
+					{PageInteraction, i18n.T("Interaction")},
+					{PageAppearance, i18n.T("Appearance")},
+					{PageSchemes, i18n.T("Color schemes")},
+					{PageActions, i18n.T("Actions")},
+				} {
+					navItem(c, st.Page, it.page, it.label, act)
+				}
+				myui.Text(c, i18n.T("Profiles")).FontSize(11).TextColor(t.TextMuted).Padding(12, 8, 4, 8)
+				navItem(c, st.Page, PageProfiles, i18n.T("Defaults"), act)
+				for _, p := range st.Profiles {
+					navItem(c, st.Page, ProfilePage(p.ID), p.Name, act)
+				}
+			})
+		})
+		myui.Column(c).Gap(2).Padding(6, 0, 0, 0).Children(func() {
+			navAction(c, icons.Add.SVG, i18n.T("Add profile"), act.AddProfile)
+			navCheck(c, st.Hidden, i18n.T("Show hidden profiles"), act.ShowHiddenProfiles)
+		})
 	})
 }
 
@@ -77,6 +88,28 @@ func navItem(c *myui.Context, page, target, label string, act Actions) {
 	el.Children(func() {
 		myui.Text(c, label).SingleLine()
 	})
+}
+
+// navAction is a row under the pages that does something instead of opening a
+// page, so it sits where the list ends rather than on the page it acts on.
+func navAction(c *myui.Context, icon *myui.SVG, label string, onClick func()) {
+	t := c.Theme()
+	el := myui.Row(c).Height(30).Padding(0, 6).Gap(8).AlignItems(myui.Center).Radius(6).
+		Cursor(myui.CursorPointer).OnClick(onClick)
+	if el.Hovered() {
+		el.Background(t.SurfaceHover)
+	}
+	el.Children(func() {
+		myui.Icon(c, icon).Size(14, 14).TextColor(t.TextMuted)
+		myui.Text(c, label).FontSize(13).SingleLine()
+	})
+}
+
+// navCheck is a switch that holds in the column, under the pages.
+func navCheck(c *myui.Context, on bool, label string, toggle func()) {
+	if myui.Checkbox(c, &on, label).FontSize(12).Changed() {
+		toggle()
+	}
 }
 
 // footer is what saves the page: what the draft holds that the file does not,
@@ -309,12 +342,6 @@ func profilesPage(c *myui.Context, st Settings, act Actions) {
 				})
 			})
 		}
-		row(c, func() {
-			myui.Row(c).Gap(8).Children(func() {
-				myui.Button(c, i18n.T("Add profile")).OnClick(act.AddProfile)
-				myui.Button(c, i18n.T("Show hidden profiles")).OnClick(act.ShowHiddenProfiles)
-			})
-		})
 	})
 }
 
