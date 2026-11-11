@@ -16,7 +16,7 @@ pwsh .\Scripts\build.ps1                 # 编译到 build\windows-amd64\wt-go.e
 发布包用 mygo 自己的构建命令，一次产出可执行文件、原生库与 Linux 包：
 
 ```pwsh
-pwsh .\Scripts\build.ps1 -Package        # 等于 go tool mygo build -platform windows/amd64 -skip-installer -o dist
+pwsh .\Scripts\build.ps1 -Package        # 等于 go tool mygo build -platform windows/amd64 -skip-installer -skip-dmg -o dist
 ```
 
 发布页只放两个便携 zip：`wt-go_<version>_windows-amd64_portable.zip`（`wt-go.exe` 与
@@ -31,6 +31,8 @@ pwsh .\Scripts\build.ps1 -Package        # 等于 go tool mygo build -platform w
 .\build\windows-amd64\wt-go.exe diag --json
 .\build\windows-amd64\wt-go.exe diag --redact  # 贴到 issue 里：个人路径换成 %USERPROFILE% 之类
 .\build\windows-amd64\wt-go.exe mcp       # MCP 服务器（stdin/stdout），给 AI 读现场
+.\build\windows-amd64\wt-go.exe version   # 版本、mygo 与 libghostty-vt 版本
+.\build\windows-amd64\wt-go.exe help      # 用法
 ```
 
 出问题时先看 [docs/故障排查.md](docs/故障排查.md)。
@@ -46,7 +48,7 @@ pwsh .\Scripts\build.ps1 -Package        # 等于 go tool mygo build -platform w
 | 把现场交给 AI（`wt-go mcp`，Model Context Protocol） | ✅ 五个只读工具，不需要窗口开着 |
 | exe 图标与版本信息 | ✅ `resources/icon.png`，`mygo build`（含 `Scripts/build.ps1`）打包时注入 |
 | profile：自动发现 pwsh / Windows PowerShell / cmd / WSL / POSIX shell | ✅ |
-| 配色方案 | ✅ 内置 9 套 + Ghostty 617 套直用 + 自定义 |
+| 配色方案 | ✅ 内置 7 套 + Ghostty 617 套直用 + 自定义 |
 | 字体 / 字号 / 行高 / 内边距 / 光标形状 / 窗口透明度 | ✅ |
 | 设置页（表单 + 全部动作可录制键位 + 实时预览） | ✅ |
 | `settings.json` 热重载、坏配置归档 | ✅ 约一秒内生效 |
@@ -59,9 +61,11 @@ pwsh .\Scripts\build.ps1 -Package        # 等于 go tool mygo build -platform w
 
 | 文档 | 内容 |
 | --- | --- |
-| [docs/使用说明.md](docs/使用说明.md) | 运行环境、构建、标签与分栏、快捷键、`settings.json` 全字段、profile、配色、设置页、Linux、与 WT 的差异 |
+| [docs/使用说明.md](docs/使用说明.md) | 运行环境、构建、标签与分栏、快捷键概览、profile、配色、设置页、与 WT 的差异 |
+| [docs/配置参考.md](docs/配置参考.md) | `settings.json` 全字段、完整示例、数值范围、路径写法、关闭确认 |
+| [docs/键位.md](docs/键位.md) | 默认键位表、动作名、键位字符串写法 |
 | [docs/故障排查.md](docs/故障排查.md) | 每个故障码的意思、怎么确认、改什么；`wt-go diag` 与 MCP 的用法 |
-| [docs/代码导读.md](docs/代码导读.md) | 代码地图：目录、包职责、依赖方向、渲染流程、改动前必读的坑、阅读顺序 |
+| [docs/Linux.md](docs/Linux.md) | Linux 运行库依赖、装法、已知限制、反馈时附什么 |
 | [docs/代码导读.md](docs/代码导读.md) | 代码地图：目录、包职责、依赖方向、渲染流程、改动前必读的坑、阅读顺序 |
 | [docs/decisions.md](docs/decisions.md) | 设计决策与理由（ADR） |
 | [docs/plan.md](docs/plan.md) | 阶段计划、验收标准、不做什么 |
@@ -86,11 +90,11 @@ internal/sys/      全部 OS 副作用（路径、原子写、日志、Job Objec
 internal/i18n/     中英文案
 tools/genicon/     画 resources/icon.png（go run ./tools/genicon）
 resources/         应用图标（1024×1024 PNG）
-docs/              使用说明 / 故障排查 / 代码导读 / ADR / 阶段计划
+docs/              使用说明 / 配置参考 / 键位 / 故障排查 / Linux / 代码导读 / ADR / 阶段计划
 ```
 
-依赖方向是硬规则（`app → ui → {pane, store, theme, profile, action} → i18n`），
-由 `internal/app/deps_test.go` 机械校验。详见 [docs/代码导读.md](docs/代码导读.md)。
+依赖方向是硬规则（`app → ui → {pane, layout, store, theme, profile, action, icons} → i18n`），
+由 `internal/app/deps_test.go` 机械校验；完整的边见 [docs/代码导读.md](docs/代码导读.md) 的「边界与链路」。
 
 ## 运行环境
 
@@ -106,3 +110,4 @@ wt-go 本身是 [MIT](LICENSE)。随包发布的东西另有出处：
 | --- | --- |
 | 终端内核 `ghostty-vt.dll`（libghostty-vt，来自 [Ghostty](https://github.com/ghostty-org/ghostty)） | MIT，Copyright (c) 2024 Mitchell Hashimoto |
 | UI 框架与终端插件 [mygo](https://github.com/egoist/mygo) | MIT |
+| 界面图标 Remix Icon v4.8.0（`internal/icons/svg`） | Apache-2.0，Copyright (c) Remix Design，见 `internal/icons/NOTICE` |

@@ -7,8 +7,8 @@
 - 代码注释用英文（与 mygo 上游一致），文档用中文；注释解释“为什么”，不复述代码。
 - 依赖方向是硬规则，由 `internal/app/deps_test.go` 用 `go list` 机械校验。新增包或改 import 时同步它的规则表，以及 `docs/代码导读.md` 的依赖图。
 - 纯函数包（`internal/action`、`internal/cli`、`internal/fault`、`internal/mcp`、`internal/store`、`internal/profile`、`internal/layout`、`internal/theme`）不 import `os`、`os/exec`、`path/filepath`、注册表；要 OS 能力时由 `internal/sys` 提供、`internal/app` 读入数据后注入。
-- 动作的 id、标题、分组与默认键位只有一份：`internal/action`。菜单、命令面板、设置页、默认 `keybindings` 都从它取名，不另拼字符串。
-- 改行为时一起改文档：`docs/使用说明.md`（用户视角）、`docs/代码导读.md`（代码地图）、`docs/decisions.md`（新决策写成 ADR）、`docs/plan.md`（阶段状态）。
+- 动作的 id、标题、分组与默认键位只有一份：`internal/action`。菜单、命令面板、设置页、默认 `keybindings` 都从它取名，不另拼字符串；用户能看到的键位说明也只在 `docs/键位.md` 写一遍。
+- 改行为时一起改文档：`docs/使用说明.md`（用户视角）、`docs/配置参考.md`（`settings.json` 字段）、`docs/代码导读.md`（代码地图）、`docs/decisions.md`（新决策写成 ADR）、`docs/plan.md`（阶段状态）。
 - 新的失败路径要编号：`internal/fault` 里加一个码，`docs/故障排查.md` 里写它的确认与修法；日志里用 `fault.Line(code, detail)` 打印，别写自由文本。
 
 ## 路径
@@ -33,6 +33,6 @@
 | `tools/genicon/` | 画 `resources/icon.png`：`go run ./tools/genicon` |
 | `resources/icon.png` | 应用图标（1024×1024 PNG），`mygo build` 打包时嵌进 exe |
 | `Scripts/build.ps1` | 日常构建：`go tool mygo build` 出 `build\windows-amd64\wt-go.exe`（带图标、版本与 native 库） |
-| `docs/` | `使用说明.md` / `代码导读.md` / `故障排查.md`（故障码）/ `decisions.md`（ADR）/ `plan.md`（阶段计划） |
+| `docs/` | `使用说明.md` / `配置参考.md`（`settings.json` 全字段）/ `键位.md`（默认键位与键位写法）/ `故障排查.md`（故障码）/ `Linux.md` / `代码导读.md` / `decisions.md`（ADR）/ `plan.md`（阶段计划） |
 | `mygo.json` | `go tool mygo build` 的包名、版本与打包信息 |
 | `Scripts/build.ps1` | 参数：`-Test` 先跑 vet 与测试、`-Clean` 清掉 `build/`、`-Package` 只出 `dist/` |
