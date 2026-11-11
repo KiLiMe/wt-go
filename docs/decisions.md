@@ -292,7 +292,7 @@ Windows 关句柄 → 作业里的进程全部终止。
    `E201` 设置不是合法 JSON、`E202` 字段越界、`E203` 键位字符串读不懂、`E301` shell 起不来、`E302` panic），
    每码一行英文含义；日志里用 `fault.Line(code, detail)` 打印，不再写自由文本。
 2. `app.Run` 一开始把日志接到 `%LOCALAPPDATA%\wt-go\wt-go.log`（超过 1 MiB 下次启动轮换成 `.log.1`）。
-3. `wtgo diag` 打印同一套事实：版本/提交、exe、设置文件、原生库、每个 profile 能不能启动、
+3. `wt-go diag` 打印同一套事实：版本/提交、exe、设置文件、原生库、每个 profile 能不能启动、
    日志与崩溃日志位置、检查项；`--json` 供机器读。
 
 **理由**：重复的排查对话全部变成“先跑 `diag`”。码与文档一对一，用户报 `E203` 时不需要
@@ -307,7 +307,7 @@ Windows 关句柄 → 作业里的进程全部终止。
 
 **背景**：“把问题交给 AI”需要机器可读的现场。候选是本地 HTTP 端口与 MCP（Model Context Protocol）。
 
-**决定**：实现 `wtgo mcp`：JSON-RPC 2.0 走 stdin/stdout，五个只读工具
+**决定**：实现 `wt-go mcp`：JSON-RPC 2.0 走 stdin/stdout，五个只读工具
 （`wtgo_diag`/`wtgo_status`/`wtgo_settings`/`wtgo_profiles`/`wtgo_log`）与两个资源，
 实际协议实现自写（`internal/mcp`，只用标准库）。
 

@@ -3,6 +3,6 @@
   "identifier": "com.wtgo.desktop",
   "version": "0.1.0",
   "main": ".",
-  "out": "dist",
+  "out": "build",
   "linux": { "depends": [], "webview": false }
 }

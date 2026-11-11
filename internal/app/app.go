@@ -118,7 +118,7 @@ type binding struct {
 
 // Run opens the window and runs until it closes.
 func Run() (err error) {
-	// The commands that answer without a window: `wtgo diag` and `wtgo mcp`.
+	// The commands that answer without a window: `wt-go diag` and `wt-go mcp`.
 	if handled, code := cli.Run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr); handled {
 		if code != 0 {
 			os.Exit(code)
@@ -126,7 +126,7 @@ func Run() (err error) {
 		return nil
 	}
 	// A window started from Explorer has no console: what it says goes to
-	// wt-go.log as well, so that `wtgo diag` can read it back later.
+	// wt-go.log as well, so that `wt-go diag` can read it back later.
 	if f, ferr := sys.OpenLog(); ferr == nil {
 		// The file comes first: a window started from Explorer has no console,
 		// and writing to one that is not there must not lose the line.

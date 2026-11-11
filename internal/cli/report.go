@@ -1,5 +1,5 @@
-// Package cli is wt-go without a window: the report `wtgo diag` prints and
-// the MCP server `wtgo mcp` runs for an editor or an agent. It holds no OS
+// Package cli is wt-go without a window: the report `wt-go diag` prints and
+// the MCP server `wt-go mcp` runs for an editor or an agent. It holds no OS
 // knowledge of its own — every path and file comes from internal/sys — so one
 // report answers a terminal, a JSON reader and a tool call alike.
 package cli

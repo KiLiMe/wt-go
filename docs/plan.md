@@ -9,7 +9,7 @@
 
 **做什么**
 
-1. `go.mod`（module `wtgo`，`go 1.27.3`，依赖 mygo v0.8.3）。
+1. `go.mod`（module `wt-go`，`go 1.27.3`，依赖 mygo v0.8.3）。
 2. `main.go`：`mygo.App.WhenReady` → `terminal.New()` → `NewWindow`。
 3. 单标签、单窗格，`terminal.View(...).Fill().AutoFocus()` 占满。
 4. 窗口标题跟随 shell 的 OSC 0/2；进程退出时标签显示"已退出"，窗口不自动关。
@@ -121,12 +121,12 @@
 状态：部分已完成；配置原子写入、坏配置归档、边界校验与 watcher 生命周期保护已提前落地。
 
 **部分已完成**（2026-11-10）：子进程树收尾（Job Object）、崩溃日志、
-**故障码 + `wtgo diag` + `wtgo mcp`**（ADR-021/022：失败有了编号，日志写进
+**故障码 + `wt-go diag` + `wt-go mcp`**（ADR-021/022：失败有了编号，日志写进
 `wt-go.log`，`diag` 一次说完这台机器的事实，MCP 让 AI 自己读）。
 
 1. 启动恢复（可选）：记住昨天的标签与目录。
 2. ~~崩溃日志~~（已完成：`panic` 写 `crash-<时间>.log` 到配置目录）、内存/句柄泄漏检查（长期跑 shell 会话）。
-3. ~~冒烟脚本~~（部分完成：`wtgo diag` 与 `wtgo mcp` 提供了机器可读的现场，
+3. ~~冒烟脚本~~（部分完成：`wt-go diag` 与 `wt-go mcp` 提供了机器可读的现场，
    但“临时配置目录 + 截图”的自动化仍缺，见 `docs/decisions.md` 待定的控制接口）。
 4. 打包：`mygo build` 出单文件 exe + 原生库（已完成：图标、版本信息与 manifest
    在打包时注入，`go run ./tools/genicon` 重画图标）。
@@ -138,7 +138,7 @@
 - SSH / 串口 / 隧道 / 密码保管（那是 sshterm 的领域）。
 - 多窗口共享会话、协作、录制。
 - 插件系统（至少前三阶段不做）；WT 的「扩展」页不做。
-- 命令行参数兼容 `wt.exe` 的全套（只做 `wtgo [profile] [-- dir]`）。
+- 命令行参数兼容 `wt.exe` 的全套（只做 `wt-go [profile] [-- dir]`）。
 - WT 设置页里与渲染后端相关的整页：**呈现**（Direct2D / WARP / 交换链）。
 - **兼容性**页：后台运行、文本度量模式、清缓存（只保留「重置为默认设置」按钮，放设置页底部）。
 - 亚克力 / 背景图 / 通知区域图标 / 最小化到托盘 / 自动隐藏窗口 / 窗格动画。

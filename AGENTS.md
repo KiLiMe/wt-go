@@ -26,12 +26,12 @@
 | `internal/theme/` | 配色：设置里的方案 > 内置 > Ghostty 的 617 套（纯函数） |
 | `internal/sys/` | 全部 OS 副作用：路径、原子写、坏配置归档、Job Object、shell 探测、打开路径、崩溃日志 |
 | `internal/i18n/` | 中英文案，缺条目回落原文 |
-| `internal/fault/` | 故障码与一行含义：日志、`wtgo diag`、文档共用一套编号（纯函数） |
-| `internal/cli/` | 不开窗口的那部分：`wtgo diag` 的报告、`wtgo mcp` 的工具（不碰 OS，全走 `internal/sys`） |
+| `internal/fault/` | 故障码与一行含义：日志、`wt-go diag`、文档共用一套编号（纯函数） |
+| `internal/cli/` | 不开窗口的那部分：`wt-go diag` 的报告、`wt-go mcp` 的工具（不碰 OS，全走 `internal/sys`） |
 | `internal/mcp/` | 精简的 Model Context Protocol 服务器：JSON-RPC 2.0 + tools/resources（只用标准库） |
 | `tools/genicon/` | 画 `resources/icon.png`：`go run ./tools/genicon` |
 | `resources/icon.png` | 应用图标（1024×1024 PNG），`mygo build` 打包时嵌进 exe |
-| `build.ps1` | 日常构建：`go tool mygo build` 出 `build\bin\Release\wtgo.exe`（带图标、版本与 native 库） |
+| `build.ps1` | 日常构建：`go tool mygo build` 出 `build\windows-amd64\wt-go.exe`（带图标、版本与 native 库） |
 | `docs/` | `使用说明.md` / `代码导读.md` / `故障排查.md`（故障码）/ `decisions.md`（ADR）/ `plan.md`（阶段计划） |
 | `mygo.json` | `go tool mygo build` 的包名、版本与打包信息 |
 | `build.ps1` | 参数：`-Test` 先跑 vet 与测试、`-Clean` 清掉 `build/`、`-Package` 只出 `dist/` |

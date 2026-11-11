@@ -17,15 +17,15 @@ func servemcp(in io.Reader, out, errOut io.Writer) int {
 	s := Server()
 	s.In = in
 	s.Out = out
-	s.Logf = func(format string, a ...any) { fmt.Fprintf(errOut, "wtgo mcp: "+format+"\n", a...) }
+	s.Logf = func(format string, a ...any) { fmt.Fprintf(errOut, "wt-go mcp: "+format+"\n", a...) }
 	if err := s.Serve(); err != nil {
-		fmt.Fprintf(errOut, "wtgo mcp: %v\n", err)
+		fmt.Fprintf(errOut, "wt-go mcp: %v\n", err)
 		return 1
 	}
 	return 0
 }
 
-// Server is the MCP server wt-go offers: the same report `wtgo diag` prints,
+// Server is the MCP server wt-go offers: the same report `wt-go diag` prints,
 // as tools and resources, so an agent reads the checks instead of asking the
 // user to copy a window.
 func Server() *mcp.Server {
@@ -128,7 +128,7 @@ window closed by itself: the fault line names the code the doc explains.`,
 			{
 				URI:         "wtgo://diag",
 				Name:        "diag",
-				Description: "The wt-go diagnostic report as text, the way wtgo diag prints it.",
+				Description: "The wt-go diagnostic report as text, the way wt-go diag prints it.",
 				MimeType:    "text/plain",
 				Read:        func() (string, error) { return Collect().Explain(), nil },
 			},

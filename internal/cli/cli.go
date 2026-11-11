@@ -5,14 +5,14 @@ import (
 	"io"
 )
 
-// Usage is what `wtgo help` prints: the window, and what runs without one.
+// Usage is what `wt-go help` prints: the window, and what runs without one.
 const Usage = `wt-go — a terminal multiplexer in one window
 
-  wtgo                     open the window
-  wtgo diag [--json]       what this machine is missing, and why
-  wtgo mcp                 answer the Model Context Protocol on stdin/stdout
-  wtgo version             print the build
-  wtgo help                this text
+  wt-go                     open the window
+  wt-go diag [--json]       what this machine is missing, and why
+  wt-go mcp                 answer the Model Context Protocol on stdin/stdout
+  wt-go version             print the build
+  wt-go help                this text
 
 The report and the MCP tools read the same files the window reads, and every
 failure they name has a code with the checks and the fix in docs/故障排查.md.
@@ -37,7 +37,7 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) (handled bool, code
 		fmt.Fprint(out, Usage)
 		return true, 0
 	}
-	fmt.Fprintf(errOut, "wtgo: unknown command %q\n\n%s", args[0], Usage)
+	fmt.Fprintf(errOut, "wt-go: unknown command %q\n\n%s", args[0], Usage)
 	return true, 2
 }
 
@@ -50,7 +50,7 @@ func diag(args []string, out, errOut io.Writer) int {
 		case "--json", "-json":
 			asJSON = true
 		default:
-			fmt.Fprintf(errOut, "wtgo diag: unknown flag %q\n", a)
+			fmt.Fprintf(errOut, "wt-go diag: unknown flag %q\n", a)
 			return 2
 		}
 	}
@@ -58,7 +58,7 @@ func diag(args []string, out, errOut io.Writer) int {
 	if asJSON {
 		text, err := r.JSON()
 		if err != nil {
-			fmt.Fprintf(errOut, "wtgo diag: %v\n", err)
+			fmt.Fprintf(errOut, "wt-go diag: %v\n", err)
 			return 1
 		}
 		fmt.Fprintln(out, text)
