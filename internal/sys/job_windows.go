@@ -20,7 +20,8 @@ var job windows.Handle
 //
 // It joins the process itself rather than each child: children join a job on
 // their own, and one call covers every pane, every split, and the processes
-// those shells start later.
+// those shells start later. A child that asks to break away, which only the
+// window this one restarts does, leaves the job on purpose.
 func HoldChildren() error {
 	if job != 0 {
 		return nil
@@ -31,7 +32,7 @@ func HoldChildren() error {
 	}
 	info := windows.JOBOBJECT_EXTENDED_LIMIT_INFORMATION{
 		BasicLimitInformation: windows.JOBOBJECT_BASIC_LIMIT_INFORMATION{
-			LimitFlags: windows.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+			LimitFlags: windows.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | windows.JOB_OBJECT_LIMIT_BREAKAWAY_OK,
 		},
 	}
 	if _, err := windows.SetInformationJobObject(

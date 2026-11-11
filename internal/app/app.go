@@ -102,7 +102,10 @@ type App struct {
 	recording string
 	// note is what the last action did; configErr is why the file is not
 	// settings and stays until the file is settings again.
-	note      string
+	note string
+	// relaunch starts the program again, which the advanced page does after
+	// it deletes the settings; the tests replace it.
+	relaunch  func() error
 	configErr string
 	// filter is what the color schemes page searches for.
 	filter string
@@ -226,8 +229,8 @@ func opacity(v float64) float64 {
 // newApp reads the settings and finds the shells, and says what went wrong
 // when it could not: the window opens with the defaults.
 func newApp() *App {
-	a := &App{settings: store.Default(), shells: map[*terminal.Terminal]sys.ShellProc{}, watchStop: make(chan struct{})}
-	settings, data, err := load()
+	a := &App{settings: store.Default(), shells: map[*terminal.Terminal]sys.ShellProc{}, watchStop: make(chan struct{}), relaunch: sys.Relaunch}
+	settings, data, fresh, err := load()
 	if err == nil {
 		a.settings = settings
 	} else {
@@ -244,11 +247,14 @@ func newApp() *App {
 	} else {
 		a.savedData = data
 	}
-	a.found = found()
-	// A file that is not settings is left as it is, so that a person can fix
-	// it: the profiles the window found stay in memory for this run only.
-	if adopt(&a.settings, a.found, exists) && err == nil {
-		a.adoptWrite()
+	// The shells of the machine are probed when the window writes its first
+	// settings file. After that the file is the list, and a probe is what the
+	// advanced page asks for.
+	if fresh && err == nil {
+		a.found = found()
+		if adopt(&a.settings, a.found, exists) {
+			a.adoptWrite()
+		}
 	}
 	a.profiles = profile.Resolve(a.settings.Profiles, a.found)
 	a.keys = bindings(a.settings.Keybindings)
@@ -349,24 +355,27 @@ func (a *App) CloseWindow() {
 
 // load reads the settings, and writes the defaults where there are none. It
 // answers with the bytes the file holds, which the window watches.
-func load() (store.Settings, []byte, error) {
+// load reads settings.json, writing the defaults when there is no file, and
+// reports whether it wrote them: that first file is the only one the window
+// probes the machine for.
+func load() (store.Settings, []byte, bool, error) {
 	data, ok, err := sys.ReadSettings()
 	if err != nil {
-		return store.Settings{}, nil, err
+		return store.Settings{}, nil, false, err
 	}
 	if !ok {
 		settings := store.Default()
 		data, err := store.Marshal(settings)
 		if err != nil {
-			return settings, nil, err
+			return settings, nil, true, err
 		}
 		if err := sys.WriteSettings(data); err != nil {
-			return settings, nil, err
+			return settings, nil, true, err
 		}
-		return settings, data, nil
+		return settings, data, true, nil
 	}
 	settings, err := store.Parse(data)
-	return settings, data, err
+	return settings, data, false, err
 }
 
 // found is the shells of the machine, as profile resolves them.

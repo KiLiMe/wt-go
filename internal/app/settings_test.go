@@ -35,7 +35,7 @@ func TestLoadKeepsTheOriginal(t *testing.T) {
 	if err := sys.WriteSettings(bad); err != nil {
 		t.Fatal(err)
 	}
-	settings, data, err := load()
+	settings, data, _, err := load()
 	if err == nil {
 		t.Fatal("loaded a file that is not settings")
 	}

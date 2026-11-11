@@ -18,6 +18,7 @@ const (
 	PageAppearance  = "appearance"
 	PageSchemes     = "schemes"
 	PageActions     = "actions"
+	PageAdvanced    = "advanced"
 	PageProfiles    = "profiles"
 )
 
@@ -60,6 +61,7 @@ func nav(c *myui.Context, st Settings, act Actions) myui.Element {
 					{PageAppearance, i18n.T("Appearance")},
 					{PageSchemes, i18n.T("Color schemes")},
 					{PageActions, i18n.T("Actions")},
+					{PageAdvanced, i18n.T("Advanced")},
 				} {
 					navItem(c, st.Page, it.page, it.label, act)
 				}
@@ -125,7 +127,7 @@ func footer(c *myui.Context, st Settings, act Actions) myui.Element {
 			myui.Text(c, note).FontSize(11).TextColor(t.TextMuted).SingleLine().MaxWidth(420)
 		}
 		myui.Spacer(c)
-		myui.Button(c, i18n.T("Open settings.json")).OnClick(act.OpenSettingsFile)
+		myui.Button(c, i18n.T("Open settings folder")).OnClick(act.OpenSettingsFolder)
 		myui.Button(c, i18n.T("Discard")).Disabled(!st.Dirty).Opacity(dimmed(st.Dirty)).OnClick(act.DiscardSettings)
 		myui.PrimaryButton(c, i18n.T("Save")).Disabled(!st.Dirty).Opacity(dimmed(st.Dirty)).OnClick(act.SaveSettings)
 	})
@@ -156,6 +158,8 @@ func page(c *myui.Context, st Settings, act Actions) {
 		schemesPage(c, st, act)
 	case PageActions:
 		actionsPage(c, st, act)
+	case PageAdvanced:
+		advancedPage(c, st, act)
 	case PageProfiles:
 		profilesPage(c, st, act)
 	default:

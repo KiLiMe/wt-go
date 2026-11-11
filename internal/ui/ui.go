@@ -52,8 +52,13 @@ type Actions interface {
 	SaveSettings()
 	// DiscardSettings goes back to the settings the file holds.
 	DiscardSettings()
-	// OpenSettingsFile opens the file in the program that edits it.
-	OpenSettingsFile()
+	// OpenSettingsFolder opens the folder settings.json lives in.
+	OpenSettingsFolder()
+	// OpenProgramFolder opens the folder the program runs from.
+	OpenProgramFolder()
+	// AskAdvanced asks the question a button of the advanced page needs
+	// answered, which is AskRediscover or AskReset.
+	AskAdvanced(kind string)
 	// RecordKeybinding waits for a key of the action with an id.
 	RecordKeybinding(action string)
 	// SetKeybinding gives the action with an id a key; "" stops recording.

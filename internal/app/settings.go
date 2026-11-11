@@ -273,20 +273,6 @@ func (a *App) refreshSettings() {
 	a.reloadSafely(data)
 }
 
-// OpenSettingsFile opens settings.json in the program that edits it.
-func (a *App) OpenSettingsFile() {
-	path, err := sys.SettingsPath()
-	if err != nil {
-		a.note = err.Error()
-		a.redraw()
-		return
-	}
-	if err := sys.OpenPath(path); err != nil {
-		a.note = err.Error()
-		a.redraw()
-	}
-}
-
 // RecordKeybinding waits for a key of an action; asking again for the one it
 // waits for stops it.
 func (a *App) RecordKeybinding(action string) {
