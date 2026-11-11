@@ -7,6 +7,7 @@ import (
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/action"
+	"wtgo/internal/i18n"
 )
 
 // TestShortcut covers the menu's shortcut hint: an action the window binds a
@@ -65,18 +66,28 @@ func TestWindowButtons(t *testing.T) {
 	// Close at the start, as a desktop that puts its buttons there names it,
 	// and the other two at the end.
 	tt, act := draw(&WindowButtons{Start: []string{"close"}, End: []string{"minimize", "maximize"}})
-	for _, glyph := range []string{"\u00d7", "\u2013", "\u25a1"} {
-		if !tt.HasText(glyph) {
-			t.Fatalf("the strip does not draw %q: %q", glyph, tt.Texts())
+	// The buttons are named rather than written, so that a test finds them
+	// where a screen reader would.
+	closeAt, ok := tt.Find(i18n.T("Close Window"))
+	if !ok {
+		t.Fatalf("the strip draws no close button: %q", tt.Texts())
+	}
+	minAt, ok := tt.Find(i18n.T("Minimize"))
+	if !ok {
+		t.Fatalf("the strip draws no minimize button: %q", tt.Texts())
+	}
+	maxAt, ok := tt.Find(i18n.T("Maximize"))
+	if !ok {
+		t.Fatalf("the strip draws no maximize button: %q", tt.Texts())
+	}
+	tabs, _ := tt.Find("PowerShell 7")
+	if !(closeAt.X < tabs.X && tabs.X < minAt.X && minAt.X < maxAt.X) {
+		t.Errorf("the buttons sit at %v, %v and %v around the tabs at %v", closeAt.X, minAt.X, maxAt.X, tabs.X)
+	}
+	for _, label := range []string{i18n.T("Close Window"), i18n.T("Minimize"), i18n.T("Maximize")} {
+		if err := tt.Click(label); err != nil {
+			t.Fatal(err)
 		}
-	}
-	// The close button sits at the start of the strip, before the tabs.
-	tt.ClickAt(windowButtonRoom+windowButtonWidth/2, TitleBarHeight/2)
-	if err := tt.Click("\u2013"); err != nil {
-		t.Fatal(err)
-	}
-	if err := tt.Click("\u25a1"); err != nil {
-		t.Fatal(err)
 	}
 	if want := []string{"close", "minimize", "maximize"}; !slices.Equal(act.asked, want) {
 		t.Errorf("the buttons asked for %q, want %q", act.asked, want)
@@ -84,15 +95,15 @@ func TestWindowButtons(t *testing.T) {
 
 	// A maximized window draws the button that restores it.
 	tt, _ = draw(&WindowButtons{End: []string{"maximize"}, Maximized: true})
-	if !tt.HasText("\u2750") || tt.HasText("\u25a1") {
+	if !tt.HasText(i18n.T("Restore")) || tt.HasText(i18n.T("Maximize")) {
 		t.Errorf("a maximized window draws %q, want the button that restores it", tt.Texts())
 	}
 
 	// A window that keeps the desktop's buttons draws none of its own.
 	tt, _ = draw(nil)
-	for _, glyph := range []string{"\u2013", "\u25a1", "\u2750"} {
-		if tt.HasText(glyph) {
-			t.Errorf("the strip draws %q for a window that keeps the desktop's buttons", glyph)
+	for _, label := range []string{i18n.T("Close Window"), i18n.T("Minimize"), i18n.T("Maximize")} {
+		if tt.HasText(label) {
+			t.Errorf("the strip draws %q for a window that keeps the desktop's buttons", label)
 		}
 	}
 }

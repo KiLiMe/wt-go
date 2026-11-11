@@ -484,7 +484,9 @@ macOS 没有 `/proc`，`Processes()` 必然失败，退回 `tab.Running()` 于�
   Wayland 上 GTK 仍自装饰（阴影、缩放边），X11 上窗口只保留内容区。
 - 按钮位置与顺序跟随桌面：`mygo.Theme.WindowButtons()` 读 `gtk-decoration-layout`，
   `ui/tabs.go` 的 `windowButtonGroup` 按 `Start`/`End` 在标签条两端画；最大化状态由
-  `Window.OnMaximize`/`OnUnmaximize` 回填（最大化时 `□` 变 `❐`），布局变了由 `mygo.Theme.OnUpdated` 刷新。
+  `Window.OnMaximize`/`OnUnmaximize` 回填（最大化时方框变成两个错开的方框），布局变了由 `mygo.Theme.OnUpdated` 刷新。
+  图标用盒子画（横线 / 方框 / 两个错开的方框 / `×`），不用字形：这几个字形在部分字体里缺失或过宽；
+  每个按钮用 `Label` 命名，读屏与测试都按名字找。
 - 按钮经 `ui.Actions`（`MinimizeWindow`/`ToggleMaximizeWindow`/`CloseWindow`）回到 `app`，
   用 `a.Do` 排到下一轮主循环：`onMain` 在主线程是内联的（`mygo` 的 `loop.go`），
   在绘制帧里直接 `Close()` 会在帧内销毁窗口（sshyard 用 `go w.Close()` 是同一个坑）。

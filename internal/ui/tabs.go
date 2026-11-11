@@ -42,6 +42,10 @@ const (
 	windowButtonRoom  float32 = 6
 )
 
+// windowIcon is how wide the icon of a window button is: a square that fills
+// the icon area of the desktop's own buttons.
+const windowIcon float32 = 10
+
 // tabStep is how far the buttons beside the tabs move what the strip shows:
 // about one tab, so that a press brings the next tabs into view.
 const tabStep float32 = 176
@@ -101,28 +105,43 @@ func windowButtonGroup(c *myui.Context, b *WindowButtons, act Actions, names []s
 	})
 }
 
-// windowButton is one of the window's buttons. It draws a glyph rather than an
-// image, as the strip draws its other buttons, and follows the desktop's
-// layout rather than a look of its own.
+// windowButton is one of the window's buttons. It draws its icon from boxes
+// rather than from glyphs: the glyphs for these are missing from some fonts,
+// or wide in the fonts that draw them.
 func windowButton(c *myui.Context, b *WindowButtons, act Actions, name string) {
 	t := c.Theme()
-	glyph, tip := "", ""
-	size := float32(14)
+	label := ""
+	var icon func(color myui.Color, bg myui.Color)
 	switch name {
 	case "minimize":
-		glyph, tip = "\u2013", i18n.T("Minimize")
+		label = i18n.T("Minimize")
+		icon = func(color myui.Color, bg myui.Color) {
+			myui.Box(c).Width(windowIcon).Height(1).Background(color)
+		}
 	case "maximize":
-		size = 12
+		label = i18n.T("Maximize")
 		if b.Maximized {
-			glyph, tip = "\u2750", i18n.T("Restore")
+			label = i18n.T("Restore")
+			icon = func(color myui.Color, bg myui.Color) {
+				myui.Box(c).Size(windowIcon+1, windowIcon+1).Children(func() {
+					myui.Box(c).Absolute().Left(4).Top(0).Size(windowIcon-3, windowIcon-3).Radius(1).Border(1, color)
+					myui.Box(c).Absolute().Left(0).Top(4).Size(windowIcon-3, windowIcon-3).Radius(1).Border(1, color).Background(bg)
+				})
+			}
 		} else {
-			glyph, tip = "\u25a1", i18n.T("Maximize")
+			icon = func(color myui.Color, bg myui.Color) {
+				myui.Box(c).Size(windowIcon-1, windowIcon-1).Radius(1).Border(1, color)
+			}
 		}
 	case "close":
-		glyph, tip = "\u00d7", i18n.T("Close Window")
+		label = i18n.T("Close Window")
+		icon = func(color myui.Color, bg myui.Color) {
+			myui.Text(c, "\u00d7").FontSize(15).TextColor(color)
+		}
 	default:
 		return
 	}
+	bg := t.Surface
 	color := t.TextMuted
 	el := myui.Box(c).
 		Size(windowButtonWidth, 28).
@@ -130,10 +149,12 @@ func windowButton(c *myui.Context, b *WindowButtons, act Actions, name string) {
 		AlignItems(myui.Center).
 		Justify(myui.Center).
 		Cursor(myui.CursorPointer).
-		Tooltip(tip)
+		Label(label).
+		Tooltip(label)
 	if el.Hovered() {
-		el = el.Background(t.SurfaceHover)
+		bg = t.SurfaceHover
 		color = t.Text
+		el = el.Background(bg)
 	}
 	el.OnClick(func() {
 		switch name {
@@ -145,7 +166,7 @@ func windowButton(c *myui.Context, b *WindowButtons, act Actions, name string) {
 			act.CloseWindow()
 		}
 	}).Children(func() {
-		myui.Text(c, glyph).FontSize(size).TextColor(color)
+		icon(color, bg)
 	})
 }
 
