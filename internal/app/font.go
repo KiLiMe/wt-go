@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"slices"
 	"strings"
 
 	"github.com/egoist/mygo/plugins/terminal"
@@ -54,6 +55,34 @@ func monospace(family string, size float32) bool {
 		lo, hi = min(lo, cell), max(hi, cell)
 	}
 	return hi-lo < advanceSpread
+}
+
+// monospaceFamilies are the installed families a terminal can draw with: those
+// the text engine calls monospaced and that shape the printable ASCII at one
+// advance, sorted. The font setting lists them, so that a family it offers is
+// one the terminal takes as it is, without a line about it in the log.
+func monospaceFamilies(fs []myui.FontFamily, size float32) []string {
+	var out []string
+	for _, f := range fs {
+		if f.Monospaced && monospace(f.Name, size) {
+			out = append(out, f.Name)
+		}
+	}
+	slices.Sort(out)
+	return out
+}
+
+// loadFontFamilies lists the families the font setting offers, off the UI
+// thread: the text engine takes long enough to list them for a frame to show it.
+// The measures are the window's, though, so they wait for it.
+func (a *App) loadFontFamilies(size float32) {
+	go func() {
+		fs := myui.FontFamilies()
+		a.Do(func() {
+			a.families = monospaceFamilies(fs, size)
+			a.redraw()
+		})
+	}()
 }
 
 // terminalFont is the font the terminals draw with: the one the settings name,

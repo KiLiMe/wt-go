@@ -51,17 +51,18 @@ func (a *App) insertTab(tab *pane.Tab) {
 // settingsState is the settings tab as the window draws it.
 func (a *App) settingsState() ui.Settings {
 	return ui.Settings{
-		Page:      a.settingsPage,
-		Draft:     &a.settings,
-		Dirty:     a.dirty(),
-		Note:      a.settingsNote(),
-		Recording: a.recording,
-		Filter:    &a.filter,
-		Profile:   a.editing,
-		Args:      &a.editingArgs,
-		Profiles:  fileProfiles(a.settings),
-		Known:     knownProfiles(a.profiles),
-		Schemes:   theme.Schemes(a.settings),
+		Page:         a.settingsPage,
+		Draft:        &a.settings,
+		Dirty:        a.dirty(),
+		Note:         a.settingsNote(),
+		Recording:    a.recording,
+		Filter:       &a.filter,
+		Profile:      a.editing,
+		Args:         &a.editingArgs,
+		Profiles:     fileProfiles(a.settings),
+		Known:        knownProfiles(a.profiles),
+		Schemes:      theme.Schemes(a.settings),
+		FontFamilies: a.families,
 	}
 }
 

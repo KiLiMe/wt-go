@@ -67,6 +67,10 @@ type App struct {
 	// fontWarned is the family the log already said is not monospace, so that
 	// a settings file naming one leaves a line behind and not one a tab.
 	fontWarned string
+	// families are the installed families the terminal can draw with, which
+	// the font setting lists; they take a moment to list, so they arrive after
+	// the window does.
+	families []string
 	// content is the room the panes took in the last frame, which the keys
 	// that split and move between panes measure.
 	content layout.Rect
@@ -166,6 +170,7 @@ func Run() (err error) {
 		})
 		a.win.OnClosed(a.onClosed)
 		a.watchWindowButtons()
+		a.loadFontFamilies(a.settings.Font.Size)
 		a.openFirst()
 		if a.settingsNote() != "" {
 			a.OpenSettings()

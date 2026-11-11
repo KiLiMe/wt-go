@@ -3,8 +3,10 @@
 package store
 
 // DefaultFontFamily is the family a terminal draws with until the settings
-// name one.
-func DefaultFontFamily() string { return "Cascadia Mono" }
+// name one: the one Windows Terminal installs, with the generic family after
+// it, so that a machine without it draws with a monospace font rather than a
+// proportional one.
+func DefaultFontFamily() string { return "Cascadia Mono,monospace" }
 
 // DefaultShellHint is the command line the settings show before a profile
 // names one.

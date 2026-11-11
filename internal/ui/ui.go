@@ -161,6 +161,9 @@ type Settings struct {
 	Args    *string
 	// Schemes are the color schemes the color schemes page lists.
 	Schemes []string
+	// FontFamilies are the installed families the terminal can draw with,
+	// which the font setting lists.
+	FontFamilies []string
 }
 
 // Confirm is the question the window asks before it does something it cannot

@@ -1,7 +1,10 @@
 package app
 
 import (
+	"slices"
 	"testing"
+
+	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/store"
 )
@@ -27,6 +30,19 @@ func TestMonospace(t *testing.T) {
 				t.Errorf("monospace(%q) = %v, want %v", tc.family, got, tc.want)
 			}
 		})
+	}
+}
+
+// TestMonospaceFamilies covers the families the font setting lists: the ones
+// the text engine calls monospaced that also measure as monospace, sorted.
+func TestMonospaceFamilies(t *testing.T) {
+	fs := []myui.FontFamily{
+		{Name: "monospace", Monospaced: true},
+		{Name: "no-such-font-at-all", Monospaced: true},
+		{Name: "sans-serif", Monospaced: false},
+	}
+	if got, want := monospaceFamilies(fs, 13), []string{"monospace"}; !slices.Equal(got, want) {
+		t.Errorf("monospaceFamilies() = %v, want %v", got, want)
 	}
 }
 

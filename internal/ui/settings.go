@@ -231,6 +231,14 @@ func appearancePage(c *myui.Context, st Settings, act Actions) {
 }
 
 // profilesPage is the settings a profile starts from, and the profiles.
+// fontOptions are the font setting's choices: the generic family every system
+// resolves to a monospace font, then the families installed.
+func fontOptions(families []string) []string {
+	out := make([]string, 0, len(families)+1)
+	out = append(out, "monospace")
+	return append(out, families...)
+}
+
 func profilesPage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
 	t := c.Theme()
@@ -238,8 +246,8 @@ func profilesPage(c *myui.Context, st Settings, act Actions) {
 		field(c, i18n.T("Color scheme"), i18n.T("The colors a terminal paints with unless its profile names another."), func() {
 			choice(c, &s.ColorScheme, schemeOptions(st.Schemes))
 		})
-		field(c, i18n.T("Font"), "", func() {
-			myui.TextInput(c, &s.Font.Family).Width(220).Placeholder(store.DefaultFontFamily())
+		field(c, i18n.T("Font"), i18n.T("The monospaced families this machine has, as the terminal measures them."), func() {
+			myui.Combobox(c, &s.Font.Family, fontOptions(st.FontFamilies)).Width(220).Label(i18n.T("Font"))
 		})
 		field(c, i18n.T("Font size"), i18n.T("How tall the letters of a terminal are, in DIPs."), func() {
 			measure(c, &s.Font.Size, 6, 48, 1)
