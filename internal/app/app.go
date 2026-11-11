@@ -157,6 +157,11 @@ func Run() (err error) {
 		log.Printf("wt-go: %v", err)
 	}
 	mygo.App.WhenReady(func() {
+		// Before the first layout: a glyph drawn after it is already the wrong
+		// color, and the fix only reaches glyphs drawn later.
+		if !sys.FixTextColor() {
+			log.Print(fault.Line(fault.NoFontconfig, ""))
+		}
 		a := newApp()
 		a.appearance()
 		a.win = mygo.NewWindow(mygo.WindowOptions{

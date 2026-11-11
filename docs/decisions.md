@@ -588,6 +588,32 @@ Mayoi 用 13 个写死的主题表。
 后看不到差别。
 
 ---
+## ADR-033 Linux 用 fontconfig 规则保住文字颜色
+
+**背景**：Linux 上（X11 与 Wayland 都会）文字整体发白、发绿，浅色底与提示框上几乎看不清。
+原因是 mygo 的 Linux 文字后端先把字形按灰度光栅化，再把「通道值不一致」的字形判为彩色字形
+（emoji）原样绘制（`mygo@v0.8.3 internal/text/pango_linux.go:1200` 的 `b.color` 分支）；
+而 cairo 1.17.8 之前会把灰度改成次像素光栅化——只要 fontconfig 匹配到的字体带次像素顺序
+（`rgba`），这次改成次像素就发生在 mygo 眼皮底下，于是每个字形都是白底绿 alpha。
+`settings.ini` 的 `gtk-xft-rgba` 会被 XSETTINGS 盖掉；`xrdb` 只喂读 X 资源的 Xft 客户端；
+`FONTCONFIG_FILE` 只影响新创建的配置，GTK 早就初始化完了——三条都不管用。
+十个参考项目里只有 sshyard 处理了这件事（`sshyard/internal/gtkfix`），其余九个没有相关代码。
+
+**决定**：启动时（`mygo.App.WhenReady` 的第一件事，早于第一次排版）用 purego 从已加载的库里
+取 `FcConfigGetCurrent` 与 `FcConfigParseAndLoadFromMemory`，把两条 `rgba = none` 规则
+（`target="pattern"` 与 `target="font"`）追加到**当前**的 fontconfig 配置
+（`internal/sys/textcolor_linux.go`）。拿不到符号就记一条 E305 并继续，窗口照常开；
+非 Linux 是空实现。
+
+**理由**：改的是进程内已经生效的配置，所以不需要重启、不写用户目录、不受 XSETTINGS 影响。
+只去掉字体的次像素顺序：mygo 自己要次像素的字形仍会显式设 `subpixel_order`，
+所以不会把「本来就该次像素」的路径打死。
+
+**代价**：这些字体从此只有灰阶抗锯齿，文字观感略软——这是为「文字颜色正确」付的价。
+上游把 `b.color` 的判定改成「先强制灰度、再判颜色」之后（sshyard 的注释里写的是
+"Drop it once MyGo forces grayscale itself"），这段可以整块删掉。
+
+---
 ## 待定
 
 - 会话常驻：阶段 5 评估是否采用 ADR-009 所述的会话服务模型。

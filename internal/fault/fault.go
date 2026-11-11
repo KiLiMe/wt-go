@@ -30,6 +30,7 @@ const (
 	Crashed       Code = "E302" // the window stopped with a panic
 	NoProcessList Code = "E303" // the process list could not be read
 	UnknownShell  Code = "E304" // the window did not learn the process of a shell
+	NoFontconfig  Code = "E305" // the text color fix could not be applied
 )
 
 // about is the one line the program shows for a code.
@@ -45,6 +46,7 @@ var about = map[Code]string{
 	Crashed:       "The window stopped with a panic; the stack is in the crash log",
 	NoProcessList: "The process list could not be read, so whether a tab still runs a program is unknown",
 	UnknownShell:  "The window did not learn the process of a shell, so whether its tab still runs a program is unknown",
+	NoFontconfig:  "fontconfig was not found, so text may draw in the wrong color",
 }
 
 // doc is where the details for a code are kept, from the project root.
