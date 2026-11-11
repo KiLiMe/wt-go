@@ -1,11 +1,14 @@
-# What every push and pull request must pass: the code's shape, the tests, and a
-# package build for each platform we ship. Tags are left out: release.yml owns
-# them and would only build the same two archives again.
+# One workflow for everything. Every push and pull request must pass the code's
+# shape, the tests and a package build for both platforms; a vX.Y.Z tag
+# additionally publishes the two portable .zip archives and SHA256SUMS. It is a
+# single file on purpose: the packaging steps exist once, so what CI builds is
+# exactly what a release ships.
 name: ci
 
 on:
   push:
     branches: [main]
+    tags: ["v*"]
     paths-ignore: ["**.md", "docs/**", "LICENSE"]
   pull_request:
   workflow_dispatch:
@@ -68,20 +71,123 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: linux/amd64, os: ubuntu-latest, platforms: linux/amd64 }
-          - { name: windows/amd64, os: windows-latest, platforms: windows/amd64 }
+          - { name: linux/amd64, slug: linux-amd64, os: ubuntu-latest, platforms: linux/amd64 }
+          - { name: windows/amd64, slug: windows-amd64, os: windows-latest, platforms: windows/amd64 }
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
-      # Packaging is what the release does; here it only has to work, so the
-      # disk images and the Windows installer are left out (the installer would
-      # download NSIS on every push).
+      # The archives are named after the version. A tag has to agree with
+      # mygo.json, so a release cannot be labelled one version and contain
+      # another; a branch build just uses what mygo.json says.
+      - name: version
+        id: version
+        run: |
+          set -euo pipefail
+          configured="$(jq -r .version mygo.json)"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            tag="$GITHUB_REF_NAME"
+            if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::tag $tag is not vX.Y.Z"
+              exit 1
+            fi
+            if [ "${tag#v}" != "$configured" ]; then
+              echo "::error::tag $tag but mygo.json says $configured: bump mygo.json, commit, then tag"
+              exit 1
+            fi
+            echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$configured" >> "$GITHUB_OUTPUT"
+          fi
+      # Packaging is the only thing that has to work here; the disk images and
+      # the Windows installer are left out (the installer would download NSIS
+      # on every push).
       - name: package
         run: go tool mygo build -platform "${{ matrix.platforms }}" -skip-dmg -skip-installer -o dist
+      # A release carries one portable archive per platform, both .zip: the
+      # executable with the native library beside it, unpacked anywhere. No
+      # installer, no .deb, no PKGBUILD: mygo build still writes those, they are
+      # just not shipped.
+      - name: portable (linux)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          root="$PWD"
+          zip="out/wt-go_${{ steps.version.outputs.version }}_linux-amd64_portable.zip"
+          (cd dist/linux-amd64 && zip -qr "$root/$zip" .)
+          # The archive has to hold the executable and the native library, or
+          # it is not portable: fail rather than publish an empty one.
+          unzip -l "$zip"
+          for need in wt-go libghostty-vt.so LICENSE; do
+            unzip -Z1 "$zip" | grep -qx "$need" || { echo "::error::$zip has no $need"; exit 1; }
+          done
+      - name: portable (windows)
+        if: startsWith(matrix.os, 'windows')
+        shell: pwsh
+        run: |
+          $version = '${{ steps.version.outputs.version }}'
+          $root = (Get-Location).Path
+          $app = Join-Path $root 'dist/windows-amd64'
+          $zip = Join-Path $root "out/wt-go_${version}_windows-amd64_portable.zip"
+          New-Item -ItemType Directory -Force (Join-Path $root 'out') | Out-Null
+          # -Force: the dotfile (.mygo-files) ships too, and a bare
+          # `dist/windows-amd64/*` glob would drop it.
+          Compress-Archive -Force -DestinationPath $zip `
+            -Path (Get-ChildItem $app -Force).FullName
+          # The archive has to hold the executable and the native library, or
+          # it is not portable: fail rather than publish an empty one.
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $names = [IO.Compression.ZipFile]::OpenRead($zip).Entries | ForEach-Object FullName
+          foreach ($need in 'wt-go.exe', 'ghostty-vt.dll', 'LICENSE', '.mygo-files') {
+            if ($names -notcontains $need) { Write-Error "$zip has no $need"; exit 1 }
+          }
+          $names
+          Get-Item $zip | Select-Object Name, Length
       - name: list
-        run: find dist -type f | sort
+        run: |
+          set -euo pipefail
+          ls -l out
+          [[ -n "$(ls -A out)" ]] || { echo "::error::no portable archive was made"; exit 1; }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.slug }}
+          path: out/
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: publish the release
+    needs: build
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+      - name: checksums
+        run: |
+          set -euo pipefail
+          cd dist
+          ls -l
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
+      - name: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "wt-go ${GITHUB_REF_NAME#v}" \
+            --generate-notes
