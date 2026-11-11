@@ -49,12 +49,33 @@ func Hex(c myui.Color) string {
 }
 
 // base is the colors of the window's theme: dark, unless the settings ask for
-// light.
+// light, or name a theme of their own that is light.
 func base(s store.Settings) *terminal.Theme {
-	if s.Theme == "light" {
+	if light(s) {
 		return terminal.LightTheme()
 	}
 	return terminal.DarkTheme()
+}
+
+// light reports whether the window is light: the appearance the settings name,
+// or the background of the theme of their own. It reads the schemes without
+// going through base, which asks it.
+func light(s store.Settings) bool {
+	switch s.Theme {
+	case "light":
+		return true
+	case "", "system", "dark":
+		return false
+	}
+	if th, known := named(s.Theme); known {
+		return luminance(th.Background) >= 0.5
+	}
+	if sc, own := custom(s, s.Theme); own {
+		if bg, ok := Color(sc.Background); ok {
+			return luminance(bg) >= 0.5
+		}
+	}
+	return false
 }
 
 // override sets *c to the color s writes, and keeps it when s writes none.

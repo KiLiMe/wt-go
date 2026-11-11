@@ -7,6 +7,7 @@ import (
 
 	"wtgo/internal/i18n"
 	"wtgo/internal/store"
+	"wtgo/internal/theme"
 )
 
 // The pages the settings tab shows in its left column.
@@ -199,12 +200,16 @@ func interactionPage(c *myui.Context, st Settings, act Actions) {
 func appearancePage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
 	section(c, i18n.T("Appearance"), func() {
-		field(c, i18n.T("Theme"), i18n.T("The light or dark face of the window itself."), func() {
-			choice(c, &s.Theme, []option{
+		field(c, i18n.T("Theme"), i18n.T("The face of the window: the system's, light, dark, or a theme of its own."), func() {
+			options := []option{
 				{"system", i18n.T("Follow the system")},
 				{"light", i18n.T("Light")},
 				{"dark", i18n.T("Dark")},
-			})
+			}
+			for _, name := range theme.UIThemes() {
+				options = append(options, option{name, name})
+			}
+			choice(c, &s.Theme, options)
 		})
 		field(c, i18n.T("Background opacity"), i18n.T("How much of what is behind the window shows through it."), func() {
 			ratio(c, &s.BackgroundOpacity, 0.3, 1, 0.05)

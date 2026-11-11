@@ -557,6 +557,37 @@ Windows 的默认值也随之改成 `Cascadia Mono,monospace`：没装 Cascadia 
 
 ---
 
+## ADR-032 界面主题从配色方案推导
+
+**背景**：`theme` 原先只有 `system` / `light` / `dark`，整个窗口是 mygo 的两套默认 token，
+与终端里选的配色方案无关——用 Dracula 的终端配 VS Code 灰的标签栏。mygo v0.8.3 的
+`ui.Theme` 有完整 token 集、`Context.SetTheme` 可以整棵替换，`mygo.Theme.SetSource` 只管
+原生窗口（Linux 的 CSD、Windows 的标题栏）。参考项目里 kero 就是这么做的：拿终端方案的
+背景与光标推导整套 UI 颜色（`kero/theme.go:334 ghosttyLook`）；dgopher 用 JSON 主题文件，
+Mayoi 用 13 个写死的主题表。
+
+**决定**：
+
+- `theme` 可以是 `system` / `light` / `dark`，也可以是任意方案名（内置、Ghostty 617 套、
+  `schemes` 里自己写的）。方案名时整个窗口换成那个方案的颜色。
+- 界面 token 不手写，从方案的背景 `bg`、前景 `fg`、强调色推导（`internal/theme/ui.go`
+  `window()`）：表面色是 `bg` 往 `fg` 混 7%/11%/15%，边框 20%，次要文字 38%；强调色取
+  方案调色板第 5 色（各家的蓝），没有就用光标，再没有用前景；强调色上的文字按 WCAG 对比度
+  取 `bg` 或 `fg`。
+- 明暗不由 `theme` 字段的字面值决定，由方案自己的背景亮度决定：选了 `Catppuccin Latte`
+  就是浅色窗口，终端没指定 `colorScheme` 时也跟着落到浅色底。
+- 设置页的下拉列 11 个挑过的方案（`UIThemes()`）；写别的名字照样生效，只是不在下拉里。
+
+**理由**：一份配色方案已经写好了「这个主题该长什么样」，界面再挑一遍颜色只会打架；推导出来的
+窗口与终端同源，换方案时两边一起变。挑 11 个而不是 617 个，是因为下拉里滚 617 项没人受得了，
+且多数方案的背景对比度撑不起一套可用的 UI。
+
+**代价**：推导只能保证「能看」，不保证与方案作者给的 UI 版一致（比如 Catppuccin 官方给 UI 的
+表面色是另算的）。强调色固定取调色板第 5 色，是因为几乎所有方案的光标都是灰的，先取光标会让
+强调色变成无彩度。`mygo.WindowOptions.BackgroundColor` 在主题生效时取该主题的底色，页面画满
+后看不到差别。
+
+---
 ## 待定
 
 - 会话常驻：阶段 5 评估是否采用 ADR-009 所述的会话服务模型。

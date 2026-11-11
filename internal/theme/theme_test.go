@@ -3,6 +3,7 @@ package theme
 import (
 	"testing"
 
+	"github.com/egoist/mygo/plugins/terminal"
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/store"
@@ -101,5 +102,68 @@ func TestTerminal(t *testing.T) {
 func TestHex(t *testing.T) {
 	if got, want := Hex(myui.RGB(0x0c, 0x0c, 0x0c)), "#0c0c0c"; got != want {
 		t.Errorf("Hex = %q, want %q", got, want)
+	}
+}
+
+// TestUITheme covers a theme of the window's own: every theme the settings page
+// offers is one, the appearance is none, and the window takes the scheme's
+// background and text with the shades a window needs derived between them.
+func TestUITheme(t *testing.T) {
+	s := store.Default()
+	for _, name := range UIThemes() {
+		th, ok := Scheme(s, name)
+		if !ok {
+			t.Fatalf("%q is no scheme, so the page offers a theme that is none", name)
+		}
+		ui, ok := UITheme(s, name)
+		if !ok {
+			t.Fatalf("UITheme(s, %q) is no theme", name)
+		}
+		if ui.Background != th.Background || ui.Text != th.Foreground {
+			t.Errorf("%q draws %v on %v, want %v on %v", name, ui.Text, ui.Background, th.Foreground, th.Background)
+		}
+		if want := luminance(th.Background) < 0.5; ui.Dark != want {
+			t.Errorf("%q is dark = %v, want %v", name, ui.Dark, want)
+		}
+		if ui.Surface == ui.Background || ui.Border == ui.Background {
+			t.Errorf("%q draws its surfaces and borders in its background", name)
+		}
+		if c := contrast(ui.AccentText, ui.Accent); c < 3 {
+			t.Errorf("%q writes text on its accent at a contrast of %.1f", name, c)
+		}
+	}
+	for _, name := range []string{"", "system", "light", "dark", "No Such Scheme"} {
+		if _, ok := UITheme(s, name); ok {
+			t.Errorf("UITheme(s, %q) is a theme", name)
+		}
+	}
+}
+
+// TestUILightTheme covers the colors the terminal falls back to: those of a
+// light theme of the settings' own, where they name one.
+func TestUILightTheme(t *testing.T) {
+	s := store.Default()
+	s.ColorScheme = ""
+	light := terminal.LightTheme().Background
+	dark := terminal.DarkTheme().Background
+
+	s.Theme = "Catppuccin Latte"
+	if got := Terminal(s).Background; got != light {
+		t.Errorf("a light theme's terminal draws on %v, want %v", got, light)
+	}
+	s.Theme = "Nord"
+	if got := Terminal(s).Background; got != dark {
+		t.Errorf("a dark theme's terminal draws on %v, want %v", got, dark)
+	}
+	s.Theme = "system"
+	if got := Terminal(s).Background; got != dark {
+		t.Errorf("the system's terminal draws on %v, want %v", got, dark)
+	}
+
+	// A scheme of the settings' own decides it by its own background.
+	s.Schemes = []store.Scheme{{Name: "Paper", Background: "#fafafa"}}
+	s.Theme = "Paper"
+	if got := Terminal(s).Background; got != light {
+		t.Errorf("a light scheme of its own draws on %v, want %v", got, light)
 	}
 }

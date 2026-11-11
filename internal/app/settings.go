@@ -438,7 +438,7 @@ func (a *App) apply() {
 		}
 	}
 	if a.win != nil {
-		if err := a.win.SetBackgroundColor(theme.Hex(colors.Background)); err != nil {
+		if err := a.win.SetBackgroundColor(theme.Hex(a.background())); err != nil {
 			log.Printf("wt-go: background: %v", err)
 		}
 		a.win.SetOpacity(opacity(s.BackgroundOpacity))

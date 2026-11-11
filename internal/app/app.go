@@ -67,6 +67,9 @@ type App struct {
 	// fontWarned is the family the log already said is not monospace, so that
 	// a settings file naming one leaves a line behind and not one a tab.
 	fontWarned string
+	// uiTheme is the theme of its own the settings name, in place of the
+	// appearance's light or dark one; nil when they name the appearance.
+	uiTheme *myui.Theme
 	// families are the installed families the terminal can draw with, which
 	// the font setting lists; they take a moment to list, so they arrive after
 	// the window does.
@@ -164,7 +167,7 @@ func Run() (err error) {
 			TitleBarHeight:    ui.TitleBarHeight,
 			HideWindowButtons: hideWindowButtons(),
 			StateKey:          "main",
-			BackgroundColor:   theme.Hex(theme.Terminal(a.settings).Background),
+			BackgroundColor:   theme.Hex(a.background()),
 			Opacity:           opacity(a.settings.BackgroundOpacity),
 			Content:           myui.View(a.view),
 		})
@@ -239,9 +242,29 @@ func newApp() *App {
 	return a
 }
 
+// background is the color the window fills what the page has not painted yet:
+// the theme's own where the settings name one, else the terminal's.
+func (a *App) background() myui.Color {
+	if a.uiTheme != nil {
+		return a.uiTheme.Background
+	}
+	return theme.Terminal(a.settings).Background
+}
+
 // appearance gives the window the appearance the settings ask for: dark and
-// light are the settings', system is the machine's.
+// light are the settings', system is the machine's, and a theme of its own is
+// the one that theme is.
 func (a *App) appearance() {
+	if t, ok := theme.UITheme(a.settings, a.settings.Theme); ok {
+		a.uiTheme = t
+		if t.Dark {
+			mygo.Theme.SetSource(mygo.ThemeDark)
+		} else {
+			mygo.Theme.SetSource(mygo.ThemeLight)
+		}
+		return
+	}
+	a.uiTheme = nil
 	switch a.settings.Theme {
 	case "light":
 		mygo.Theme.SetSource(mygo.ThemeLight)
@@ -370,6 +393,9 @@ func (a *App) shortcut(action string) string {
 
 // view is the window's frame.
 func (a *App) view(c *myui.Context) {
+	if a.uiTheme != nil {
+		c.SetTheme(a.uiTheme)
+	}
 	if a.renaming != nil && !a.renaming.Open {
 		a.renaming = nil
 	}
