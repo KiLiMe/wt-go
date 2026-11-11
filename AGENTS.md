@@ -32,7 +32,7 @@
 | `internal/mcp/` | 精简的 Model Context Protocol 服务器：JSON-RPC 2.0 + tools/resources（只用标准库） |
 | `tools/genicon/` | 画 `resources/icon.png`：`go run ./tools/genicon` |
 | `resources/icon.png` | 应用图标（1024×1024 PNG），`mygo build` 打包时嵌进 exe |
-| `build.ps1` | 日常构建：`go tool mygo build` 出 `build\windows-amd64\wt-go.exe`（带图标、版本与 native 库） |
+| `Scripts/build.ps1` | 日常构建：`go tool mygo build` 出 `build\windows-amd64\wt-go.exe`（带图标、版本与 native 库） |
 | `docs/` | `使用说明.md` / `代码导读.md` / `故障排查.md`（故障码）/ `decisions.md`（ADR）/ `plan.md`（阶段计划） |
 | `mygo.json` | `go tool mygo build` 的包名、版本与打包信息 |
-| `build.ps1` | 参数：`-Test` 先跑 vet 与测试、`-Clean` 清掉 `build/`、`-Package` 只出 `dist/` |
+| `Scripts/build.ps1` | 参数：`-Test` 先跑 vet 与测试、`-Clean` 清掉 `build/`、`-Package` 只出 `dist/` |

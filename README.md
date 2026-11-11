@@ -9,14 +9,14 @@ Windows Terminal 风格的终端，用 [mygo](https://github.com/egoist/mygo)（
 ## 快速开始
 
 ```pwsh
-pwsh .\build.ps1                 # 编译到 build\windows-amd64\wt-go.exe
+pwsh .\Scripts\build.ps1                 # 编译到 build\windows-amd64\wt-go.exe
 .\build\windows-amd64\wt-go.exe
 ```
 
 发布包用 mygo 自己的构建命令，一次产出可执行文件、原生库与 Linux 包：
 
 ```pwsh
-pwsh .\build.ps1 -Package        # 等于 go tool mygo build -platform windows/amd64 -skip-installer -o dist
+pwsh .\Scripts\build.ps1 -Package        # 等于 go tool mygo build -platform windows/amd64 -skip-installer -o dist
 ```
 
 发布页只放两个便携 zip：`wt-go_<version>_windows-amd64_portable.zip`（`wt-go.exe` 与
@@ -44,7 +44,7 @@ pwsh .\build.ps1 -Package        # 等于 go tool mygo build -platform windows/a
 | 查找（`Ctrl+Shift+F`）、命令面板（`Ctrl+Shift+P`） | ✅ |
 | 出故障能自己说清（`wt-go diag`、故障码 `E1xx`/`E2xx`/`E3xx`、崩溃日志） | ✅ 见 [docs/故障排查.md](docs/故障排查.md) |
 | 把现场交给 AI（`wt-go mcp`，Model Context Protocol） | ✅ 五个只读工具，不需要窗口开着 |
-| exe 图标与版本信息 | ✅ `resources/icon.png`，`mygo build`（含 `build.ps1`）打包时注入 |
+| exe 图标与版本信息 | ✅ `resources/icon.png`，`mygo build`（含 `Scripts/build.ps1`）打包时注入 |
 | profile：自动发现 pwsh / Windows PowerShell / cmd / WSL / POSIX shell | ✅ |
 | 配色方案 | ✅ 内置 9 套 + Ghostty 617 套直用 + 自定义 |
 | 字体 / 字号 / 行高 / 内边距 / 光标形状 / 窗口透明度 | ✅ |
