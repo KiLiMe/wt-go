@@ -1,11 +1,11 @@
 # What every push and pull request must pass: the code's shape, the tests, and a
-# package build for each platform we ship.
+# package build for each platform we ship. Tags are left out: release.yml owns
+# them and would only build the same two archives again.
 name: ci
 
 on:
   push:
     branches: [main]
-    tags: ["v*"]
     paths-ignore: ["**.md", "docs/**", "LICENSE"]
   pull_request:
   workflow_dispatch:

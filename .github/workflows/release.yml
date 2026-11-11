@@ -79,7 +79,7 @@ jobs:
           # The archive has to hold the executable and the native library, or
           # it is not portable: fail rather than publish an empty one.
           unzip -l "$zip"
-          for need in wt-go libghostty-vt.so; do
+          for need in wt-go libghostty-vt.so LICENSE; do
             unzip -Z1 "$zip" | grep -qx "$need" || { echo "::error::$zip has no $need"; exit 1; }
           done
       - name: portable (windows)
@@ -87,14 +87,19 @@ jobs:
         shell: pwsh
         run: |
           $version = '${{ needs.preflight.outputs.version }}'
-          New-Item -ItemType Directory -Force out | Out-Null
-          $zip = "out/wt-go_${version}_windows-amd64_portable.zip"
-          Compress-Archive -Path dist/windows-amd64/* -DestinationPath $zip
+          $root = (Get-Location).Path
+          $app = Join-Path $root 'dist/windows-amd64'
+          $zip = Join-Path $root "out/wt-go_${version}_windows-amd64_portable.zip"
+          New-Item -ItemType Directory -Force (Join-Path $root 'out') | Out-Null
+          # -Force: the dotfile (.mygo-files) ships too, and a bare
+          # `dist/windows-amd64/*` glob would drop it.
+          Compress-Archive -Force -DestinationPath $zip `
+            -Path (Get-ChildItem $app -Force).FullName
           # The archive has to hold the executable and the native library, or
           # it is not portable: fail rather than publish an empty one.
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           $names = [IO.Compression.ZipFile]::OpenRead($zip).Entries | ForEach-Object FullName
-          foreach ($need in 'wt-go.exe', 'ghostty-vt.dll') {
+          foreach ($need in 'wt-go.exe', 'ghostty-vt.dll', 'LICENSE', '.mygo-files') {
             if ($names -notcontains $need) { Write-Error "$zip has no $need"; exit 1 }
           }
           $names
@@ -127,7 +132,7 @@ jobs:
           set -euo pipefail
           cd dist
           ls -l
-          sha256sum $(ls) > SHA256SUMS
+          sha256sum -- * > SHA256SUMS
           cat SHA256SUMS
       - name: release
         env:
