@@ -65,14 +65,23 @@ type Actions interface {
 	// CopyScheme makes a color scheme of the settings from the one the
 	// terminal paints with, and picks it.
 	CopyScheme()
+	// RemoveScheme drops the color scheme the settings write by a name.
+	RemoveScheme(name string)
 	// ConfirmYes does what the question asks.
 	ConfirmYes()
 	// ConfirmNo drops the question, doing nothing.
 	ConfirmNo()
 	// AddProfile adds a profile, and shows its page.
 	AddProfile()
-	// RemoveProfile drops the profile with an id.
+	// RemoveProfile drops the profile with an id, or hides the one the window
+	// found on this machine: the next start adds it back, so hiding is all a
+	// person can do to a shell that is there.
 	RemoveProfile(id string)
+	// ShowHiddenProfiles lists the profiles the page hides, so that one can be
+	// brought back.
+	ShowHiddenProfiles()
+	// ShowProfile brings the profile with an id back from hiding.
+	ShowProfile(id string)
 	// DuplicateProfile copies the profile with an id, and shows its page.
 	DuplicateProfile(id string)
 	// Run does the action with an id, as the palette picked it.
@@ -120,6 +129,20 @@ type Profile struct {
 	ID    string
 	Name  string
 	Color string
+	// Discovered is whether the window found this profile on the machine
+	// rather than a person writing it, which is what the settings page calls
+	// a built-in one.
+	Discovered bool
+	// Hidden is whether the settings page hides it, which is all a removal
+	// can do to a profile the window finds again.
+	Hidden bool
+}
+
+// Scheme is a color scheme the color schemes page lists: its name, and whether
+// the settings write it, which is what lets the page remove it.
+type Scheme struct {
+	Name   string
+	Custom bool
 }
 
 // Rename is the dialog that renames a tab.
@@ -149,6 +172,8 @@ type Settings struct {
 	Recording string
 	// Filter is what the color schemes page searches for.
 	Filter *string
+	// Hidden is whether the profiles page lists the profiles it hides.
+	Hidden bool
 	// Profiles are the profiles the file holds, which the column lists.
 	Profiles []Profile
 	// Known are the profiles a setting may name, the file's and the ones
@@ -160,7 +185,7 @@ type Settings struct {
 	Profile *store.Profile
 	Args    *string
 	// Schemes are the color schemes the color schemes page lists.
-	Schemes []string
+	Schemes []Scheme
 	// FontFamilies are the installed families the terminal can draw with,
 	// which the font setting lists.
 	FontFamilies []string

@@ -287,15 +287,32 @@ func profilesPage(c *myui.Context, st Settings, act Actions) {
 		for _, p := range st.Profiles {
 			row(c, func() {
 				myui.Row(c).Height(32).AlignItems(myui.Center).Gap(8).Children(func() {
-					myui.Text(c, p.Name).Grow(1)
+					name := myui.Text(c, p.Name).Grow(1)
+					if p.Hidden {
+						name.TextColor(t.TextMuted)
+					}
+					if p.Discovered {
+						myui.Text(c, i18n.T("built-in")).FontSize(11).TextColor(t.TextMuted).
+							Background(t.Surface).Padding(0, 6).Radius(4)
+					}
 					myui.Button(c, i18n.T("Duplicate")).OnClick(func() { act.DuplicateProfile(p.ID) })
-					myui.Button(c, i18n.T("Remove")).OnClick(func() { act.RemoveProfile(p.ID) })
+					switch {
+					case p.Hidden:
+						myui.Button(c, i18n.T("Show")).OnClick(func() { act.ShowProfile(p.ID) })
+					case p.Discovered:
+						// The window finds this shell again on the next start, so
+						// the page offers to hide it rather than to remove it.
+						myui.Button(c, i18n.T("Hide")).OnClick(func() { act.RemoveProfile(p.ID) })
+					default:
+						myui.Button(c, i18n.T("Remove")).OnClick(func() { act.RemoveProfile(p.ID) })
+					}
 				})
 			})
 		}
 		row(c, func() {
-			myui.Row(c).Children(func() {
+			myui.Row(c).Gap(8).Children(func() {
 				myui.Button(c, i18n.T("Add profile")).OnClick(act.AddProfile)
+				myui.Button(c, i18n.T("Show hidden profiles")).OnClick(act.ShowHiddenProfiles)
 			})
 		})
 	})

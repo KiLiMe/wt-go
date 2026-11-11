@@ -10,13 +10,22 @@ import (
 
 // TitleBarHeight is the height of the tab strip, which is the title bar: the
 // window keeps it clear of its window controls, and the strip runs under
-// them.
-const TitleBarHeight = 36
+// them. It is the height of Windows Terminal's, so that a window beside one
+// keeps the two bars level.
+const TitleBarHeight = 40
 
 // tabHeight is the height of a tab, less than the strip's: the tab in front
 // floats clear of the window's top edge, so that its rounded top corners are
 // drawn rather than cut off, the way Windows Terminal's are.
-const tabHeight float32 = 30
+const tabHeight float32 = 32
+
+// tabLine is how thick the line along the top of the tab in front is, and
+// tabLineInset how far it stops short of the tab's ends: the tab's top corners
+// are rounded, and a line run to them would show outside the round.
+const (
+	tabLine      float32 = 2
+	tabLineInset float32 = 4
+)
 
 // stripGutter is the room the strip keeps between the window's left edge and
 // the first tab, for the same reason.
@@ -169,6 +178,12 @@ func windowButton(c *myui.Context, b *WindowButtons, act Actions, name string) {
 	if el.Hovered() {
 		bg = t.SurfaceHover
 		color = t.Text
+		if name == "close" {
+			// The button that takes the window away turns the red Windows
+			// gives it: the one button of the three that does something the
+			// others do not is the one worth a color of its own.
+			bg = t.Danger
+		}
 		el = el.Background(bg)
 	}
 	el.OnClick(func() {
@@ -189,7 +204,10 @@ func windowButton(c *myui.Context, b *WindowButtons, act Actions, name string) {
 // tabs themselves, which scroll sideways when they outgrow the room.
 func stripTabs(c *myui.Context, st State, act Actions) {
 	if st.TabsScroll == nil {
-		tabs(c, st, act)
+		myui.Row(c).Height(TitleBarHeight).Grow(1).AlignItems(myui.Center).Children(func() {
+			tabs(c, st, act)
+			stripButtons(c, st, act)
+		})
 		return
 	}
 	// The buttons take room from the tabs, so they only show once the tabs
@@ -206,6 +224,10 @@ func stripTabs(c *myui.Context, st State, act Actions) {
 		if scrolls {
 			stepButton(c, st, act, 1)
 		}
+		// The buttons that open a tab sit past the tabs rather than in them:
+		// however many tabs there are, a tab is a press away rather than a
+		// scroll to the end away.
+		stripButtons(c, st, act)
 	})
 }
 
@@ -214,7 +236,6 @@ func stripTabs(c *myui.Context, st State, act Actions) {
 func viewport(c *myui.Context, st State, act Actions) {
 	myui.ScrollHorizontal(c).
 		Height(TitleBarHeight).
-		Grow(1).
 		Scrollbars(false).
 		TrackScroll(st.TabsScroll).
 		HandleInput(func(ev myui.InputEvent) bool {
@@ -256,7 +277,7 @@ func stepButton(c *myui.Context, st State, act Actions, dir int) myui.Element {
 		color = t.TextMuted
 		color.A = uint8(float32(color.A) * 0.45)
 	}
-	return myui.Box(c).
+	el := myui.Box(c).
 		Size(stepWidth, 28).
 		Radius(6).
 		AlignItems(myui.Center).
@@ -264,24 +285,26 @@ func stepButton(c *myui.Context, st State, act Actions, dir int) myui.Element {
 		Cursor(myui.CursorPointer).
 		Label(tip).
 		Tooltip(tip).
-		OnClick(func() { act.ScrollTabs(float32(dir) * tabStep) }).
-		Children(func() {
-			myui.Icon(c, ic.SVG).Size(16, 16).TextColor(color)
-		})
+		OnClick(func() { act.ScrollTabs(float32(dir) * tabStep) })
+	if el.Hovered() {
+		el = el.Background(t.SurfaceHover)
+	}
+	return el.Children(func() {
+		myui.Icon(c, ic.SVG).Size(16, 16).TextColor(color)
+	})
 }
 
 // tabs are the tabs, in order, each a place another tab may be dropped on,
 // and the buttons that open a tab after the last of them.
 func tabs(c *myui.Context, st State, act Actions) {
 	var move *tabMove
-	myui.Row(c).Height(TitleBarHeight).AlignItems(myui.End).Children(func() {
+	myui.Row(c).Height(TitleBarHeight).AlignItems(myui.End).Gap(4).Children(func() {
 		for i := range st.Tabs {
 			el := tab(c, st, act, i)
 			if d, ok := myui.Drop[tabDrag](el); ok && move == nil {
 				move = &tabMove{from: d.from, to: i}
 			}
 		}
-		stripButtons(c, st, act)
 	})
 	if move != nil {
 		act.MoveTab(move.from, move.to)
@@ -328,8 +351,14 @@ func tab(c *myui.Context, st State, act Actions, i int) myui.Element {
 	el = el.Shrink(0)
 	if active {
 		// The tab in front carries the terminal's background up into the
-		// strip, rounded at the top the way Windows Terminal does.
-		el = el.Background(t.Background).Radius(8, 8, 0, 0)
+		// strip, rounded at the top the way Windows Terminal does, and draws
+		// the accent along its top edge: the tab joins the pane below it, so
+		// the line is what tells the two apart at a glance.
+		el = el.Background(t.Background).Radius(8, 8, 0, 0).
+			Draw(func(p *myui.Painter, r myui.Rect) {
+				p.Fill(myui.Rect{X: r.X + tabLineInset, Y: r.Y, W: r.W - 2*tabLineInset, H: tabLine},
+					tabAccent(t), 1)
+			})
 	} else if el.Hovered() {
 		el = el.Background(t.SurfaceHover)
 	}
@@ -370,6 +399,14 @@ func tab(c *myui.Context, st State, act Actions, i int) myui.Element {
 	return el
 }
 
+// tabAccent is the color of the line along the top of the tab in front: the
+// accent of the theme, a shade toward the text, which a line two DIPs high
+// needs -- the accent itself reads as a filled button's face, too near the
+// background to stand on its own at that size.
+func tabAccent(t *myui.Theme) myui.Color {
+	return t.Accent.MixOklab(t.Text, 0.2)
+}
+
 // measuredName is how wide a tab draws its name: as wide as the name takes
 // in the theme's font, within the room a tab may take.
 func measuredName(c *myui.Context, name string) float32 {
@@ -400,30 +437,34 @@ func tabMenu(m *myui.Menu, st State, act Actions, i int) {
 	}
 }
 
-// closeButton closes a tab.
+// closeButton closes a tab. It takes the surface under the pointer, so that
+// it reads as the button it is rather than as a mark on the tab.
 func closeButton(c *myui.Context, act Actions, i int, active bool) myui.Element {
 	t := c.Theme()
 	color := t.TextMuted
 	if active {
 		color = t.Text
 	}
-	return myui.Box(c).
+	el := myui.Box(c).
 		Size(16, 16).
 		Radius(4).
 		AlignItems(myui.Center).
 		Justify(myui.Center).
 		Cursor(myui.CursorPointer).
 		Tooltip(i18n.T("Close Tab")).
-		OnClick(func() { act.CloseTab(i) }).
-		Children(func() {
-			myui.Icon(c, icons.Close.SVG).Size(14, 14).TextColor(color)
-		})
+		OnClick(func() { act.CloseTab(i) })
+	if el.Hovered() {
+		el = el.Background(t.SurfaceHover)
+		color = t.Text
+	}
+	return el.Children(func() {
+		myui.Icon(c, icons.Close.SVG).Size(14, 14).TextColor(color)
+	})
 }
 
 // profilesMenu opens a tab that runs one of the profiles.
 func profilesMenu(c *myui.Context, st State, act Actions) myui.Element {
-	t := c.Theme()
-	return myui.Box(c).
+	base := myui.Box(c).
 		Size(28, 28).
 		Radius(6).
 		AlignItems(myui.Center).
@@ -446,10 +487,29 @@ func profilesMenu(c *myui.Context, st State, act Actions) myui.Element {
 		if it.Chosen() {
 			act.OpenSettings()
 		}
-	}).
-		Children(func() {
-			myui.Icon(c, icons.Chevron.SVG).Size(14, 14).TextColor(t.TextMuted)
-		})
+	})
+	return stripButton(c, base).Children(func() {
+		myui.Icon(c, icons.Chevron.SVG).Size(14, 14).TextColor(stripIcon(c, base))
+	})
+}
+
+// stripButton is one of the buttons beside the tabs: a square in the room of a
+// glyph and a half, which takes the surface under the pointer, as the window's
+// own buttons do, so that a mark in the strip reads as a button.
+func stripButton(c *myui.Context, el myui.Element) myui.Element {
+	if el.Hovered() {
+		return el.Background(c.Theme().SurfaceHover)
+	}
+	return el
+}
+
+// stripIcon is the color of a strip button's mark: the text color while the
+// pointer is over the button, the muted one otherwise.
+func stripIcon(c *myui.Context, el myui.Element) myui.Color {
+	if el.Hovered() {
+		return c.Theme().Text
+	}
+	return c.Theme().TextMuted
 }
 
 // shortcut shows an action's key by a menu item, when the window knows one.
@@ -466,8 +526,7 @@ func shortcut(it *myui.MenuItem, st State, action string) {
 
 // newTabButton opens a tab that runs the default profile.
 func newTabButton(c *myui.Context, act Actions) myui.Element {
-	t := c.Theme()
-	return myui.Box(c).
+	base := myui.Box(c).
 		Size(28, 28).
 		Radius(6).
 		AlignItems(myui.Center).
@@ -475,8 +534,8 @@ func newTabButton(c *myui.Context, act Actions) myui.Element {
 		Cursor(myui.CursorPointer).
 		Label(i18n.T("New Tab")).
 		Tooltip(i18n.T("New Tab")).
-		OnClick(func() { act.NewTab("") }).
-		Children(func() {
-			myui.Icon(c, icons.Add.SVG).Size(14, 14).TextColor(t.TextMuted)
-		})
+		OnClick(func() { act.NewTab("") })
+	return stripButton(c, base).Children(func() {
+		myui.Icon(c, icons.Add.SVG).Size(14, 14).TextColor(stripIcon(c, base))
+	})
 }

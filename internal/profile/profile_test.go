@@ -16,9 +16,9 @@ func TestResolve(t *testing.T) {
 		{ID: "mine", Name: "我的", Command: "cmd.exe"},
 	}
 	found := []Found{
-		{ID: "pwsh7", Name: "PowerShell 7", Command: "pwsh.exe"},
-		{ID: "cmd", Name: "命令提示符", Command: "cmd.exe"},
-		{ID: "wsl:Ubuntu", Name: "Ubuntu", Command: "wsl.exe", Args: []string{"-d", "Ubuntu"}},
+		{ID: "pwsh7", Command: "pwsh.exe"},
+		{ID: "cmd", Command: "cmd.exe"},
+		{ID: "wsl:Ubuntu", Command: "wsl.exe", Args: []string{"-d", "Ubuntu"}},
 	}
 	got := Resolve(configured, found)
 	if len(got) != 4 {
@@ -71,9 +71,9 @@ func TestCommandLine(t *testing.T) {
 	}
 }
 
-// TestColorOf covers the dot a discovered profile wears: a known shell gets
-// its own color, and a shell nothing knows gets none.
-func TestColorOf(t *testing.T) {
+// TestColor covers the dot a discovered profile wears: a known shell gets its
+// own color, and a shell nothing knows gets none.
+func TestColor(t *testing.T) {
 	tests := []struct {
 		id   string
 		want string
@@ -93,8 +93,31 @@ func TestColorOf(t *testing.T) {
 		{"elvish", ""},
 	}
 	for _, tt := range tests {
-		if got := colorOf(tt.id); got != tt.want {
-			t.Errorf("colorOf(%q) = %q, want %q", tt.id, got, tt.want)
+		if got := Color(tt.id); got != tt.want {
+			t.Errorf("Color(%q) = %q, want %q", tt.id, got, tt.want)
+		}
+	}
+}
+
+// TestName covers what the strip calls a shell: the name the table gives a
+// shell it knows, and the name of the program for one it does not.
+func TestName(t *testing.T) {
+	tests := []struct {
+		id      string
+		command string
+		want    string
+	}{
+		{"pwsh7", `C:\Program Files\PowerShell\7\pwsh.exe`, "PowerShell 7"},
+		{"cmd", `C:\Windows\system32\cmd.exe`, "Command Prompt"},
+		{"bash", `/usr/bin/bash`, "Bash"},
+		{"elvish", `/usr/local/bin/elvish`, "elvish"},
+		{"xonsh", `C:\tools\xonsh.exe`, "xonsh"},
+		{"wsl:Ubuntu", `C:\Windows\system32\wsl.exe`, "wsl"},
+		{"", "", ""},
+	}
+	for _, tt := range tests {
+		if got := Name(tt.id, tt.command); got != tt.want {
+			t.Errorf("Name(%q, %q) = %q, want %q", tt.id, tt.command, got, tt.want)
 		}
 	}
 }

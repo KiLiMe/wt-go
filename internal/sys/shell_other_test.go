@@ -53,10 +53,10 @@ func TestDiscoverShells(t *testing.T) {
 				"/bin/zsh": true, "/bin/bash": true, "/bin/fish": true, "/bin/sh": true,
 			},
 			want: []Shell{
-				{ID: "zsh", Name: "Zsh", Command: "/bin/zsh"},
-				{ID: "bash", Name: "Bash", Command: "/bin/bash"},
-				{ID: "fish", Name: "Fish", Command: "/bin/fish"},
-				{ID: "sh", Name: "sh", Command: "/bin/sh"},
+				{ID: "zsh", Command: "/bin/zsh"},
+				{ID: "bash", Command: "/bin/bash"},
+				{ID: "fish", Command: "/bin/fish"},
+				{ID: "sh", Command: "/bin/sh"},
 			},
 		},
 		{
@@ -67,8 +67,8 @@ func TestDiscoverShells(t *testing.T) {
 				"/bin/bash": true, "/bin/sh": true,
 			},
 			want: []Shell{
-				{ID: "bash", Name: "Bash", Command: "/bin/bash"},
-				{ID: "sh", Name: "sh", Command: "/bin/sh"},
+				{ID: "bash", Command: "/bin/bash"},
+				{ID: "sh", Command: "/bin/sh"},
 			},
 		},
 		{
@@ -79,8 +79,8 @@ func TestDiscoverShells(t *testing.T) {
 				"/bin/bash": true, "/usr/local/bin/bash": true, "/bin/sh": true,
 			},
 			want: []Shell{
-				{ID: "bash", Name: "Bash", Command: "/bin/bash"},
-				{ID: "sh", Name: "sh", Command: "/bin/sh"},
+				{ID: "bash", Command: "/bin/bash"},
+				{ID: "sh", Command: "/bin/sh"},
 			},
 		},
 		{
@@ -91,8 +91,8 @@ func TestDiscoverShells(t *testing.T) {
 				"/bin/bash": true, "/usr/bin/git-shell": true, "/bin/rbash": true, "/bin/sh": true,
 			},
 			want: []Shell{
-				{ID: "bash", Name: "Bash", Command: "/bin/bash"},
-				{ID: "sh", Name: "sh", Command: "/bin/sh"},
+				{ID: "bash", Command: "/bin/bash"},
+				{ID: "sh", Command: "/bin/sh"},
 			},
 		},
 		{
@@ -103,8 +103,8 @@ func TestDiscoverShells(t *testing.T) {
 				"/usr/bin/pwsh": true, "/bin/sh": true,
 			},
 			want: []Shell{
-				{ID: "pwsh", Name: "PowerShell 7", Command: "/usr/bin/pwsh"},
-				{ID: "sh", Name: "sh", Command: "/bin/sh"},
+				{ID: "pwsh", Command: "/usr/bin/pwsh"},
+				{ID: "sh", Command: "/bin/sh"},
 			},
 		},
 		{
@@ -114,8 +114,8 @@ func TestDiscoverShells(t *testing.T) {
 				"/usr/bin/elvish": true, "/bin/sh": true,
 			},
 			want: []Shell{
-				{ID: "elvish", Name: "elvish", Command: "/usr/bin/elvish"},
-				{ID: "sh", Name: "sh", Command: "/bin/sh"},
+				{ID: "elvish", Command: "/usr/bin/elvish"},
+				{ID: "sh", Command: "/bin/sh"},
 			},
 		},
 		{
@@ -126,7 +126,7 @@ func TestDiscoverShells(t *testing.T) {
 				"/bin/sh": true,
 			},
 			want: []Shell{
-				{ID: "sh", Name: "sh", Command: "/bin/sh"},
+				{ID: "sh", Command: "/bin/sh"},
 			},
 		},
 		{

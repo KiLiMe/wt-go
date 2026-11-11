@@ -218,7 +218,7 @@ func shells() []ShellReport {
 	found := sys.Discover()
 	out := make([]ShellReport, 0, len(found))
 	for _, s := range found {
-		out = append(out, ShellReport{ID: s.ID, Name: s.Name, Command: s.Command})
+		out = append(out, ShellReport{ID: s.ID, Name: profile.Name(s.ID, s.Command), Command: s.Command})
 	}
 	return out
 }
@@ -229,7 +229,7 @@ func shells() []ShellReport {
 func profiles(found []ShellReport, settingsOK bool) []ProfileReport {
 	known := make([]profile.Found, 0, len(found))
 	for _, s := range found {
-		known = append(known, profile.Found{ID: s.ID, Name: s.Name, Command: s.Command})
+		known = append(known, profile.Found{ID: s.ID, Command: s.Command})
 	}
 	var configured []store.Profile
 	if settingsOK {

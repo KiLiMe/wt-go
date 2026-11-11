@@ -7,6 +7,7 @@ import (
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/i18n"
+	"wtgo/internal/icons"
 	"wtgo/internal/store"
 	"wtgo/internal/theme"
 )
@@ -37,8 +38,8 @@ func schemesPage(c *myui.Context, st Settings, act Actions) {
 				myui.Text(c, i18n.T("No scheme by that name.")).FontSize(11).TextColor(t.TextMuted)
 			}
 			myui.Column(c).Gap(2).Children(func() {
-				for _, name := range names {
-					schemeRow(c, name, s)
+				for _, sc := range names {
+					schemeRow(c, sc, s, act)
 				}
 			})
 		})
@@ -60,36 +61,57 @@ func filter(st Settings) string {
 }
 
 // schemeOptions are the schemes a control picks from.
-func schemeOptions(names []string) []option {
-	out := make([]option, 0, len(names))
-	for _, name := range names {
-		out = append(out, option{name, name})
+func schemeOptions(schemes []Scheme) []option {
+	out := make([]option, 0, len(schemes))
+	for _, sc := range schemes {
+		out = append(out, option{sc.Name, sc.Name})
 	}
 	return out
 }
 
-// schemeRow is one scheme in the list, chosen by a click.
-func schemeRow(c *myui.Context, name string, s *store.Settings) {
-	el := myui.Row(c).Height(28).Padding(0, 8).AlignItems(myui.Center).Radius(6).
-		Cursor(myui.CursorPointer).OnClick(func() { s.ColorScheme = name })
-	if s.ColorScheme == name {
+// schemeRow is one scheme in the list: its name, chosen by a click, and for a
+// scheme the settings write the button that removes it -- shown while the row
+// is in front, in room the row keeps either way, so that the names do not jump
+// as the pointer moves.
+func schemeRow(c *myui.Context, sc Scheme, s *store.Settings, act Actions) {
+	el := myui.Row(c).Height(28).Padding(0, 4, 0, 8).AlignItems(myui.Center).Gap(4).Radius(6).
+		Cursor(myui.CursorPointer).OnClick(func() { s.ColorScheme = sc.Name })
+	if s.ColorScheme == sc.Name {
 		el.Background(c.Theme().SurfaceHover)
 	}
+	shown := sc.Custom && (el.Hovered() || s.ColorScheme == sc.Name)
 	el.Children(func() {
-		myui.Text(c, name).SingleLine()
+		myui.Text(c, sc.Name).Grow(1).Shrink(1).SingleLine()
+		if !sc.Custom {
+			return
+		}
+		remove := myui.Box(c).Size(20, 20).Radius(4).AlignItems(myui.Center).Justify(myui.Center)
+		if !shown {
+			// The box keeps its room, so that the names do not move as the
+			// pointer goes from row to row, and nothing of the button is there
+			// to click: a row that hides its button still picks the scheme.
+			remove.Opacity(0).PassThrough()
+		} else {
+			remove.Cursor(myui.CursorPointer).Label(i18n.T("Remove the scheme")).
+				Tooltip(i18n.T("Remove the scheme")).
+				OnClick(func() { act.RemoveScheme(sc.Name) })
+		}
+		remove.Children(func() {
+			myui.Icon(c, icons.Close.SVG).Size(12, 12).TextColor(c.Theme().TextMuted)
+		})
 	})
 }
 
-// search is the names that hold what the search asks for, at most the rows a
+// search is the schemes that hold what the search asks for, at most the rows a
 // page shows at once: the schemes number in the hundreds.
-func search(names []string, search string) []string {
+func search(schemes []Scheme, search string) []Scheme {
 	search = strings.ToLower(strings.TrimSpace(search))
-	out := make([]string, 0, len(names))
-	for _, name := range names {
-		if search != "" && !strings.Contains(strings.ToLower(name), search) {
+	out := make([]Scheme, 0, len(schemes))
+	for _, sc := range schemes {
+		if search != "" && !strings.Contains(strings.ToLower(sc.Name), search) {
 			continue
 		}
-		out = append(out, name)
+		out = append(out, sc)
 		if len(out) == 60 {
 			break
 		}

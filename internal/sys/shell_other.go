@@ -9,10 +9,10 @@ import (
 	"strings"
 )
 
-// Shell is a shell this machine has.
+// Shell is a shell this machine has, as it is found: no name, no color, no
+// place in the settings.
 type Shell struct {
 	ID      string
-	Name    string
 	Command string
 	Args    []string
 }
@@ -23,18 +23,20 @@ const shellsFile = "/etc/shells"
 // fallbackShell is the shell a POSIX system is required to have.
 const fallbackShell = "/bin/sh"
 
-// shellNames is what the strip calls a shell it knows, by the id of its
-// program. A shell it does not know keeps its own name.
-var shellNames = map[string]string{
-	"bash": "Bash",
-	"zsh":  "Zsh",
-	"fish": "Fish",
-	"sh":   "sh",
-	"nu":   "Nushell",
-	"dash": "dash",
-	"ksh":  "Korn Shell",
-	"tcsh": "tcsh",
-	"pwsh": "PowerShell 7",
+// runnable are the shells a tab can run, by the id of their program:
+// /etc/shells also lists the ones a person may not start interactively, like
+// git-shell and rbash, and a tab that runs one is a tab that does nothing.
+// What the strip calls them, and the dot they wear, is profile's business.
+var runnable = map[string]bool{
+	"bash": true,
+	"zsh":  true,
+	"fish": true,
+	"sh":   true,
+	"nu":   true,
+	"dash": true,
+	"ksh":  true,
+	"tcsh": true,
+	"pwsh": true,
 }
 
 // Discover is the shells this machine has, in the order a strip shows them:
@@ -62,7 +64,7 @@ func discoverShells(envShell string, readFile func(string) ([]byte, error), look
 			return
 		}
 		seen[id] = true
-		shells = append(shells, Shell{ID: id, Name: shellName(id), Command: command})
+		shells = append(shells, Shell{ID: id, Command: command})
 	}
 
 	add(envShell)
@@ -79,24 +81,13 @@ func discoverShells(envShell string, readFile func(string) ([]byte, error), look
 	return shells
 }
 
-// knownShell reports whether path is a shell a tab can be: /etc/shells also
-// lists the ones a person may not start interactively, like git-shell and
-// rbash, and a tab that runs one is a tab that does nothing.
+// knownShell reports whether path is a shell a tab can be.
 func knownShell(path string) bool {
-	_, ok := shellNames[shellID(path)]
-	return ok
+	return runnable[shellID(path)]
 }
 
 // shellID is the stable name of a shell program: the lowercase base name of
 // its path, so /bin/bash and /usr/local/bin/bash are the same shell.
 func shellID(path string) string {
 	return strings.ToLower(filepath.Base(path))
-}
-
-// shellName is what the strip calls a shell.
-func shellName(id string) string {
-	if name, ok := shellNames[id]; ok {
-		return name
-	}
-	return id
 }

@@ -59,18 +59,38 @@ func (a *App) settingsState() ui.Settings {
 		Filter:       &a.filter,
 		Profile:      a.editing,
 		Args:         &a.editingArgs,
-		Profiles:     fileProfiles(a.settings),
+		Profiles:     fileProfiles(a.settings, a.showHidden),
+		Hidden:       a.showHidden,
 		Known:        knownProfiles(a.profiles),
-		Schemes:      theme.Schemes(a.settings),
+		Schemes:      uiSchemes(a.settings),
 		FontFamilies: a.families,
 	}
 }
 
-// fileProfiles are the profiles the file holds, as the settings list them.
-func fileProfiles(s store.Settings) []ui.Profile {
+// uiSchemes are the color schemes the color schemes page lists, each saying
+// whether the settings write it: the page offers to remove those alone.
+func uiSchemes(s store.Settings) []ui.Scheme {
+	custom := make(map[string]bool, len(s.Schemes))
+	for _, sc := range s.Schemes {
+		custom[strings.ToLower(sc.Name)] = true
+	}
+	names := theme.Schemes(s)
+	out := make([]ui.Scheme, 0, len(names))
+	for _, name := range names {
+		out = append(out, ui.Scheme{Name: name, Custom: custom[strings.ToLower(name)]})
+	}
+	return out
+}
+
+// fileProfiles are the profiles the file holds, as the settings list them: the
+// hidden ones too while the page shows them.
+func fileProfiles(s store.Settings, showHidden bool) []ui.Profile {
 	out := make([]ui.Profile, 0, len(s.Profiles))
 	for _, p := range s.Profiles {
-		out = append(out, ui.Profile{ID: p.ID, Name: p.Name, Color: p.Color})
+		if p.Hidden && !showHidden {
+			continue
+		}
+		out = append(out, ui.Profile{ID: p.ID, Name: p.Name, Color: p.Color, Discovered: p.Discovered, Hidden: p.Hidden})
 	}
 	return out
 }
@@ -79,7 +99,7 @@ func fileProfiles(s store.Settings) []ui.Profile {
 func knownProfiles(profiles []profile.Profile) []ui.Profile {
 	out := make([]ui.Profile, 0, len(profiles))
 	for _, p := range profiles {
-		out = append(out, ui.Profile{ID: p.ID, Name: p.Name, Color: p.Color})
+		out = append(out, ui.Profile{ID: p.ID, Name: p.Name, Color: p.Color, Discovered: p.Discovered})
 	}
 	return out
 }
@@ -319,16 +339,89 @@ func (a *App) CopyScheme() {
 	if !ok {
 		return
 	}
-	name := a.settings.ColorScheme + " (custom)"
-	for i := 2; a.schemeNamed(name); i++ {
-		name = a.settings.ColorScheme + " (custom " + strconv.Itoa(i) + ")"
-	}
 	scheme := theme.Stored(th)
-	scheme.Name = name
+	scheme.Name = a.customSchemeName(schemeBaseName(a.settings.ColorScheme))
 	a.settings.Schemes = append(a.settings.Schemes, scheme)
-	a.settings.ColorScheme = name
+	a.settings.ColorScheme = scheme.Name
 	a.note = i18n.T("The scheme is copied; save to keep it.")
 	a.redraw()
+}
+
+// customSuffix starts the mark a copied scheme carries on its name.
+const customSuffix = " (custom"
+
+// schemeBaseName is the name a copy starts from: the name the copies before it
+// added their marks to, without them. A copy copies the scheme in front, which
+// may be a copy itself, so the marks nest unless they come off again.
+func schemeBaseName(name string) string {
+	for {
+		i := strings.LastIndex(name, customSuffix)
+		if i <= 0 {
+			return name
+		}
+		// What follows the mark is ")" or a number and ")", as
+		// customSchemeName writes them.
+		n := strings.TrimSpace(strings.TrimSuffix(name[i+len(customSuffix):], ")"))
+		if n != "" && !digits(n) {
+			return name
+		}
+		name = name[:i]
+	}
+}
+
+// digits reports whether s is a run of decimal digits.
+func digits(s string) bool {
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+// customSchemeName is a name no scheme holds yet for a copy of the scheme
+// named base: its own name with a mark, numbered once that is taken.
+func (a *App) customSchemeName(base string) string {
+	name := base + customSuffix + ")"
+	for i := 2; a.schemeNamed(name); i++ {
+		name = base + customSuffix + " " + strconv.Itoa(i) + ")"
+	}
+	return name
+}
+
+// RemoveScheme drops a color scheme the settings write, which is the only kind
+// the color schemes page offers to remove: the terminal keeps painting with the
+// scheme the one removed was a copy of, while that is still there.
+func (a *App) RemoveScheme(name string) {
+	out := a.settings.Schemes[:0]
+	removed := false
+	for _, s := range a.settings.Schemes {
+		if strings.EqualFold(s.Name, name) {
+			removed = true
+			continue
+		}
+		out = append(out, s)
+	}
+	if !removed {
+		return
+	}
+	a.settings.Schemes = out
+	if strings.EqualFold(a.settings.ColorScheme, name) {
+		a.settings.ColorScheme = a.schemeAfterRemoving(name)
+	}
+	a.note = i18n.T("The scheme is removed; save to keep it.")
+	a.redraw()
+}
+
+// schemeAfterRemoving is the scheme to paint with once one is gone: the one it
+// was a copy of, while that is still there, else the one the defaults name.
+func (a *App) schemeAfterRemoving(name string) string {
+	for _, candidate := range []string{schemeBaseName(name), store.Default().ColorScheme} {
+		if _, ok := theme.Scheme(a.settings, candidate); ok {
+			return candidate
+		}
+	}
+	return ""
 }
 
 // schemeNamed reports whether the settings hold a color scheme of that name.
@@ -369,6 +462,17 @@ func (a *App) newProfileID() string {
 
 // RemoveProfile drops a profile from the file's list.
 func (a *App) RemoveProfile(id string) {
+	if p, ok := profileByID(a.settings, id); ok && p.Discovered {
+		// The window finds this shell again on the next start, so hiding it
+		// is the only removal that holds: dropping it would put it back.
+		p.Hidden = true
+		a.upsertProfile(p)
+		a.settingsPage = ui.PageProfiles
+		a.editNone()
+		a.recording = ""
+		a.redraw()
+		return
+	}
 	out := make([]store.Profile, 0, len(a.settings.Profiles))
 	for _, p := range a.settings.Profiles {
 		if p.ID != id {
@@ -379,6 +483,23 @@ func (a *App) RemoveProfile(id string) {
 	a.settingsPage = ui.PageProfiles
 	a.editNone()
 	a.recording = ""
+	a.redraw()
+}
+
+// ShowHiddenProfiles lists the profiles the page hides, or hides them again.
+func (a *App) ShowHiddenProfiles() {
+	a.showHidden = !a.showHidden
+	a.redraw()
+}
+
+// ShowProfile brings the profile with an id back from hiding.
+func (a *App) ShowProfile(id string) {
+	p, ok := profileByID(a.settings, id)
+	if !ok {
+		return
+	}
+	p.Hidden = false
+	a.upsertProfile(p)
 	a.redraw()
 }
 

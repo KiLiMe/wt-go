@@ -24,6 +24,7 @@ const (
 	BadField      Code = "E202" // a field is out of range
 	BadKeybinding Code = "E203" // a keybinding names a key that cannot be read
 	BadFont       Code = "E204" // the font family is not a monospace font
+	SettingsWrite Code = "E205" // settings.json could not be written
 
 	// While it runs.
 	ChildFailed   Code = "E301" // a shell could not be started
@@ -42,6 +43,7 @@ var about = map[Code]string{
 	BadField:      "A field of settings.json is out of range; the defaults are used",
 	BadKeybinding: "A keybinding names a key wt-go cannot read; that one binding is dropped, the rest work",
 	BadFont:       "The font family is not a monospace font, or is not installed; the terminal draws with monospace instead",
+	SettingsWrite: "settings.json could not be written, so the profiles the window found are not in the file",
 	ChildFailed:   "A shell could not be started, so the tab has nothing in it",
 	Crashed:       "The window stopped with a panic; the stack is in the crash log",
 	NoProcessList: "The process list could not be read, so whether a tab still runs a program is unknown",

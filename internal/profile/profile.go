@@ -21,22 +21,60 @@ type Profile struct {
 	Discovered bool
 }
 
-// Found is a shell sys found on this machine, before profile gives it a
-// place among the ones the settings name.
+// Found is a shell sys found on this machine, before profile gives it a name
+// and a place among the ones the settings name.
 type Found struct {
 	ID      string
-	Name    string
 	Command string
 	Args    []string
 }
 
+// known is what the strip calls a shell, and the dot it wears, by the id of
+// its program. A shell it does not know is called by the name of its program
+// and wears no dot.
+var known = map[string]struct{ Name, Color string }{
+	"pwsh7":      {"PowerShell 7", "#3b78ff"},
+	"pwsh":       {"PowerShell 7", "#3b78ff"},
+	"powershell": {"Windows PowerShell", "#2671be"},
+	"cmd":        {"Command Prompt", "#cccccc"},
+	"bash":       {"Bash", "#4eaa25"},
+	"zsh":        {"Zsh", "#e5c07b"},
+	"fish":       {"Fish", "#56b6c2"},
+	"sh":         {"sh", "#b0b0b0"},
+	"nu":         {"Nushell", "#7c6cf5"},
+	"dash":       {"dash", "#ff9e64"},
+	"ksh":        {"Korn Shell", "#c678dd"},
+	"tcsh":       {"tcsh", "#e06c9f"},
+}
+
+// Name is what the strip calls a shell of an id, whose program is command:
+// the name the table gives it, or the name of its program.
+func Name(id, command string) string {
+	if k, ok := known[id]; ok {
+		return k.Name
+	}
+	if i := strings.LastIndexAny(command, `\/`); i >= 0 {
+		command = command[i+1:]
+	}
+	command = strings.TrimSuffix(strings.TrimSuffix(command, ".exe"), ".EXE")
+	return command
+}
+
+// Color is the dot a shell of an id wears, "" for none.
+func Color(id string) string {
+	if strings.HasPrefix(id, "wsl:") {
+		return "#e95420"
+	}
+	return known[id].Color
+}
+
 // Resolve is the profiles the window offers: the shells found on this machine
 // in the order sys found them, each replaced by the settings' profile of the
-// same id, so renaming or recoloring a discovered profile keeps it; and then
-// the profiles the settings name that no shell matched. The shells come first
-// because a settings file that names no default profile starts the first
-// profile in the list, and a profile someone adds should not take over the
-// tabs they did not ask it for.
+// same id, so renaming or recoloring a discovered profile keeps it, and hidden
+// ones stay out of the way; and then the profiles the settings name that no
+// shell matched. The shells come first because a settings file that names no
+// default profile starts the first profile in the list, and a profile someone
+// adds should not take over the tabs they did not ask it for.
 func Resolve(configured []store.Profile, found []Found) []Profile {
 	named := make(map[string]store.Profile, len(configured))
 	for _, p := range configured {
@@ -54,15 +92,19 @@ func Resolve(configured []store.Profile, found []Found) []Profile {
 		}
 		profiles = append(profiles, Profile{
 			ID:         f.ID,
-			Name:       f.Name,
+			Name:       Name(f.ID, f.Command),
 			Command:    f.Command,
 			Args:       f.Args,
-			Color:      colorOf(f.ID),
+			Color:      Color(f.ID),
 			Discovered: true,
 		})
 	}
+	seen := make(map[string]bool, len(profiles))
+	for _, p := range profiles {
+		seen[p.ID] = true
+	}
 	for _, p := range configured {
-		if p.ID == "" || used[p.ID] {
+		if p.ID == "" || used[p.ID] || seen[p.ID] {
 			continue
 		}
 		profiles = append(profiles, fromStore(p))
@@ -109,39 +151,4 @@ func (p Profile) CommandLine() []string {
 		return nil
 	}
 	return append([]string{p.Command}, p.Args...)
-}
-
-// colorOf is the dot a profile of a known kind wears, as Windows Terminal
-// gives its shells a color.
-func colorOf(id string) string {
-	switch {
-	case id == "pwsh7":
-		return "#3b78ff"
-	case id == "powershell":
-		return "#2671be"
-	case id == "cmd":
-		return "#cccccc"
-	case strings.HasPrefix(id, "wsl:"):
-		return "#e95420"
-	case id == "pwsh":
-		// The same PowerShell 7 as pwsh7: a POSIX system calls it pwsh.
-		return "#3b78ff"
-	case id == "bash":
-		return "#4eaa25"
-	case id == "zsh":
-		return "#e5c07b"
-	case id == "fish":
-		return "#56b6c2"
-	case id == "sh":
-		return "#b0b0b0"
-	case id == "nu":
-		return "#7c6cf5"
-	case id == "dash":
-		return "#ff9e64"
-	case id == "ksh":
-		return "#c678dd"
-	case id == "tcsh":
-		return "#e06c9f"
-	}
-	return ""
 }

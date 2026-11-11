@@ -106,6 +106,8 @@ type App struct {
 	configErr string
 	// filter is what the color schemes page searches for.
 	filter string
+	// showHidden is whether the profiles page lists the profiles it hides.
+	showHidden bool
 	// editing is the profile the profile page edits, and editingFrom what it
 	// held when the page opened. editingArgs is the arguments as the page types
 	// them, one on a line, so that an empty line stays while it is typed.
@@ -243,6 +245,11 @@ func newApp() *App {
 		a.savedData = data
 	}
 	a.found = found()
+	// A file that is not settings is left as it is, so that a person can fix
+	// it: the profiles the window found stay in memory for this run only.
+	if adopt(&a.settings, a.found, exists) && err == nil {
+		a.adoptWrite()
+	}
 	a.profiles = profile.Resolve(a.settings.Profiles, a.found)
 	a.keys = bindings(a.settings.Keybindings)
 	return a
@@ -367,9 +374,92 @@ func found() []profile.Found {
 	shells := sys.Discover()
 	out := make([]profile.Found, 0, len(shells))
 	for _, s := range shells {
-		out = append(out, profile.Found{ID: s.ID, Name: s.Name, Command: s.Command, Args: s.Args})
+		out = append(out, profile.Found{ID: s.ID, Command: s.Command, Args: s.Args})
 	}
 	return out
+}
+
+// adopt writes the shells the machine has into the settings, the way the
+// settings page would: a shell the file does not name is added below the ones
+// it does, so that the strip lists what can be started without a person
+// typing a path, and editing the command line of a discovered profile
+// afterwards keeps the edit. A discovered profile whose program is gone is
+// hidden rather than dropped, so that installing the program again is all it
+// takes to bring it back.
+// adoptWrite puts the settings the window adopted into the file, and keeps the
+// copy the window compares against.
+func (a *App) adoptWrite() {
+	data, err := store.Marshal(a.settings)
+	if err != nil {
+		log.Printf("wt-go: %s", fault.Line(fault.BadSettings, err.Error()))
+		return
+	}
+	if err := sys.WriteSettings(data); err != nil {
+		log.Printf("wt-go: %s", fault.Line(fault.SettingsWrite, err.Error()))
+		return
+	}
+	a.saved, a.savedData = a.settings.Clone(), data
+	a.file.markSeen(data)
+}
+
+// adopt adds the shells the machine has to the settings, and hides the found
+// profiles whose program is gone, and reports whether it changed anything.
+func adopt(s *store.Settings, found []profile.Found, exists func(string) bool) bool {
+	at := 0
+	have := make(map[string]bool, len(s.Profiles))
+	for i, p := range s.Profiles {
+		have[p.ID] = true
+		if p.Discovered {
+			at = i + 1
+		}
+	}
+	var added []store.Profile
+	for _, f := range found {
+		if have[f.ID] {
+			continue
+		}
+		have[f.ID] = true
+		added = append(added, store.Profile{
+			ID:         f.ID,
+			Name:       profile.Name(f.ID, f.Command),
+			Command:    f.Command,
+			Args:       f.Args,
+			Color:      profile.Color(f.ID),
+			Discovered: true,
+		})
+	}
+	changed := len(added) > 0
+	if changed {
+		list := make([]store.Profile, 0, len(s.Profiles)+len(added))
+		list = append(list, s.Profiles[:at]...)
+		list = append(list, added...)
+		list = append(list, s.Profiles[at:]...)
+		s.Profiles = list
+	}
+	for i := range s.Profiles {
+		p := &s.Profiles[i]
+		if p.Discovered && !p.Hidden && commandGone(p.Command, exists) {
+			p.Hidden = true
+			changed = true
+		}
+	}
+	return changed
+}
+
+// exists reports whether a path is there.
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+// commandGone reports whether the program a profile runs is no longer where
+// the profile says. A command that is a bare name is PATH's business, not this
+// one's: it is left to fail when a tab runs it.
+func commandGone(command string, exists func(string) bool) bool {
+	if command == "" || !strings.ContainsAny(command, `\/:`) {
+		return false
+	}
+	return !exists(command)
 }
 
 // bindings are the keybindings the settings name, as the keys they bind.

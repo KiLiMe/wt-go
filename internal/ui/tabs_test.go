@@ -185,6 +185,38 @@ func TestTabFloats(t *testing.T) {
 	}
 }
 
+// TestTabAccent covers the line the tab in front draws along its top edge:
+// the theme's accent, stopped short of the tab's rounded ends, and no line at
+// all on the tab behind it.
+func TestTabAccent(t *testing.T) {
+	top := int(TitleBarHeight - tabHeight)
+	draw := func(active int) (*myui.Tester, func(x, y int) color.RGBA) {
+		at := &myui.ScrollState{}
+		st := &State{Tabs: []Tab{{Name: "PowerShell 7"}}, Active: active, TabsScroll: at}
+		tt := myui.NewTester(func(c *myui.Context) { strip(c, *st, &scrollActions{at: at}) }, 900, TitleBarHeight*2)
+		tt.Frame()
+		img := tt.Image()
+		return tt, func(x, y int) color.RGBA { return img.RGBAAt(x, y) }
+	}
+
+	_, px := draw(0)
+	line := px(int(stripGutter)+40, top)
+	body := px(int(stripGutter)+40, int(TitleBarHeight)-2)
+	if line == body {
+		t.Errorf("the tab in front draws %v along its top edge, the same as its body %v", line, body)
+	}
+	// The line is two DIPs high: the row below it is the tab's own background
+	// again, near its left end where no name is drawn.
+	if got := px(int(stripGutter)+6, top+2); got != body {
+		t.Errorf("the line is thicker than two DIPs: it draws %v below itself, want the tab's %v", got, body)
+	}
+
+	_, px = draw(1)
+	if got := px(int(stripGutter)+40, top); got != px(890, 2) {
+		t.Errorf("the tab behind draws %v along its top edge, want the strip's %v", got, px(890, 2))
+	}
+}
+
 // windowActions is the window as the strip's buttons see it: it records what
 // each button asked for.
 type windowActions struct {
