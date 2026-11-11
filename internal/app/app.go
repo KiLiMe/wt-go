@@ -59,6 +59,11 @@ type App struct {
 	// left in which the strip brings the tab in front into view.
 	tabsScroll myui.ScrollState
 	revealTabs int
+	// buttons is the desktop's window button layout, which the strip draws
+	// where the window hides the desktop's buttons, and maximized whether the
+	// window is maximized, which the button that maximizes shows.
+	buttons   mygo.WindowButtons
+	maximized bool
 	// content is the room the panes took in the last frame, which the keys
 	// that split and move between panes measure.
 	content layout.Rect
@@ -145,17 +150,19 @@ func Run() (err error) {
 		a := newApp()
 		a.appearance()
 		a.win = mygo.NewWindow(mygo.WindowOptions{
-			Title:           "wt-go",
-			Width:           960,
-			Height:          600,
-			TitleBarStyle:   titleBarStyle(),
-			TitleBarHeight:  ui.TitleBarHeight,
-			StateKey:        "main",
-			BackgroundColor: theme.Hex(theme.Terminal(a.settings).Background),
-			Opacity:         opacity(a.settings.BackgroundOpacity),
-			Content:         myui.View(a.view),
+			Title:             "wt-go",
+			Width:             960,
+			Height:            600,
+			TitleBarStyle:     titleBarStyle(),
+			TitleBarHeight:    ui.TitleBarHeight,
+			HideWindowButtons: hideWindowButtons(),
+			StateKey:          "main",
+			BackgroundColor:   theme.Hex(theme.Terminal(a.settings).Background),
+			Opacity:           opacity(a.settings.BackgroundOpacity),
+			Content:           myui.View(a.view),
 		})
 		a.win.OnClosed(a.onClosed)
+		a.watchWindowButtons()
 		a.openFirst()
 		if a.settingsNote() != "" {
 			a.OpenSettings()
@@ -235,6 +242,60 @@ func (a *App) appearance() {
 	default:
 		mygo.Theme.SetSource(mygo.ThemeSystem)
 	}
+}
+
+// windowButtons are the buttons the strip draws where the window hides the
+// desktop's: the ones the desktop's layout names, at the sides it puts them,
+// and whether the window is maximized. It is nil where mygo draws them, or
+// where the compositor draws a title bar of its own.
+func (a *App) windowButtons() *ui.WindowButtons {
+	if !hideWindowButtons() {
+		return nil
+	}
+	return &ui.WindowButtons{Start: a.buttons.Start, End: a.buttons.End, Maximized: a.maximized}
+}
+
+// watchWindowButtons keeps the strip's copy of the desktop's buttons in step:
+// the layout changes when the user picks another one, and the window maximizes
+// and restores as the user asks it to.
+func (a *App) watchWindowButtons() {
+	a.buttons = mygo.Theme.WindowButtons()
+	a.maximized = a.win.IsMaximized()
+	mygo.Theme.OnUpdated(func() {
+		a.Do(func() {
+			a.buttons = mygo.Theme.WindowButtons()
+			a.redraw()
+		})
+	})
+	a.win.OnMaximize(func() {
+		a.Do(func() {
+			a.maximized = true
+			a.redraw()
+		})
+	})
+	a.win.OnUnmaximize(func() {
+		a.Do(func() {
+			a.maximized = false
+			a.redraw()
+		})
+	})
+}
+
+// MinimizeWindow minimizes the window, as its own button would.
+func (a *App) MinimizeWindow() {
+	a.Do(func() { a.win.Minimize() })
+}
+
+// ToggleMaximizeWindow maximizes the window, or restores it, as its own button
+// would.
+func (a *App) ToggleMaximizeWindow() {
+	a.Do(func() { a.win.ToggleMaximize() })
+}
+
+// CloseWindow closes the window, as its own close button would, so that the
+// shells the window runs still close with it.
+func (a *App) CloseWindow() {
+	a.Do(func() { a.win.Close() })
 }
 
 // load reads the settings, and writes the defaults where there are none. It
@@ -322,6 +383,9 @@ func (a *App) view(c *myui.Context) {
 		Shortcut:   a.shortcut,
 		TabsScroll: &a.tabsScroll,
 		RevealTab:  a.revealTabs > 0,
+		// The buttons the strip draws for the window, where the window hides
+		// the desktop's.
+		WindowButtons: a.windowButtons(),
 	}
 	// The strip brings the tab in front into view for the frames the window
 	// asked for, and no more: asking on every frame would keep the user from

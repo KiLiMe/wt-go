@@ -34,6 +34,14 @@ const (
 	dragRoom  float32 = 56
 )
 
+// The room a window button takes, the gap between two of them, and the room
+// the buttons keep from the corner of the window.
+const (
+	windowButtonWidth float32 = 34
+	windowButtonGap   float32 = 2
+	windowButtonRoom  float32 = 6
+)
+
 // tabStep is how far the buttons beside the tabs move what the strip shows:
 // about one tab, so that a press brings the next tabs into view.
 const tabStep float32 = 176
@@ -48,8 +56,9 @@ type tabMove struct {
 	from, to int
 }
 
-// strip is the title bar: the tabs, the menu that opens tabs, the button that
-// opens one, and the room that moves the window.
+// strip is the title bar: the window's buttons where the window draws them,
+// the tabs, the menu that opens tabs, the button that opens one, and the room
+// that moves the window.
 func strip(c *myui.Context, st State, act Actions) {
 	t := c.Theme()
 	bar := c.TitleBar()
@@ -59,11 +68,85 @@ func strip(c *myui.Context, st State, act Actions) {
 		Padding(0, bar.Right, 0, bar.Left).
 		DragWindow().
 		Children(func() {
+			if b := st.WindowButtons; b != nil && len(b.Start) > 0 {
+				windowButtonGroup(c, b, act, b.Start, false)
+			}
 			stripTabs(c, st, act)
 			profilesMenu(c, st, act)
 			newTabButton(c, act)
 			myui.Box(c).Width(dragRoom).Height(TitleBarHeight)
+			if b := st.WindowButtons; b != nil && len(b.End) > 0 {
+				windowButtonGroup(c, b, act, b.End, true)
+			}
 		})
+}
+
+// windowButtonGroup draws the window's buttons the desktop puts on a side of
+// the title bar, at the end of it when end is set, and nothing where it puts
+// none: a desktop may name some, and a tiling window manager names none.
+func windowButtonGroup(c *myui.Context, b *WindowButtons, act Actions, names []string, end bool) myui.Element {
+	row := myui.Row(c).
+		Height(TitleBarHeight).
+		Gap(windowButtonGap).
+		AlignItems(myui.Center)
+	if end {
+		row = row.Padding(0, windowButtonRoom, 0, 0)
+	} else {
+		row = row.Padding(0, 0, 0, windowButtonRoom)
+	}
+	return row.Children(func() {
+		for _, name := range names {
+			windowButton(c, b, act, name)
+		}
+	})
+}
+
+// windowButton is one of the window's buttons. It draws a glyph rather than an
+// image, as the strip draws its other buttons, and follows the desktop's
+// layout rather than a look of its own.
+func windowButton(c *myui.Context, b *WindowButtons, act Actions, name string) {
+	t := c.Theme()
+	glyph, tip := "", ""
+	size := float32(14)
+	switch name {
+	case "minimize":
+		glyph, tip = "\u2013", i18n.T("Minimize")
+	case "maximize":
+		size = 12
+		if b.Maximized {
+			glyph, tip = "\u2750", i18n.T("Restore")
+		} else {
+			glyph, tip = "\u25a1", i18n.T("Maximize")
+		}
+	case "close":
+		glyph, tip = "\u00d7", i18n.T("Close Window")
+	default:
+		return
+	}
+	color := t.TextMuted
+	el := myui.Box(c).
+		Size(windowButtonWidth, 28).
+		Radius(6).
+		AlignItems(myui.Center).
+		Justify(myui.Center).
+		Cursor(myui.CursorPointer).
+		Tooltip(tip)
+	if el.Hovered() {
+		el = el.Background(t.SurfaceHover)
+		color = t.Text
+	}
+	el.OnClick(func() {
+		switch name {
+		case "minimize":
+			act.MinimizeWindow()
+		case "maximize":
+			act.ToggleMaximizeWindow()
+		case "close":
+			act.CloseWindow()
+		}
+	}).Children(func() {
+		myui.Text(c, glyph).FontSize(size).TextColor(color)
+	})
 }
 
 // stripTabs is the room the tabs take: the buttons that move them, and the

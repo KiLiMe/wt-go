@@ -28,6 +28,12 @@ type Actions interface {
 	FocusTab(i int)
 	// ScrollTabs moves the tabs the strip shows by by DIPs.
 	ScrollTabs(by float32)
+	// MinimizeWindow minimizes the window.
+	MinimizeWindow()
+	// ToggleMaximizeWindow maximizes the window, or restores it.
+	ToggleMaximizeWindow()
+	// CloseWindow closes the window, as its close button would.
+	CloseWindow()
 	// BeginRename opens the dialog that renames the tab at i.
 	BeginRename(i int)
 	// RenameTab gives the tab at i a name; "" keeps the one it had.
@@ -79,6 +85,17 @@ type Actions interface {
 	FindPrevious()
 	// EndFind closes the find bar, and stops the search.
 	EndFind()
+}
+
+// WindowButtons are the window's buttons where the window draws them itself:
+// "minimize", "maximize" and "close", in the desktop's order, at the start
+// and at the end of the title bar. The desktop's layout names them, and a
+// desktop that names none, as tiling window managers do, gets none.
+type WindowButtons struct {
+	Start, End []string
+	// Maximized is whether the window is maximized, which the button that
+	// maximizes draws as the one that restores it.
+	Maximized bool
 }
 
 // Tab is a tab as the window draws it.
@@ -186,6 +203,10 @@ type State struct {
 	// RevealTab asks the strip to bring the tab in front into view in this
 	// frame, which the window asks once as it changes that tab.
 	RevealTab bool
+	// WindowButtons are the buttons the strip draws for a window that hides
+	// the desktop's, nil while the desktop draws them, or draws a title bar
+	// of its own.
+	WindowButtons *WindowButtons
 	// Shortcut is the key the settings bind an action to, as a keybinding
 	// writes it, and "" when none binds it. nil shows no shortcut.
 	Shortcut func(action string) string

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"slices"
 	"testing"
 
 	myui "github.com/egoist/mygo/ui"
@@ -49,6 +50,63 @@ func TestNameWidth(t *testing.T) {
 		}
 	}
 }
+
+// TestWindowButtons covers the buttons the strip draws for a window that hides
+// the desktop's: the layout's buttons at the sides it names, the button that
+// restores a maximized window, and a click that asks the window for each.
+func TestWindowButtons(t *testing.T) {
+	draw := func(b *WindowButtons) (*myui.Tester, *windowActions) {
+		act := &windowActions{}
+		st := &State{Tabs: []Tab{{Name: "PowerShell 7"}}, WindowButtons: b}
+		tt := myui.NewTester(func(c *myui.Context) { strip(c, *st, act) }, 900, TitleBarHeight*2)
+		tt.Frame()
+		return tt, act
+	}
+	// Close at the start, as a desktop that puts its buttons there names it,
+	// and the other two at the end.
+	tt, act := draw(&WindowButtons{Start: []string{"close"}, End: []string{"minimize", "maximize"}})
+	for _, glyph := range []string{"\u00d7", "\u2013", "\u25a1"} {
+		if !tt.HasText(glyph) {
+			t.Fatalf("the strip does not draw %q: %q", glyph, tt.Texts())
+		}
+	}
+	// The close button sits at the start of the strip, before the tabs.
+	tt.ClickAt(windowButtonRoom+windowButtonWidth/2, TitleBarHeight/2)
+	if err := tt.Click("\u2013"); err != nil {
+		t.Fatal(err)
+	}
+	if err := tt.Click("\u25a1"); err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"close", "minimize", "maximize"}; !slices.Equal(act.asked, want) {
+		t.Errorf("the buttons asked for %q, want %q", act.asked, want)
+	}
+
+	// A maximized window draws the button that restores it.
+	tt, _ = draw(&WindowButtons{End: []string{"maximize"}, Maximized: true})
+	if !tt.HasText("\u2750") || tt.HasText("\u25a1") {
+		t.Errorf("a maximized window draws %q, want the button that restores it", tt.Texts())
+	}
+
+	// A window that keeps the desktop's buttons draws none of its own.
+	tt, _ = draw(nil)
+	for _, glyph := range []string{"\u2013", "\u25a1", "\u2750"} {
+		if tt.HasText(glyph) {
+			t.Errorf("the strip draws %q for a window that keeps the desktop's buttons", glyph)
+		}
+	}
+}
+
+// windowActions is the window as the strip's buttons see it: it records what
+// each button asked for.
+type windowActions struct {
+	Actions
+	asked []string
+}
+
+func (a *windowActions) MinimizeWindow()       { a.asked = append(a.asked, "minimize") }
+func (a *windowActions) ToggleMaximizeWindow() { a.asked = append(a.asked, "maximize") }
+func (a *windowActions) CloseWindow()          { a.asked = append(a.asked, "close") }
 
 // scrollActions is the window as a strip sees it: it keeps where the strip
 // shows the tabs the way the window does, and nothing else answers.

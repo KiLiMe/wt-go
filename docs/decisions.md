@@ -142,6 +142,8 @@ Linux 除外，是因为 mygo 的 hidden 在 Wayland 上靠合成器补标题栏
 **代价**：标签栏右侧必须留空白给拖窗，标签放不下时没有横向滚动（已知退化，待做文本测量）。
 Linux 上多一行合成器/窗口管理器的标题栏，标签栏不再顶到窗口上缘。
 
+**后续**：Linux 的例外在 ADR-029 取消。
+
 ---
 
 ## ADR-012 窗格几何与焦点移动用矩形判定，不用树序
@@ -466,6 +468,35 @@ macOS 没有 `/proc`，`Processes()` 必然失败，退回 `tab.Running()` 于�
 不用"默认脱敏"是因为报告要回答"是哪个文件坏了"，路径本身是信息。
 
 **代价**：多一个开关要记；`--redact` 之后 `exe:` 这类不在家目录下的路径仍然是原样（那是安装位置，不是身份）。
+
+---
+
+## ADR-029 Linux 也用自绘标题栏，按钮跟随桌面布局
+
+**背景**：ADR-011 让 Linux 把标题栏交给平台，因为 mygo 的 `TitleBarHidden` 在 X11 上只做
+`gtk_window_set_decorated(false)`。代价是 Linux 上多一行 GTK/窗口管理器的标题栏，它的配色来自
+桌面主题（GTK3 主题），与终端配色是两套：切深浅色、换配色方案时这一行都不跟。
+
+**决定**：
+
+- Linux 与 Windows/macOS 一致：`TitleBarHidden` + `HideWindowButtons: true`
+  （`internal/app/titlebar_linux.go`）。GTK 于是不建 `GtkHeaderBar`，主题碰不到标题栏；
+  Wayland 上 GTK 仍自装饰（阴影、缩放边），X11 上窗口只保留内容区。
+- 按钮位置与顺序跟随桌面：`mygo.Theme.WindowButtons()` 读 `gtk-decoration-layout`，
+  `ui/tabs.go` 的 `windowButtonGroup` 按 `Start`/`End` 在标签条两端画；最大化状态由
+  `Window.OnMaximize`/`OnUnmaximize` 回填（最大化时 `□` 变 `❐`），布局变了由 `mygo.Theme.OnUpdated` 刷新。
+- 按钮经 `ui.Actions`（`MinimizeWindow`/`ToggleMaximizeWindow`/`CloseWindow`）回到 `app`，
+  用 `a.Do` 排到下一轮主循环：`onMain` 在主线程是内联的（`mygo` 的 `loop.go`），
+  在绘制帧里直接 `Close()` 会在帧内销毁窗口（sshyard 用 `go w.Close()` 是同一个坑）。
+
+**理由**：标题栏是窗口的一部分，配色该跟终端走。v0.8.3 的 `HideWindowButtons` 让 GTK 干脆不建
+header bar，比“留 GTK 标题栏再用 CSS 压掉 80px 空标题”（sshyard 的 `gtkfix`）干净，也不用 purego
+手写 GTK 调用。按钮跟桌面布局，是让平铺/左侧按钮的用户拿到自己熟悉的位置，而不是硬编一套。
+
+**代价**：`gtk-decoration-layout` 被清空（平铺窗口管理器常见）与“合成器自己画标题栏”（KWin Wayland）
+在 API 上不可区分，两种情形都返回空，于是都不画按钮——平铺 WM 下窗口没有按钮，只能靠快捷键或
+窗口管理器。真有人要，再给一个环境变量兜底（kero 用 `KERO_WINDOW_CONTROLS`）。
+窗口按钮不是“动作”：没有 id、不进 `internal/action`、不可绑键位。
 
 ---
 
