@@ -134,6 +134,32 @@ func TestActivity(t *testing.T) {
 	}
 }
 
+// TestReexec covers the launcher a package manager puts on PATH: the program
+// the window started runs the program again, and the child is the shell.
+func TestReexec(t *testing.T) {
+	shim := []Proc{
+		{Pid: 100, Parent: 1, Name: "wtgo.exe"},
+		{Pid: 300, Parent: 100, Name: "pwsh.exe"},
+		{Pid: 320, Parent: 300, Name: "pwsh.exe"},
+	}
+	if p, ok := Reexec(shim, Proc{Pid: 300, Name: "pwsh.exe"}); !ok || p.Pid != 320 {
+		t.Errorf("Reexec = %d, %v, want 320", p.Pid, ok)
+	}
+	// The shell the launcher started is the program itself.
+	if p, ok := Reexec(shim, Proc{Pid: 320, Name: "pwsh.exe"}); ok {
+		t.Errorf("Reexec of the program = %d, want none", p.Pid)
+	}
+	// A child of another name is a program the shell runs, not the shell.
+	if p, ok := Reexec(shim, Proc{Pid: 100, Name: "wtgo.exe"}); ok {
+		t.Errorf("Reexec of a launcher with another child = %d, want none", p.Pid)
+	}
+	// A shell that runs two copies of itself may be doing work in them.
+	twice := append(shim, Proc{Pid: 340, Parent: 300, Name: "pwsh.exe"})
+	if p, ok := Reexec(twice, Proc{Pid: 300, Name: "pwsh.exe"}); ok {
+		t.Errorf("Reexec with two children = %d, want none", p.Pid)
+	}
+}
+
 // TestPrograms covers what a shell says it runs: the programs under it that
 // keep the tab open, each once, without the extension Windows adds.
 func TestPrograms(t *testing.T) {

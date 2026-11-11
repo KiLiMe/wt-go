@@ -400,13 +400,20 @@ macOS 没有 `/proc`，`Processes()` 必然失败，退回 `tab.Running()` 于�
   `Activity` 就是 `len(Programs) > 0`，两处共用同一套过滤。`app` 用 `tabActivity{act, programs}` 把两者一起传给对话框，
   文案变成「还在运行：PING」。理由：用户问的是"为什么 pwsh 会提示"，点名程序比任何解释都短，
   而程序名恰好就是 `ping`/`vim` 这类用户自己起的。
+- 认领时跟着"同名重执行链"往下走一层：`sys.Reexec(all, p)` 找出 p 唯一一个同名子进程，
+  `spawned` 找到候选后最多再看 250ms（`shellSettle`），有就用 `reclaim` 把认领的 Pid 换到子进程上。
+  理由：scoop 这类包管理器在 `PATH` 上放的是 **shim**（`…\shims\pwsh.exe`），它再启动真正的 `…\apps\pwsh\current\pwsh.exe`；
+  于是标签的 shell 底下永远有一个同名子进程，空闲标签也被判成 `Busy`，提示「还在运行：pwsh」。
+  实测：从资源管理器双击启动（`PATH` 命中 shim）必现，从带真 exe 的 `PATH` 启动则复现不出来。
+  `taken` 随之从 `map[int]bool` 变成 `map[int]*terminal.Terminal`，`forget` 按终端清掉它的全部 Pid，
+  否则 shim 的 Pid 会永久占位，将来被系统复用后新标签就认不出自己的 shell。
 
 **理由**：产品要回答的是"关了会不会杀掉用户还在用的东西"，这个问题有三个答案，不是一个。
 把 `Unknown` 单独拿出来，既不会把误报推给用户（假阳性），也不会在真的不知道时说"没事"（假阴性）。
 纯函数化之后，macOS 的采集错误不可能再伪装成"有程序在跑"。
 
 **代价**：shell 内置的长命令（`Start-Sleep`）看不到，这是进程树的固有盲区（插件内部的 OSC 133 提示符状态没有导出）；
-只在文档里说明，不为此引入新的采集层。
+只在文档里说明，不为此引入新的采集层。启动器若只在一个短暂窗口内启动子进程（超过 `shellSettle`），仍会被当成 shell 本身。
 
 ---
 

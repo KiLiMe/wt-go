@@ -140,8 +140,10 @@
 - `app` 侧：`shells` 存 `sys.ShellProc`，`activity`/`asksClose`/`othersActivity` 取代 `running`，认领表 `taken` 防同时启动时认错，等待窗口 3 秒自适应轮询。
 - 文案：`Unknown` 时另说一句（"无法判断……"）；读不到进程列表打 `E303`；`Busy` 时**点名程序**（「还在运行：PING」）。
 - 实测：空闲 pwsh 标签中键关闭不提示；`ping -n 300` 前台跑时中键关闭会问「还在运行：PING」；`exit` 之后（标签显示「已退出 (0)」）中键关闭不提示。
+- **启动器 shim**：`scoop` 把 `…\shims\pwsh.exe` 放在 `PATH` 上，它再启动真正的 `…\apps\pwsh\current\pwsh.exe`，于是标签的 shell 底下永远有个同名子进程，空闲标签也被判成 `Busy`（提示「还在运行：pwsh」）。
+  从资源管理器双击启动必现，从带真 exe 的 `PATH` 启动复现不出来。修法：`sys.Reexec` + `spawned` 找到候选后再看 250ms（`shellSettle`），有同名子进程就用 `reclaim` 把认领换到子进程；`taken` 改成 `map[int]*terminal.Terminal`，`forget` 按终端清干净。
 - **已知盲区**：shell 内置的长命令（`Start-Sleep 300`）不产生子进程，看不到，不提示；已写进 `docs/使用说明.md` 6.7 与 ADR-026。
 
 ### 8.3 收尾
 
-`gofmt` 无输出、`go vet ./internal/...` 干净、`go test ./internal/...` 全绿（含新增的 `TestActivity`/`TestPrograms`/`TestSpawnedTogether`/`TestStripFits`/`TestStripScrolls`）。
+`gofmt` 无输出、`go vet ./internal/...` 干净、`go test ./internal/...` 全绿（含新增的 `TestActivity`/`TestPrograms`/`TestReexec`/`TestSpawnedTogether`/`TestStripFits`/`TestStripScrolls`）。

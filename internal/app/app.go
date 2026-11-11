@@ -49,11 +49,11 @@ type App struct {
 	// shells is the process each terminal runs, when the window learned it,
 	// which is how it tells a shell at its prompt from a program running.
 	shells map[*terminal.Terminal]sys.ShellProc
-	// spawnMu guards taken, the processes the window already gave to
-	// terminals: two shells that start at once would each be found by the
-	// other's search.
+	// spawnMu guards taken, the process each terminal took: two shells that
+	// start at once would each be found by the other's search, and a shell
+	// that a launcher started is two processes of the same terminal.
 	spawnMu sync.Mutex
-	taken   map[int]bool
+	taken   map[int]*terminal.Terminal
 	// tabsScroll is where the strip shows its tabs, which the wheel over the
 	// strip and the buttons that move it change; revealTabs counts the frames
 	// left in which the strip brings the tab in front into view.

@@ -177,6 +177,24 @@ func Spawned(before, after []Proc, parent int, taken map[int]bool) (Proc, bool) 
 	return oldest, oldest.Pid != 0
 }
 
+// Reexec is the process p runs when p is a launcher that starts the program
+// again: the shims a package manager puts on PATH do that, and the program the
+// user sees is then the child, not the shim. It is the one child of p that has
+// the name of p, and false when p has none or several, so that a shell that
+// runs a second copy of itself for a command is not taken for a launcher.
+func Reexec(all []Proc, p Proc) (Proc, bool) {
+	var only Proc
+	found := 0
+	for _, c := range all {
+		if c.Parent != p.Pid || !sameProgram(c.Name, p.Name) {
+			continue
+		}
+		only = c
+		found++
+	}
+	return only, found == 1
+}
+
 // ptyHost reports whether a process is the console the pty runs behind rather
 // than the program the terminal shows.
 func ptyHost(name string) bool {
