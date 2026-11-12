@@ -1,0 +1,295 @@
+{
+  "newTab": "新建标签",
+  "closeTab": "关闭标签",
+  "duplicateTab": "复制标签",
+  "closeOtherTabs": "关闭其它标签",
+  "rename": "重命名",
+  "renameTab": "重命名标签",
+  "scrollTabsLeft": "向左滚动标签",
+  "scrollTabsRight": "向右滚动标签",
+  "noTabs": "没有打开的标签",
+  "openTab": "新建标签",
+  "nextTab": "下一个标签",
+  "previousTab": "上一个标签",
+  "switchToTab": "切换到第 {n} 个标签",
+  "@switchToTab": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "openProfile": "用第 {n} 个配置文件新建标签",
+  "@openProfile": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "commandPalette": "命令面板",
+  "palettePlaceholder": "输入命令的名称",
+  "paletteNoMatch": "没有匹配的命令。",
+  "paletteNewTabWith": "用 {profile} 新建标签",
+  "@paletteNewTabWith": {
+    "placeholders": {
+      "profile": {
+        "type": "String"
+      }
+    }
+  },
+  "settings": "设置",
+  "profiles": "配置文件",
+  "tab": "标签页",
+  "pane": "窗格",
+  "window": "窗口",
+  "other": "其它",
+  "find": "查找",
+  "minimize": "最小化",
+  "maximize": "最大化",
+  "restore": "还原",
+  "closeWindow": "关闭窗口",
+  "tabExited": "已退出",
+  "splitPane": "拆分窗格",
+  "splitRight": "向右拆分",
+  "splitDown": "向下拆分",
+  "focusLeftPane": "聚焦左窗格",
+  "focusRightPane": "聚焦右窗格",
+  "focusUpPane": "聚焦上窗格",
+  "focusDownPane": "聚焦下窗格",
+  "closePane": "关闭窗格",
+  "closeOtherPanes": "关闭其它窗格",
+  "close": "关闭",
+  "cancel": "取消",
+  "ok": "确定",
+  "open": "打开",
+  "remove": "删除",
+  "duplicate": "复制",
+  "show": "显示",
+  "hide": "隐藏",
+  "save": "保存",
+  "discard": "放弃更改",
+  "none": "无",
+  "nothing": "无",
+  "menu": "菜单",
+  "paste": "粘贴",
+  "copyOrPaste": "复制或粘贴",
+  "always": "总是",
+  "never": "从不",
+  "whileProgramRuns": "有程序运行时",
+  "followSystem": "跟随系统",
+  "light": "浅色",
+  "dark": "深色",
+  "bar": "竖线",
+  "block": "方块",
+  "underline": "下划线",
+  "blink": "闪烁",
+  "language": "语言",
+  "systemLanguage": "跟随系统",
+  "builtIn": "内置",
+  "copySuffix": "副本",
+  "newProfile": "新配置文件",
+  "addProfile": "添加新配置文件",
+  "showHiddenProfiles": "显示隐藏的配置文件",
+  "selectProfile": "选择一个配置文件。",
+  "restoreDefaults": "恢复默认",
+  "pressKey": "按一个键…",
+  "startup": "启动",
+  "interaction": "交互",
+  "appearance": "外观",
+  "colorSchemes": "配色方案",
+  "actions": "操作",
+  "advanced": "高级",
+  "defaults": "默认值",
+  "unsavedChanges": "有未保存的更改",
+  "saved": "已保存",
+  "openSettingsFolder": "打开设置目录",
+  "defaultProfile": "默认配置文件",
+  "defaultProfileNote": "新标签默认运行的配置文件。",
+  "startDirectory": "起始目录",
+  "startDirectoryNote": "profile 未指定目录时，新标签从哪里开始。",
+  "startSize": "启动大小",
+  "startSizeNote": "打开时的列数与行数；0 表示保持默认。",
+  "closeOnLastTab": "关最后一个标签时关窗口",
+  "closeOnLastTabNote": "最后一个标签关闭时关闭窗口。",
+  "copyOnSelect": "选中即复制",
+  "copyOnSelectNote": "选中内容后立刻复制到剪贴板。",
+  "rightClick": "右键行为",
+  "rightClickNote": "在终端里点右键时做什么。",
+  "pasteMultiline": "多行粘贴确认",
+  "pasteMultilineNote": "粘贴多行文本前先确认。",
+  "confirmClose": "关闭前确认",
+  "confirmCloseNote": "标签里的程序还在运行时，关标签前先问一句。",
+  "panesPerTab": "每标签窗格上限",
+  "panesPerTabNote": "一个标签最多分成几个窗格；0 表示不限。",
+  "theme": "主题",
+  "themeNote": "窗口的外观：跟随系统、浅色、深色，或某个主题自己的配色。",
+  "backgroundOpacity": "背景不透明度",
+  "backgroundOpacityNote": "窗口后方的画面能透出多少。",
+  "newTabPosition": "新标签位置",
+  "newTabPositionNote": "新标签开在哪里。",
+  "afterLastTab": "最后一个标签之后",
+  "beforeFirstTab": "第一个标签之前",
+  "tabWidth": "标签宽度",
+  "tabWidthNote": "标签有多宽。",
+  "asWideAsName": "随名称宽度",
+  "allTheSame": "等宽",
+  "alwaysOnTop": "窗口置顶",
+  "alwaysOnTopNote": "让窗口保持在其他窗口之上。",
+  "titleFollowsPane": "标题跟随窗格",
+  "titleFollowsPaneNote": "窗口标题跟随有键盘焦点的窗格。",
+  "colorScheme": "配色方案",
+  "colorSchemeNote": "终端使用的配色；profile 未另指定时用这套。",
+  "scheme": "方案",
+  "schemeCopy": "复制为自定义配色",
+  "schemeSearch": "搜索配色方案",
+  "schemeNone": "没有这个名称的配色方案。",
+  "schemePreview": "预览",
+  "schemeRemove": "删除这个配色方案",
+  "schemeCopied": "配色已复制；保存后才会留下。",
+  "schemeRemoved": "配色已删除；保存后才会留下。",
+  "font": "字体",
+  "fontNote": "这台机器上装了、且量出来是等宽的族名。",
+  "fontSize": "字号",
+  "fontSizeNote": "终端文字的大小，单位 DIP。",
+  "lineHeight": "行高",
+  "lineHeightNote": "终端行高，相对字号的倍数。",
+  "cursor": "光标",
+  "padding": "内边距",
+  "paddingNote": "终端边缘内侧的空白，单位 DIP。",
+  "scrollback": "回滚缓冲",
+  "scrollbackNote": "终端保留多少 MB 内容供回滚。",
+  "name": "名称",
+  "commandLine": "命令行",
+  "commandLineNote": "这个配置文件运行的命令行；留空则用系统的默认 shell。",
+  "arguments": "参数",
+  "argumentsNote": "命令行的参数，每行一个。",
+  "profileStartNote": "这个配置文件的标签从哪个目录开始；留空则用上面的起始目录。",
+  "iconColor": "图标颜色",
+  "iconColorNote": "标签栏用来标记这个配置文件的圆点颜色。",
+  "hidden": "隐藏",
+  "hiddenNote": "在新建标签的菜单里隐藏这个配置文件。",
+  "shells": "Shell",
+  "probe": "探测",
+  "probeAgain": "重新探测 Shell",
+  "probeAgainNote": "窗口只在写第一份 settings.json 时探测这台机器。重新探测会给每个内置配置文件换上现在装着的命令，程序不见了的隐藏，回来的重新显示。名字、颜色与目录不变。",
+  "reset": "重置",
+  "deleteSettings": "删除 settings.json",
+  "deleteSettingsNote": "删掉文件并重新启动窗口，它会像第一次启动那样写入默认值并探测这台机器。",
+  "deleteAndRestart": "删除并重启",
+  "folders": "目录",
+  "settingsFolder": "设置目录",
+  "settingsFolderNote": "settings.json 所在目录。文件本身要靠桌面关联的编辑器打开，Linux 桌面不一定有，所以窗口打开的是目录。",
+  "programFolder": "程序目录",
+  "programFolderNote": "程序所在目录。",
+  "confirmProbeTitle": "重新探测 Shell？",
+  "confirmProbeText": "每个内置配置文件改用探测到的命令；程序不见了的会隐藏，回来的会重新显示。名字、颜色与目录不变。",
+  "confirmDeleteTitle": "删除 settings.json 并重启？",
+  "confirmDeleteText": "窗口将以默认值重开：字体、配色、键位与配置文件都会丢失。",
+  "confirmPasteTitle": "粘贴多行？",
+  "confirmPasteText": "{count, plural, other {这会往窗格里粘贴 # 行。}}",
+  "@confirmPasteText": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "confirmCloseSettingsTitle": "关闭设置？",
+  "confirmCloseSettingsText": "设置有未保存的更改。",
+  "confirmCloseTabTitle": "关闭标签？",
+  "confirmCloseOthersTitle": "关闭其它标签？",
+  "closeRunning": "还在运行：{programs}",
+  "@closeRunning": {
+    "placeholders": {
+      "programs": {
+        "type": "String"
+      }
+    }
+  },
+  "tabRunningText": "这个标签里的程序还在运行。",
+  "tabUnsureText": "无法判断这个标签里是否还有程序在运行。",
+  "tabAlwaysText": "关闭这个标签会结束它的终端。",
+  "othersRunningText": "其它标签里的程序还在运行。",
+  "othersUnsureText": "无法判断其它标签里是否还有程序在运行。",
+  "othersAlwaysText": "关闭其它标签会结束它们的终端。",
+  "probedNote": "已重新探测，写入文件。",
+  "probeSameNote": "文件里已经是最新的。",
+  "errDeleteSettings": "删不掉 settings.json：{error}",
+  "@errDeleteSettings": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errRelaunch": "重启失败：{error}",
+  "@errRelaunch": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errOpenFolder": "打不开目录：{error}",
+  "@errOpenFolder": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errSettings": "settings.json：{error}",
+  "@errSettings": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsChangedNote": "settings.json 在磁盘上被改动；放弃当前修改才能应用。",
+  "errSettingsInvalid": "settings.json 内容无效：{error}；原文已保存到 {path}",
+  "@errSettingsInvalid": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      },
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "errSettingsInvalidKeep": "settings.json 内容无效：{error}；原文无法保存：{keepError}",
+  "@errSettingsInvalidKeep": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      },
+      "keepError": {
+        "type": "String"
+      }
+    }
+  },
+  "findPrevious": "上一个匹配",
+  "findNext": "下一个匹配",
+  "findNone": "没有匹配",
+  "findCount": "找到 {count} 个",
+  "@findCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "findPosition": "第 {index} 个，共 {total} 个",
+  "@findPosition": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  }
+}

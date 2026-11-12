@@ -4,8 +4,8 @@ import (
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/action"
-	"wtgo/internal/i18n"
 	"wtgo/internal/icons"
+	"wtgo/locales"
 )
 
 // TitleBarHeight is the height of the tab strip, which is the title bar: the
@@ -131,14 +131,14 @@ func windowButton(c *myui.Context, b *WindowButtons, act Actions, name string) {
 	var icon func(color myui.Color, bg myui.Color)
 	switch name {
 	case "minimize":
-		label = i18n.T("Minimize")
+		label = locales.Minimize()
 		icon = func(color myui.Color, bg myui.Color) {
 			myui.Box(c).Width(windowIcon).Height(1).Background(color)
 		}
 	case "maximize":
-		label = i18n.T("Maximize")
+		label = locales.Maximize()
 		if b.Maximized {
-			label = i18n.T("Restore")
+			label = locales.Restore()
 			icon = func(color myui.Color, bg myui.Color) {
 				myui.Box(c).Size(windowIcon+1, windowIcon+1).Children(func() {
 					myui.Box(c).Absolute().Left(4).Top(0).Size(windowIcon-3, windowIcon-3).Radius(1).Border(1, color)
@@ -151,7 +151,7 @@ func windowButton(c *myui.Context, b *WindowButtons, act Actions, name string) {
 			}
 		}
 	case "close":
-		label = i18n.T("Close Window")
+		label = locales.CloseWindow()
 		icon = func(color myui.Color, bg myui.Color) {
 			// A cross of 1px lines, as Windows draws it: the icon set's close
 			// is a 2-unit stroke on a 24 grid, which comes out bold beside a
@@ -270,9 +270,9 @@ func stepButton(c *myui.Context, st State, act Actions, dir int) myui.Element {
 	// The arrows come from the icon set: the angle quotes that would stand
 	// for them read as specks at this size, and some fonts have no such
 	// glyph at all.
-	ic, tip := icons.Right, i18n.T("Scroll the tabs right")
+	ic, tip := icons.Right, locales.ScrollTabsRight()
 	if dir < 0 {
-		ic, tip = icons.Left, i18n.T("Scroll the tabs left")
+		ic, tip = icons.Left, locales.ScrollTabsLeft()
 	}
 	at := st.TabsScroll
 	color := t.Text
@@ -429,18 +429,18 @@ func nameWidth(w float32) float32 {
 // separate what it does not offer.
 func tabMenu(m *myui.Menu, st State, act Actions, i int) {
 	if i >= 0 && i < len(st.Tabs) && st.Tabs[i].Page == nil {
-		if m.Item(i18n.T("Rename")).Chosen() {
+		if m.Item(locales.Rename()).Chosen() {
 			act.BeginRename(i)
 		}
-		if m.Item(i18n.T("Duplicate Tab")).Chosen() {
+		if m.Item(locales.DuplicateTab()).Chosen() {
 			act.DuplicateTab(i)
 		}
 		m.Separator()
 	}
-	if m.Item(i18n.T("Close Tab")).Chosen() {
+	if m.Item(locales.CloseTab()).Chosen() {
 		act.CloseTab(i)
 	}
-	if m.Item(i18n.T("Close Other Tabs")).Disabled(len(st.Tabs) < 2).Chosen() {
+	if m.Item(locales.CloseOtherTabs()).Disabled(len(st.Tabs) < 2).Chosen() {
 		act.CloseOtherTabs(i)
 	}
 }
@@ -459,7 +459,7 @@ func closeButton(c *myui.Context, act Actions, i int, active bool) myui.Element 
 		AlignItems(myui.Center).
 		Justify(myui.Center).
 		Cursor(myui.CursorPointer).
-		Tooltip(i18n.T("Close Tab")).
+		Tooltip(locales.CloseTab()).
 		OnClick(func() { act.CloseTab(i) })
 	if el.Hovered() {
 		el = el.Background(t.SurfaceHover)
@@ -478,8 +478,8 @@ func profilesMenu(c *myui.Context, st State, act Actions) myui.Element {
 		AlignItems(myui.Center).
 		Justify(myui.Center).
 		Cursor(myui.CursorPointer).
-		Label(i18n.T("Profiles")).
-		Tooltip(i18n.T("Profiles")).Menu(func(m *myui.Menu) {
+		Label(locales.Profiles()).
+		Tooltip(locales.Profiles()).Menu(func(m *myui.Menu) {
 		for i, p := range st.Profiles {
 			it := m.Item(p.Name)
 			if i < 9 {
@@ -490,7 +490,7 @@ func profilesMenu(c *myui.Context, st State, act Actions) myui.Element {
 			}
 		}
 		m.Separator()
-		it := m.Item(i18n.T("Settings"))
+		it := m.Item(locales.Settings())
 		shortcut(it, st, action.Settings)
 		if it.Chosen() {
 			act.OpenSettings()
@@ -540,8 +540,8 @@ func newTabButton(c *myui.Context, act Actions) myui.Element {
 		AlignItems(myui.Center).
 		Justify(myui.Center).
 		Cursor(myui.CursorPointer).
-		Label(i18n.T("New Tab")).
-		Tooltip(i18n.T("New Tab")).
+		Label(locales.NewTab()).
+		Tooltip(locales.NewTab()).
 		OnClick(func() { act.NewTab("") })
 	return stripButton(c, base).Children(func() {
 		myui.Icon(c, icons.Add.SVG).Size(14, 14).TextColor(stripIcon(c, base))

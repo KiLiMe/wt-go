@@ -8,7 +8,7 @@ import (
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/action"
-	"wtgo/internal/i18n"
+	"wtgo/locales"
 )
 
 // TestShortcut covers the menu's shortcut hint: an action the window binds a
@@ -69,15 +69,15 @@ func TestWindowButtons(t *testing.T) {
 	tt, act := draw(&WindowButtons{Start: []string{"close"}, End: []string{"minimize", "maximize"}})
 	// The buttons are named rather than written, so that a test finds them
 	// where a screen reader would.
-	closeAt, ok := tt.Find(i18n.T("Close Window"))
+	closeAt, ok := tt.Find(locales.CloseWindow())
 	if !ok {
 		t.Fatalf("the strip draws no close button: %q", tt.Texts())
 	}
-	minAt, ok := tt.Find(i18n.T("Minimize"))
+	minAt, ok := tt.Find(locales.Minimize())
 	if !ok {
 		t.Fatalf("the strip draws no minimize button: %q", tt.Texts())
 	}
-	maxAt, ok := tt.Find(i18n.T("Maximize"))
+	maxAt, ok := tt.Find(locales.Maximize())
 	if !ok {
 		t.Fatalf("the strip draws no maximize button: %q", tt.Texts())
 	}
@@ -85,7 +85,7 @@ func TestWindowButtons(t *testing.T) {
 	if !(closeAt.X < tabs.X && tabs.X < minAt.X && minAt.X < maxAt.X) {
 		t.Errorf("the buttons sit at %v, %v and %v around the tabs at %v", closeAt.X, minAt.X, maxAt.X, tabs.X)
 	}
-	for _, label := range []string{i18n.T("Close Window"), i18n.T("Minimize"), i18n.T("Maximize")} {
+	for _, label := range []string{locales.CloseWindow(), locales.Minimize(), locales.Maximize()} {
 		if err := tt.Click(label); err != nil {
 			t.Fatal(err)
 		}
@@ -96,13 +96,13 @@ func TestWindowButtons(t *testing.T) {
 
 	// A maximized window draws the button that restores it.
 	tt, _ = draw(&WindowButtons{End: []string{"maximize"}, Maximized: true})
-	if !tt.HasText(i18n.T("Restore")) || tt.HasText(i18n.T("Maximize")) {
+	if !tt.HasText(locales.Restore()) || tt.HasText(locales.Maximize()) {
 		t.Errorf("a maximized window draws %q, want the button that restores it", tt.Texts())
 	}
 
 	// A window that keeps the desktop's buttons draws none of its own.
 	tt, _ = draw(nil)
-	for _, label := range []string{i18n.T("Close Window"), i18n.T("Minimize"), i18n.T("Maximize")} {
+	for _, label := range []string{locales.CloseWindow(), locales.Minimize(), locales.Maximize()} {
 		if tt.HasText(label) {
 			t.Errorf("the strip draws %q for a window that keeps the desktop's buttons", label)
 		}
@@ -128,7 +128,7 @@ func TestTabMenu(t *testing.T) {
 		tt.RightClickAt(p.x, p.y)
 		menu := tt.Menu()
 		tt.CloseMenu()
-		if !slices.Contains(menu, i18n.T("Rename")) {
+		if !slices.Contains(menu, locales.Rename()) {
 			t.Errorf("a right click on %s opens %q, want the tab's menu", p.what, menu)
 		}
 	}
@@ -138,7 +138,7 @@ func TestTabMenu(t *testing.T) {
 // offers neither renaming nor a copy, which only a tab that runs a shell has.
 func TestTabMenuOfSettings(t *testing.T) {
 	at := &myui.ScrollState{}
-	settings := Tab{Name: i18n.T("Settings"), Page: func(c *myui.Context) myui.Element { return myui.Box(c) }}
+	settings := Tab{Name: locales.Settings(), Page: func(c *myui.Context) myui.Element { return myui.Box(c) }}
 	st := &State{Tabs: []Tab{{Name: "PowerShell 7"}, settings}, TabsScroll: at}
 	tt := myui.NewTester(func(c *myui.Context) { strip(c, *st, &scrollActions{at: at}) }, 900, TitleBarHeight*2)
 	tt.Frame()
@@ -153,12 +153,12 @@ func TestTabMenuOfSettings(t *testing.T) {
 		tt.RightClickAt(box.X+box.W/2, box.Y+box.H/2)
 		menu := tt.Menu()
 		tt.CloseMenu()
-		for _, label := range []string{i18n.T("Rename"), i18n.T("Duplicate Tab")} {
+		for _, label := range []string{locales.Rename(), locales.DuplicateTab()} {
 			if got := slices.Contains(menu, label); got != tc.own {
 				t.Errorf("a right click on %q opens %q, want %q in it: %v", tc.name, menu, label, tc.own)
 			}
 		}
-		if !slices.Contains(menu, i18n.T("Close Tab")) {
+		if !slices.Contains(menu, locales.CloseTab()) {
 			t.Errorf("a right click on %q opens %q, want the tab's menu", tc.name, menu)
 		}
 	}
@@ -173,11 +173,11 @@ func TestStripButtons(t *testing.T) {
 	if !ok {
 		t.Fatal("the tab does not draw its name")
 	}
-	open, ok := tt.Find(i18n.T("New Tab"))
+	open, ok := tt.Find(locales.NewTab())
 	if !ok {
 		t.Fatalf("the strip draws no button to open a tab: %q", tt.Texts())
 	}
-	menu, ok := tt.Find(i18n.T("Profiles"))
+	menu, ok := tt.Find(locales.Profiles())
 	if !ok {
 		t.Fatalf("the strip draws no menu of profiles: %q", tt.Texts())
 	}
@@ -294,7 +294,7 @@ func TestStripFits(t *testing.T) {
 	if at.MaxX != 0 {
 		t.Fatalf("two tabs in 900 DIPs scroll: MaxX = %v", at.MaxX)
 	}
-	if tt.HasText(i18n.T("Scroll the tabs left")) || tt.HasText(i18n.T("Scroll the tabs right")) {
+	if tt.HasText(locales.ScrollTabsLeft()) || tt.HasText(locales.ScrollTabsRight()) {
 		t.Errorf("the strip shows buttons to move tabs that all fit: %q", tt.Texts())
 	}
 	one, _, _ := stripOf(t, 1, 0, 900)
@@ -335,7 +335,7 @@ func TestStripScrolls(t *testing.T) {
 	// The buttons take room from the tabs, so they only show once the tabs
 	// outgrow the strip: a frame later, as the strip is measured first.
 	tt.Frame()
-	if !tt.HasText(i18n.T("Scroll the tabs left")) || !tt.HasText(i18n.T("Scroll the tabs right")) {
+	if !tt.HasText(locales.ScrollTabsLeft()) || !tt.HasText(locales.ScrollTabsRight()) {
 		t.Errorf("the strip does not show buttons to move the tabs: %q", tt.Texts())
 	}
 

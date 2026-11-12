@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"log"
 	"path/filepath"
 	"slices"
@@ -12,6 +11,7 @@ import (
 	"wtgo/internal/store"
 	"wtgo/internal/sys"
 	"wtgo/internal/ui"
+	"wtgo/locales"
 )
 
 // AskAdvanced asks the question one of the advanced page's buttons needs
@@ -20,18 +20,15 @@ func (a *App) AskAdvanced(kind string) {
 	switch kind {
 	case "rediscover":
 		a.ask(ui.Confirm{
-			Title: i18n.T("Probe the shells again?"),
-			Text: i18n.T("Every built-in profile takes the command the probe finds, " +
-				"one whose program is gone is hidden, and one that is there is shown again. " +
-				"Names, colors and directories stay."),
-			Yes: i18n.T("Probe"),
+			Title: locales.ConfirmProbeTitle(),
+			Text:  locales.ConfirmProbeText(),
+			Yes:   locales.Probe(),
 		}, a.rediscover, nil)
 	case "reset":
 		a.ask(ui.Confirm{
-			Title: i18n.T("Delete settings.json and restart?"),
-			Text: i18n.T("The window starts over with the defaults: fonts, colors, " +
-				"keybindings and profiles are all lost."),
-			Yes: i18n.T("Delete and restart"),
+			Title: locales.ConfirmDeleteTitle(),
+			Text:  locales.ConfirmDeleteText(),
+			Yes:   locales.DeleteAndRestart(),
 		}, a.reset, nil)
 	}
 }
@@ -45,9 +42,9 @@ func (a *App) rediscover() {
 	a.profiles = profile.Resolve(a.settings.Profiles, a.found)
 	if changed {
 		a.adoptWrite()
-		a.note = i18n.T("The shells are probed again; the file is written.")
+		a.note = locales.ProbedNote()
 	} else {
-		a.note = i18n.T("The shells are what the file already says.")
+		a.note = locales.ProbeSameNote()
 	}
 	a.redraw()
 }
@@ -58,13 +55,13 @@ func (a *App) rediscover() {
 func (a *App) reset() {
 	if err := sys.RemoveSettings(); err != nil {
 		log.Printf("wt-go: %s", fault.Line(fault.SettingsGone, err.Error()))
-		a.note = fmt.Sprintf(i18n.T("settings.json could not be deleted: %v"), fault.Line(fault.SettingsGone, err.Error()))
+		a.note = i18n.F("errDeleteSettings", map[string]any{"error": fault.Line(fault.SettingsGone, err.Error())})
 		a.redraw()
 		return
 	}
 	if err := a.relaunch(); err != nil {
 		log.Printf("wt-go: %s", fault.Line(fault.Relaunch, err.Error()))
-		a.note = fmt.Sprintf(i18n.T("The window could not start again: %v"), fault.Line(fault.Relaunch, err.Error()))
+		a.note = i18n.F("errRelaunch", map[string]any{"error": fault.Line(fault.Relaunch, err.Error())})
 		a.redraw()
 		return
 	}
@@ -100,7 +97,7 @@ func (a *App) OpenProgramFolder() {
 func (a *App) openFolder(dir string) {
 	if err := sys.OpenPath(dir); err != nil {
 		log.Printf("wt-go: %s", fault.Line(fault.OpenFolder, err.Error()))
-		a.note = fmt.Sprintf(i18n.T("The folder could not be opened: %v"), fault.Line(fault.OpenFolder, err.Error()))
+		a.note = i18n.F("errOpenFolder", map[string]any{"error": fault.Line(fault.OpenFolder, err.Error())})
 	}
 	a.redraw()
 }

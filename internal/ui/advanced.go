@@ -3,7 +3,7 @@ package ui
 import (
 	myui "github.com/egoist/mygo/ui"
 
-	"wtgo/internal/i18n"
+	"wtgo/locales"
 )
 
 // The kinds of question the advanced page asks, which is what the window does
@@ -18,37 +18,32 @@ const (
 // so the page has no fields to save.
 func advancedPage(c *myui.Context, st Settings, act Actions) {
 	t := c.Theme()
-	section(c, i18n.T("Shells"), func() {
-		field(c, i18n.T("Probe the shells again"),
-			i18n.T("The window probes this machine when it writes its first settings file. "+
-				"Probing again gives every built-in profile the command that is installed now, "+
-				"hides the ones whose program is gone and shows the ones that are back. "+
-				"Names, colors and directories stay."),
+	section(c, locales.Shells(), func() {
+		field(c, locales.ProbeAgain(),
+			locales.ProbeAgainNote(),
 			func() {
-				myui.Button(c, i18n.T("Probe")).OnClick(func() { act.AskAdvanced(AskRediscover) })
+				myui.Button(c, locales.Probe()).OnClick(func() { act.AskAdvanced(AskRediscover) })
 			})
 	})
-	section(c, i18n.T("Reset"), func() {
-		field(c, i18n.T("Delete settings.json"),
-			i18n.T("Deletes the file and starts the window again, which writes the defaults "+
-				"and probes the machine the way the first start did."),
+	section(c, locales.Reset(), func() {
+		field(c, locales.DeleteSettings(),
+			locales.DeleteSettingsNote(),
 			func() {
-				myui.Button(c, i18n.T("Delete and restart")).
+				myui.Button(c, locales.DeleteAndRestart()).
 					Background(t.Danger).TextColor(myui.Hex("#ffffff")).
 					OnClick(func() { act.AskAdvanced(AskReset) })
 			})
 	})
-	section(c, i18n.T("Folders"), func() {
-		field(c, i18n.T("Settings folder"),
-			i18n.T("Where settings.json lives. The file itself needs a program the desktop "+
-				"edits JSON with, which not every Linux desktop has, so the window opens the folder."),
+	section(c, locales.Folders(), func() {
+		field(c, locales.SettingsFolder(),
+			locales.SettingsFolderNote(),
 			func() {
-				myui.Button(c, i18n.T("Open")).OnClick(act.OpenSettingsFolder)
+				myui.Button(c, locales.Open()).OnClick(act.OpenSettingsFolder)
 			})
-		field(c, i18n.T("Program folder"),
-			i18n.T("Where the program runs from."),
+		field(c, locales.ProgramFolder(),
+			locales.ProgramFolderNote(),
 			func() {
-				myui.Button(c, i18n.T("Open")).OnClick(act.OpenProgramFolder)
+				myui.Button(c, locales.Open()).OnClick(act.OpenProgramFolder)
 			})
 	})
 }

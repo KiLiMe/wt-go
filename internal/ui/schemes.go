@@ -6,23 +6,23 @@ import (
 	"github.com/egoist/mygo/plugins/terminal"
 	myui "github.com/egoist/mygo/ui"
 
-	"wtgo/internal/i18n"
 	"wtgo/internal/icons"
 	"wtgo/internal/store"
 	"wtgo/internal/theme"
+	"wtgo/locales"
 )
 
 // schemesPage lists the color schemes, and shows the one in front.
 func schemesPage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
 	t := c.Theme()
-	section(c, i18n.T("Color scheme"), func() {
-		field(c, i18n.T("Scheme"), i18n.T("The colors a terminal paints with unless its profile names another."), func() {
+	section(c, locales.ColorScheme(), func() {
+		field(c, locales.Scheme(), locales.ColorSchemeNote(), func() {
 			choice(c, &s.ColorScheme, schemeOptions(st.Schemes))
 		})
 		row(c, func() {
 			myui.Row(c).Children(func() {
-				myui.Button(c, i18n.T("Copy as a custom scheme")).OnClick(act.CopyScheme)
+				myui.Button(c, locales.SchemeCopy()).OnClick(act.CopyScheme)
 			})
 		})
 	})
@@ -30,12 +30,12 @@ func schemesPage(c *myui.Context, st Settings, act Actions) {
 	myui.Row(c).AlignItems(myui.Start).Gap(24).Children(func() {
 		myui.Column(c).Width(320).Gap(6).Children(func() {
 			if st.Filter != nil {
-				myui.TextInput(c, st.Filter).Placeholder(i18n.T("Search the schemes"))
+				myui.TextInput(c, st.Filter).Placeholder(locales.SchemeSearch())
 			} else {
-				myui.TextInput(c, new(string)).Placeholder(i18n.T("Search the schemes"))
+				myui.TextInput(c, new(string)).Placeholder(locales.SchemeSearch())
 			}
 			if len(names) == 0 {
-				myui.Text(c, i18n.T("No scheme by that name.")).FontSize(11).TextColor(t.TextMuted)
+				myui.Text(c, locales.SchemeNone()).FontSize(11).TextColor(t.TextMuted)
 			}
 			myui.Column(c).Gap(2).Children(func() {
 				for _, sc := range names {
@@ -45,7 +45,7 @@ func schemesPage(c *myui.Context, st Settings, act Actions) {
 		})
 		if th, ok := theme.Scheme(*s, s.ColorScheme); ok {
 			myui.Column(c).Grow(1).Gap(8).Children(func() {
-				myui.Text(c, i18n.T("Preview")).FontSize(11).TextColor(t.TextMuted)
+				myui.Text(c, locales.SchemePreview()).FontSize(11).TextColor(t.TextMuted)
 				preview(c, th)
 			})
 		}
@@ -92,8 +92,8 @@ func schemeRow(c *myui.Context, sc Scheme, s *store.Settings, act Actions) {
 			// to click: a row that hides its button still picks the scheme.
 			remove.Opacity(0).PassThrough()
 		} else {
-			remove.Cursor(myui.CursorPointer).Label(i18n.T("Remove the scheme")).
-				Tooltip(i18n.T("Remove the scheme")).
+			remove.Cursor(myui.CursorPointer).Label(locales.SchemeRemove()).
+				Tooltip(locales.SchemeRemove()).
 				OnClick(func() { act.RemoveScheme(sc.Name) })
 		}
 		remove.Children(func() {

@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"wtgo/internal/action"
-	"wtgo/internal/i18n"
 )
 
 // TestCatalog covers the actions the window has: unique ids, a title and a
@@ -17,7 +16,7 @@ func TestCatalog(t *testing.T) {
 			t.Errorf("%q is listed twice", a.ID)
 		}
 		seen[a.ID] = true
-		if a.Title == "" || a.Group == "" {
+		if a.TitleKey == "" || a.GroupKey == "" {
 			t.Errorf("%q has no title or group: %+v", a.ID, a)
 		}
 	}
@@ -36,7 +35,8 @@ func TestCatalog(t *testing.T) {
 }
 
 // TestTitle covers the titles: the number an action names, the id of an action
-// the window does not know, and the language the window is in.
+// the window does not know, and the source language the window is in until the
+// settings name another: what a language makes of them is locales' to check.
 func TestTitle(t *testing.T) {
 	if got := action.Title(action.GotoAction(3)); got != "Switch to Tab 3" {
 		t.Errorf("Title(tab.goto.3) = %q", got)
@@ -44,20 +44,17 @@ func TestTitle(t *testing.T) {
 	if got := action.Title(action.ProfileAction(9)); got != "Open Profile 9" {
 		t.Errorf("Title(profile.9) = %q", got)
 	}
+	if got := action.Title(action.Find); got != "Find" {
+		t.Errorf("Title(find) = %q", got)
+	}
 	if got := action.Title("no.such.action"); got != "no.such.action" {
 		t.Errorf("Title of an action the window does not know = %q", got)
 	}
 	if got := action.Group("no.such.action"); got != "" {
 		t.Errorf("Group of an action the window does not know = %q", got)
 	}
-
-	i18n.Set("zh-CN")
-	defer i18n.Set("")
-	if got := action.Title(action.Find); got != "查找" {
-		t.Errorf("Title(find.open) in Chinese = %q", got)
-	}
 	if got := action.Title(action.GotoAction(2)); !strings.Contains(got, "2") {
-		t.Errorf("Title(tab.goto.2) in Chinese kept no number: %q", got)
+		t.Errorf("Title(tab.goto.2) kept no number: %q", got)
 	}
 }
 

@@ -860,3 +860,44 @@ ADR-39（等 shell 时读内核的 children）。
 **代价**：这些数字绑在当时的 mygo v0.8.3 与这台机器上；换机器、换 mygo 版本要重测，不要把绝对毫秒当承诺。
 
 **状态**：归档。方案文件已删，新的测量另开记录。
+
+---
+
+## ADR-41 文案交给 mygo 的 catalog，`internal/i18n` 只剩一个薄门面
+
+**背景**：旧做法是「一条消息一个 `T("英文原句")`」加 `internal/i18n/i18n.go` 里一张 209 条的 `zhCN` map，
+`Set()` 只认 `"zh-CN"`。问题有三类：英文原句既是 id 又是文案，改一个字就等于换 key；
+没有参数类型与复数，`fmt.Sprintf(i18n.T(...))` 把占位符搬到调用点，`%s` 与 `%d` 写反只会在运行时现形；
+第三门语言要复制一张 map，`zh-TW` 用户直接掉回英文。mygo 自带 i18n（ARB 目录、`mygo generate` 出 typed 访问器、
+`mygo i18n check` 校验、`App.SetLocale` 切换并在各平台持久化），隔壁 6 个项目（Mayoi、kero、sshyard、onevra、
+breeze、WinTray）里 5 个用 catalog、1 个用 struct 字面量，主流是前者。
+
+**决定**：
+
+1. 文案放根目录 `locales/`：`en.json`（`mygo.json` 的 `i18n.source`）与 `zh-Hans.json`，ARB 格式，
+   key 是小驼峰加区域前缀（`closeTab`、`errSettingsInvalid`、`settingsFolderNote`）。
+   `go tool mygo generate` 写 `locales/catalog_gen.go`（`Catalog` + `In(lang)` + 每 key 一个 typed 函数），生成物提交。
+2. **一条文案一个 key**，按旧 map 一对一搬过来（192 条 + 新增的 `systemLanguage`），迁移可审计；
+   旧 map 里 41 条既没有字面量也没被动作引用的废弃文案不再搬。
+3. 静态调用点改成 typed 函数（`locales.CloseTab()`）：key 与参数类型在编译期检查，这是 mygo 与本仓库 6 个参考项目的正路。
+   `internal/action` 是纯数据包、存不了函数，改存 key（`TitleKey`/`GroupKey`），由 `i18n.T`/`i18n.F` 在调用时解析——
+   这是全仓库唯一按字符串 key 取文案的出口，`locales/locales_test.go` 的 `TestActionKeys` 盯着它。
+4. `internal/i18n` 变成门面：`T`/`F`/`Has`/`Valid`/`Locale`/`Languages`/`Autonym`，走 `locales.Catalog.Format(Locale(), …)`。
+   它**不 import 根包 `mygo`**（`SetLocale` 会把窗口层拖进纯函数包），语言切换由 `internal/app` 的 `locale()` 收口。
+5. 语言的存法是 BCP 47：`""`（跟随系统，新的默认值）、`zh-Hans`、`en`；`store.Parse` 把旧文件的 `zh-CN`/`en-US`
+   归一成 `zh-Hans`/`en`，所以升级后语言不会跳。设置页下拉＝「跟随系统」+ `i18n.Languages()` 每种语言的自称（`Autonym`）。
+   手写坏的值（`en_US` 之外还有 `zh CN` 这类）不会让 `SetLocale` panic：`Valid` 挡住，退回跟随系统。
+6. `mygo generate` 出来的 catalog 只带译文，中文那份也要 `@key.placeholders`：ICU 参数名两边不一致时
+   `i18n check` 与 `TestPlaceholders` 都会报。
+
+**理由**：key 与文案分开后，改文案不再改 id；占位符有名字和类型，`{count, plural, …}` 这类复数交给 ICU；
+加语言＝加一个 json，`go build` 与 `go test` 不依赖 CLI（生成物提交）。
+
+**代价**：翻译文件与生成物要一起提交，忘了 `mygo generate` 时 `catalog_gen.go` 与 json 不一致（`i18n check` 会报）；
+英文不再能直接当 key，`grep` 一句英文找不到调用点，得先查 json；`internal/action` 的 key 是字符串，
+拼错了只能靠 `TestActionKeys` 兜；`SetLocale` 会把选择写进用户数据目录（`locale` 文件），与 `settings.json` 有两份记录，
+好在两者都由 `app.locale()` 单点写入。
+
+**测试**：`locales/locales_test.go`（key 覆盖率、占位符声明与消息正文一致、动作 key 都在目录里、语言列表以原文打头）；
+`internal/i18n/i18n_test.go`（原文回退、缺 key 回显 key、`F` 填占位符、`Valid` 的边界、`Autonym`）；
+`internal/action/action_test.go` 钉住编号动作的标题与未知 id；`internal/ui/keybindings_test.go` 钉住未知动作落在 `other` 组。

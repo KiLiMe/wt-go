@@ -302,8 +302,8 @@ func TestReloadKeepsRunningSettingsForOutOfRangeFile(t *testing.T) {
 	if a.settings.Font.Size != 14 {
 		t.Errorf("font size = %v, want the running 14", a.settings.Font.Size)
 	}
-	if a.settings.Language != "zh-CN" {
-		t.Errorf("language = %q, want the running zh-CN", a.settings.Language)
+	if a.settings.Language != "" {
+		t.Errorf("language = %q, want the running empty one", a.settings.Language)
 	}
 	if !strings.Contains(a.configErr, "font.size") {
 		t.Errorf("configErr = %q, want it to name font.size", a.configErr)

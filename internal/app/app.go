@@ -29,6 +29,7 @@ import (
 	"wtgo/internal/sys"
 	"wtgo/internal/theme"
 	"wtgo/internal/ui"
+	"wtgo/locales"
 )
 
 // App is the window and what it holds.
@@ -234,6 +235,17 @@ func opacity(v float64) float64 {
 	return v
 }
 
+// locale makes the window say its messages in the language the settings name,
+// "" for the system's. A file written by hand may hold a tag that names no
+// language, which MyGo panics on: the window shows the system's instead of
+// refusing to start.
+func locale(tag string) {
+	if !i18n.Valid(tag) {
+		tag = ""
+	}
+	mygo.App.SetLocale(tag)
+}
+
 // newApp reads the settings and finds the shells, and says what went wrong
 // when it could not: the window opens with the defaults.
 func newApp() *App {
@@ -244,7 +256,7 @@ func newApp() *App {
 	} else {
 		log.Printf("wt-go: %s", fault.Line(faultCode(err), err.Error()))
 	}
-	i18n.Set(a.settings.Language)
+	locale(a.settings.Language)
 	a.saved = a.settings.Clone()
 	if data != nil {
 		a.file.markSeen(data)
@@ -638,7 +650,7 @@ func (a *App) tabName(tab *pane.Tab) string {
 	name := label(tab.Name, term.Title(), tab.ProfileName)
 	select {
 	case <-term.Done():
-		return name + " - " + i18n.T("exited") + " (" + strconv.Itoa(term.ExitCode()) + ")"
+		return name + " - " + locales.TabExited() + " (" + strconv.Itoa(term.ExitCode()) + ")"
 	default:
 		return name
 	}

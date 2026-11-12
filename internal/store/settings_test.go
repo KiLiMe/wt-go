@@ -17,7 +17,7 @@ func TestDefaultFontFamily(t *testing.T) {
 // docs/使用说明.md promises, and the keys the tab actions need.
 func TestDefault(t *testing.T) {
 	s := Default()
-	if s.Language != "zh-CN" || s.Theme != "dark" || s.ColorScheme != "Campbell" {
+	if s.Language != "" || s.Theme != "dark" || s.ColorScheme != "Campbell" {
 		t.Errorf("language, theme, scheme = %q, %q, %q", s.Language, s.Theme, s.ColorScheme)
 	}
 	if s.Font.Family != DefaultFontFamily() || s.Font.Size != 13 || s.Font.LineHeight != 1.2 {
@@ -55,6 +55,27 @@ func TestParseKeepsDefaults(t *testing.T) {
 	}
 	if s.Theme != "dark" || len(s.Keybindings) == 0 {
 		t.Errorf("unnamed settings lost their defaults: %+v", s)
+	}
+}
+
+// TestParseLegacyLanguage covers the language files of earlier versions named by
+// region: they keep it, under the tag the catalogs are filed under, instead of
+// following the system's.
+func TestParseLegacyLanguage(t *testing.T) {
+	for _, c := range []struct{ file, want string }{
+		{`{"language":"zh-CN"}`, "zh-Hans"},
+		{`{"language":"en-US"}`, "en"},
+		{`{"language":"zh-Hans"}`, "zh-Hans"},
+		{`{"language":""}`, ""},
+		{`{}`, ""},
+	} {
+		s, err := Parse([]byte(c.file))
+		if err != nil {
+			t.Fatalf("%s: %v", c.file, err)
+		}
+		if s.Language != c.want {
+			t.Errorf("%s: language = %q, want %q", c.file, s.Language, c.want)
+		}
 	}
 }
 

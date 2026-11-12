@@ -156,10 +156,15 @@ type Keybinding struct {
 	Action string `json:"action"`
 }
 
+// languageNames names the language settings of versions before the catalogs,
+// which said a region: the tags the catalogs are filed under. A file that
+// holds one keeps its language instead of falling back to the system's.
+var languageNames = map[string]string{"zh-CN": "zh-Hans", "en-US": "en"}
+
 // Default is the settings a window starts with, before any file.
 func Default() Settings {
 	return Settings{
-		Language:              "zh-CN",
+		Language:              "",
 		Theme:                 "dark",
 		StartOn:               "default",
 		Font:                  Font{Family: DefaultFontFamily(), Size: 13, LineHeight: 1.2},
@@ -218,6 +223,9 @@ func Parse(b []byte) (Settings, error) {
 	s := Default()
 	if err := json.Unmarshal(b, &s); err != nil {
 		return Settings{}, fmt.Errorf("settings: %w", err)
+	}
+	if tag, ok := languageNames[s.Language]; ok {
+		s.Language = tag
 	}
 	if err := s.Validate(); err != nil {
 		return Settings{}, err

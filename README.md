@@ -46,7 +46,7 @@ pwsh .\Scripts\build.ps1 -Package        # 等于 go tool mygo build -platform w
 | 查找（`Ctrl+Shift+F`）、命令面板（`Ctrl+Shift+P`） | ✅ |
 | 出故障能自己说清（`wt-go diag`、故障码 `E1xx`/`E2xx`/`E3xx`、崩溃日志） | ✅ 见 [docs/故障排查.md](docs/故障排查.md) |
 | 把现场交给 AI（`wt-go mcp`，Model Context Protocol） | ✅ 五个只读工具，不需要窗口开着 |
-| exe 图标与版本信息 | ✅ `resources/icon.png`，`mygo build`（含 `Scripts/build.ps1`）打包时注入 |
+| exe 图标与版本信息 | ✅ `resources/icon.png`，`mygo build`（Windows 用 `Scripts/build.ps1`，Linux/macOS 用 `Scripts/build.sh`）打包时注入 |
 | profile：自动发现 pwsh / Windows PowerShell / cmd / WSL / POSIX shell | ✅ |
 | 配色方案 | ✅ 内置 7 套 + Ghostty 617 套直用 + 自定义 |
 | 字体 / 字号 / 行高 / 内边距 / 光标形状 / 窗口透明度 | ✅ |
@@ -87,13 +87,14 @@ internal/profile/  profile 模型与自动发现结果合并
 internal/store/    settings.json 的解析、默认值、校验
 internal/theme/    配色方案解析
 internal/sys/      全部 OS 副作用（路径、原子写、日志、Job Object、shell 探测……）
-internal/i18n/     中英文案
+internal/i18n/     按 key 说一句话，语言跟随窗口设置
+locales/           消息目录：en.json / zh-Hans.json 与 mygo generate 出的访问器
 tools/genicon/     画 resources/icon.png（go run ./tools/genicon）
 resources/         应用图标（1024×1024 PNG）
 docs/              使用说明 / 配置参考 / 键位 / 故障排查 / Linux / 代码导读 / ADR / 阶段计划
 ```
 
-依赖方向是硬规则（`app → ui → {pane, layout, store, theme, profile, action, icons} → i18n`），
+依赖方向是硬规则（`app → ui → {pane, layout, store, theme, profile, action, icons} → i18n → locales`），
 由 `internal/app/deps_test.go` 机械校验；完整的边见 [docs/代码导读.md](docs/代码导读.md) 的「边界与链路」。
 
 ## 运行环境

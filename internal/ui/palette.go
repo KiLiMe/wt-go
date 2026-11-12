@@ -7,7 +7,7 @@ import (
 
 	myui "github.com/egoist/mygo/ui"
 
-	"wtgo/internal/i18n"
+	"wtgo/locales"
 )
 
 // The palette's size: eight rows of the list, and the padding above and
@@ -74,7 +74,7 @@ func palette(c *myui.Context, st State, act Actions) {
 					Children(func() {
 						in := myui.TextInputBase(c.Key("filter"), &p.Filter).
 							Grow(1).
-							Placeholder(i18n.T("Type the name of a command")).
+							Placeholder(locales.PalettePlaceholder()).
 							AutoFocus()
 						if in.Changed() {
 							p.Selected, p.reveal = 0, true
@@ -96,7 +96,7 @@ func palette(c *myui.Context, st State, act Actions) {
 					TrackScroll(&p.scroll).
 					Children(func() {
 						if len(items) == 0 {
-							myui.Text(c, i18n.T("No command matches.")).
+							myui.Text(c, locales.PaletteNoMatch()).
 								FontSize(12).
 								TextColor(t.TextMuted).
 								Padding(10, 10)

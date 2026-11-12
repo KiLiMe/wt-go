@@ -1,0 +1,295 @@
+{
+  "newTab": "New Tab",
+  "closeTab": "Close Tab",
+  "duplicateTab": "Duplicate Tab",
+  "closeOtherTabs": "Close Other Tabs",
+  "rename": "Rename",
+  "renameTab": "Rename tab",
+  "scrollTabsLeft": "Scroll the tabs left",
+  "scrollTabsRight": "Scroll the tabs right",
+  "noTabs": "No tabs open",
+  "openTab": "Open a tab",
+  "nextTab": "Next Tab",
+  "previousTab": "Previous Tab",
+  "switchToTab": "Switch to Tab {n}",
+  "@switchToTab": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "openProfile": "Open Profile {n}",
+  "@openProfile": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "commandPalette": "Command Palette",
+  "palettePlaceholder": "Type the name of a command",
+  "paletteNoMatch": "No command matches.",
+  "paletteNewTabWith": "New Tab with {profile}",
+  "@paletteNewTabWith": {
+    "placeholders": {
+      "profile": {
+        "type": "String"
+      }
+    }
+  },
+  "settings": "Settings",
+  "profiles": "Profiles",
+  "tab": "Tab",
+  "pane": "Pane",
+  "window": "Window",
+  "other": "Other",
+  "find": "Find",
+  "minimize": "Minimize",
+  "maximize": "Maximize",
+  "restore": "Restore",
+  "closeWindow": "Close Window",
+  "tabExited": "exited",
+  "splitPane": "Split Pane",
+  "splitRight": "Split Right",
+  "splitDown": "Split Down",
+  "focusLeftPane": "Focus Left Pane",
+  "focusRightPane": "Focus Right Pane",
+  "focusUpPane": "Focus Up Pane",
+  "focusDownPane": "Focus Down Pane",
+  "closePane": "Close Pane",
+  "closeOtherPanes": "Close Other Panes",
+  "close": "Close",
+  "cancel": "Cancel",
+  "ok": "OK",
+  "open": "Open",
+  "remove": "Remove",
+  "duplicate": "Duplicate",
+  "show": "Show",
+  "hide": "Hide",
+  "save": "Save",
+  "discard": "Discard",
+  "none": "None",
+  "nothing": "Nothing",
+  "menu": "Menu",
+  "paste": "Paste",
+  "copyOrPaste": "Copy or paste",
+  "always": "Always",
+  "never": "Never",
+  "whileProgramRuns": "While a program runs",
+  "followSystem": "Follow the system",
+  "light": "Light",
+  "dark": "Dark",
+  "bar": "Bar",
+  "block": "Block",
+  "underline": "Underline",
+  "blink": "Blink",
+  "language": "Language",
+  "systemLanguage": "System",
+  "builtIn": "built-in",
+  "copySuffix": "copy",
+  "newProfile": "New profile",
+  "addProfile": "Add profile",
+  "showHiddenProfiles": "Show hidden profiles",
+  "selectProfile": "Select a profile.",
+  "restoreDefaults": "Restore the defaults",
+  "pressKey": "Press a key…",
+  "startup": "Startup",
+  "interaction": "Interaction",
+  "appearance": "Appearance",
+  "colorSchemes": "Color schemes",
+  "actions": "Actions",
+  "advanced": "Advanced",
+  "defaults": "Defaults",
+  "unsavedChanges": "Unsaved changes",
+  "saved": "Saved",
+  "openSettingsFolder": "Open settings folder",
+  "defaultProfile": "Default profile",
+  "defaultProfileNote": "The profile a new tab runs unless it picks one.",
+  "startDirectory": "Start directory",
+  "startDirectoryNote": "Where a new tab starts when its profile names no directory.",
+  "startSize": "Start size",
+  "startSizeNote": "Columns and rows of the window when it opens; 0 keeps the size it opens with.",
+  "closeOnLastTab": "Close on last tab",
+  "closeOnLastTabNote": "Close the window when its last tab closes.",
+  "copyOnSelect": "Copy on select",
+  "copyOnSelectNote": "Copy what a selection takes as it takes it.",
+  "rightClick": "Right click",
+  "rightClickNote": "What a right click does.",
+  "pasteMultiline": "Paste multiline confirm",
+  "pasteMultilineNote": "Ask before a paste that holds more than one line.",
+  "confirmClose": "Confirm close",
+  "confirmCloseNote": "Ask before a tab closes while its program still runs.",
+  "panesPerTab": "Panes per tab",
+  "panesPerTabNote": "How many panes a tab splits into; 0 for no limit.",
+  "theme": "Theme",
+  "themeNote": "The face of the window: the system's, light, dark, or a theme of its own.",
+  "backgroundOpacity": "Background opacity",
+  "backgroundOpacityNote": "How much of what is behind the window shows through it.",
+  "newTabPosition": "New tab position",
+  "newTabPositionNote": "Where a new tab goes.",
+  "afterLastTab": "After the last tab",
+  "beforeFirstTab": "Before the first tab",
+  "tabWidth": "Tab width",
+  "tabWidthNote": "How wide the tabs are.",
+  "asWideAsName": "As wide as the name",
+  "allTheSame": "All the same",
+  "alwaysOnTop": "Always on top",
+  "alwaysOnTopNote": "Keep the window above the others.",
+  "titleFollowsPane": "Title follows the pane",
+  "titleFollowsPaneNote": "Name the window after the pane with the keyboard.",
+  "colorScheme": "Color scheme",
+  "colorSchemeNote": "The colors a terminal paints with unless its profile names another.",
+  "scheme": "Scheme",
+  "schemeCopy": "Copy as a custom scheme",
+  "schemeSearch": "Search the schemes",
+  "schemeNone": "No scheme by that name.",
+  "schemePreview": "Preview",
+  "schemeRemove": "Remove the scheme",
+  "schemeCopied": "The scheme is copied; save to keep it.",
+  "schemeRemoved": "The scheme is removed; save to keep it.",
+  "font": "Font",
+  "fontNote": "The monospaced families this machine has, as the terminal measures them.",
+  "fontSize": "Font size",
+  "fontSizeNote": "How tall the letters of a terminal are, in DIPs.",
+  "lineHeight": "Line height",
+  "lineHeightNote": "The height of a line of a terminal, as a multiple of the font size.",
+  "cursor": "Cursor",
+  "padding": "Padding",
+  "paddingNote": "The space inside the edges of a terminal, in DIPs.",
+  "scrollback": "Scrollback",
+  "scrollbackNote": "How much a terminal keeps to scroll back through, in MB.",
+  "name": "Name",
+  "commandLine": "Command line",
+  "commandLineNote": "The program the profile runs; empty runs the shell the system starts.",
+  "arguments": "Arguments",
+  "argumentsNote": "The arguments of the command, one on each line.",
+  "profileStartNote": "Where the profile starts; empty uses the setting.",
+  "iconColor": "Icon color",
+  "iconColorNote": "The color of the dot the tab strip marks the profile with.",
+  "hidden": "Hidden",
+  "hiddenNote": "Leave the profile out of the menu that opens tabs.",
+  "shells": "Shells",
+  "probe": "Probe",
+  "probeAgain": "Probe the shells again",
+  "probeAgainNote": "The window probes this machine when it writes its first settings file. Probing again gives every built-in profile the command that is installed now, hides the ones whose program is gone and shows the ones that are back. Names, colors and directories stay.",
+  "reset": "Reset",
+  "deleteSettings": "Delete settings.json",
+  "deleteSettingsNote": "Deletes the file and starts the window again, which writes the defaults and probes the machine the way the first start did.",
+  "deleteAndRestart": "Delete and restart",
+  "folders": "Folders",
+  "settingsFolder": "Settings folder",
+  "settingsFolderNote": "Where settings.json lives. The file itself needs a program the desktop edits JSON with, which not every Linux desktop has, so the window opens the folder.",
+  "programFolder": "Program folder",
+  "programFolderNote": "Where the program runs from.",
+  "confirmProbeTitle": "Probe the shells again?",
+  "confirmProbeText": "Every built-in profile takes the command the probe finds, one whose program is gone is hidden, and one that is there is shown again. Names, colors and directories stay.",
+  "confirmDeleteTitle": "Delete settings.json and restart?",
+  "confirmDeleteText": "The window starts over with the defaults: fonts, colors, keybindings and profiles are all lost.",
+  "confirmPasteTitle": "Paste many lines?",
+  "confirmPasteText": "{count, plural, one {This pastes # line into the pane.} other {This pastes # lines into the pane.}}",
+  "@confirmPasteText": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "confirmCloseSettingsTitle": "Close the settings?",
+  "confirmCloseSettingsText": "The settings hold changes you have not saved.",
+  "confirmCloseTabTitle": "Close the tab?",
+  "confirmCloseOthersTitle": "Close the other tabs?",
+  "closeRunning": "Still running: {programs}",
+  "@closeRunning": {
+    "placeholders": {
+      "programs": {
+        "type": "String"
+      }
+    }
+  },
+  "tabRunningText": "The program in this tab is still running.",
+  "tabUnsureText": "wt-go cannot tell whether this tab still runs a program.",
+  "tabAlwaysText": "Closing the tab ends the shell it runs.",
+  "othersRunningText": "Programs in the other tabs are still running.",
+  "othersUnsureText": "wt-go cannot tell whether the other tabs still run programs.",
+  "othersAlwaysText": "Closing the other tabs ends the shells they run.",
+  "probedNote": "The shells are probed again; the file is written.",
+  "probeSameNote": "The shells are what the file already says.",
+  "errDeleteSettings": "settings.json could not be deleted: {error}",
+  "@errDeleteSettings": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errRelaunch": "The window could not start again: {error}",
+  "@errRelaunch": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errOpenFolder": "The folder could not be opened: {error}",
+  "@errOpenFolder": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errSettings": "settings.json: {error}",
+  "@errSettings": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsChangedNote": "settings.json changed on disk; discard your changes to take it.",
+  "errSettingsInvalid": "settings.json is not valid: {error}; the original was kept at {path}",
+  "@errSettingsInvalid": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      },
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "errSettingsInvalidKeep": "settings.json is not valid: {error}; the original could not be kept: {keepError}",
+  "@errSettingsInvalidKeep": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      },
+      "keepError": {
+        "type": "String"
+      }
+    }
+  },
+  "findPrevious": "Previous match",
+  "findNext": "Next match",
+  "findNone": "No matches",
+  "findCount": "{count} found",
+  "@findCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "findPosition": "{index} of {total}",
+  "@findPosition": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  }
+}

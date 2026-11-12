@@ -1,251 +1,43 @@
+// Package i18n names the messages the window says. The words live in
+// ../locales, a file per language, and this package is the way the packages
+// that may not import them say a message by the key it is filed under.
 package i18n
 
-import "sync"
+import (
+	mygoi18n "github.com/egoist/mygo/i18n"
 
-// language is the language the words are in: nil is English, the words as
-// they are written.
-var (
-	mu       sync.RWMutex
-	language map[string]string
+	"wtgo/locales"
 )
 
-// Set makes the words come in a language: a language this program does not
-// know keeps them English.
-func Set(lang string) {
-	mu.Lock()
-	defer mu.Unlock()
-	switch lang {
-	case "zh-CN":
-		language = zhCN
-	default:
-		language = nil
-	}
+// T is the message of key in the language the window is in. A key no
+// catalog has comes back as itself: a missing message reads as its key
+// rather than as nothing.
+func T(key string) string { return locales.Catalog.Format(Locale(), key, nil) }
+
+// F is the message of key with the placeholders of args filled in: the
+// actions that carry a number, as "Switch to Tab 3", say their titles
+// through it.
+func F(key string, args map[string]any) string { return locales.Catalog.Format(Locale(), key, args) }
+
+// Has tells whether the catalogs hold key: the tests check the keys the
+// actions name, which no typed accessor checks.
+func Has(key string) bool {
+	_, _, ok := locales.Catalog.Message("", key)
+	return ok
 }
 
-// T is the word for english, in the language the window is in.
-func T(english string) string {
-	mu.RLock()
-	defer mu.RUnlock()
-	if language == nil {
-		return english
-	}
-	if word, ok := language[english]; ok {
-		return word
-	}
-	return english
-}
+// Valid tells whether tag names a language, or is "" for the system's: a
+// hand-edited settings file may say anything, and the window shows the
+// system's language rather than refusing to start.
+func Valid(tag string) bool { return tag == "" || mygoi18n.Normalize(tag) != "" }
 
-var zhCN = map[string]string{
-	"New Tab":                 "新建标签",
-	"Close Tab":               "关闭标签",
-	"Scroll the tabs left":    "向左滚动标签",
-	"Scroll the tabs right":   "向右滚动标签",
-	"Duplicate Tab":           "复制标签",
-	"Rename Tab":              "重命名标签",
-	"Close Other Tabs":        "关闭其它标签",
-	"Rename":                  "重命名",
-	"Rename tab":              "重命名标签",
-	"Cancel":                  "取消",
-	"OK":                      "确定",
-	"exited":                  "已退出",
-	"No tabs open":            "没有打开的标签",
-	"Open a tab":              "新建标签",
-	"Settings":                "设置",
-	"Saved":                   "已保存",
-	"Unsaved changes":         "有未保存的更改",
-	"Open settings.json":      "打开 settings.json",
-	"Open settings folder":    "打开设置目录",
-	"Advanced":                "高级",
-	"Shells":                  "Shell",
-	"Folders":                 "目录",
-	"Settings folder":         "设置目录",
-	"Program folder":          "程序目录",
-	"Open":                    "打开",
-	"Probe":                   "探测",
-	"Probe the shells again":  "重新探测 Shell",
-	"Reset":                   "重置",
-	"Delete settings.json":    "删除 settings.json",
-	"Delete and restart":      "删除并重启",
-	"Probe the shells again?": "重新探测 Shell？",
-	"Every built-in profile takes the command the probe finds, one whose program is gone is hidden, and one that is there is shown again. Names, colors and directories stay.": "每个内置配置文件改用探测到的命令；程序不见了的会隐藏，回来的会重新显示。名字、颜色与目录不变。",
-	"Delete settings.json and restart?": "删除 settings.json 并重启？",
-	"The window starts over with the defaults: fonts, colors, keybindings and profiles are all lost.": "窗口将以默认值重开：字体、配色、键位与配置文件都会丢失。",
-	"The shells are probed again; the file is written.":                                               "已重新探测，写入文件。",
-	"The shells are what the file already says.":                                                      "文件里已经是最新的。",
-	"settings.json could not be deleted: %v":                                                          "删不掉 settings.json：%v",
-	"The window could not start again: %v":                                                            "重启失败：%v",
-	"The folder could not be opened: %v":                                                              "打不开目录：%v",
-	"The window probes this machine when it writes its first settings file. Probing again gives every built-in profile the command that is installed now, hides the ones whose program is gone and shows the ones that are back. Names, colors and directories stay.": "窗口只在写第一份 settings.json 时探测这台机器。重新探测会给每个内置配置文件换上现在装着的命令，程序不见了的隐藏，回来的重新显示。名字、颜色与目录不变。",
-	"Deletes the file and starts the window again, which writes the defaults and probes the machine the way the first start did.":                                                                                                                                     "删掉文件并重新启动窗口，它会像第一次启动那样写入默认值并探测这台机器。",
-	"Where settings.json lives. The file itself needs a program the desktop edits JSON with, which not every Linux desktop has, so the window opens the folder.":                                                                                                      "settings.json 所在目录。文件本身要靠桌面关联的编辑器打开，Linux 桌面不一定有，所以窗口打开的是目录。",
-	"Where the program runs from.": "程序所在目录。",
-	"Discard":                      "放弃更改",
-	"Save":                         "保存",
-	"Startup":                      "启动",
-	"Interaction":                  "交互",
-	"Appearance":                   "外观",
-	"Color schemes":                "配色方案",
-	"Actions":                      "操作",
-	"Profiles":                     "配置文件",
-	"Defaults":                     "默认值",
-	"Default profile":              "默认配置文件",
-	"The profile a new tab runs unless it picks one.": "新标签默认运行的配置文件。",
-	"None":            "无",
-	"Language":        "语言",
-	"Start directory": "起始目录",
-	"Where a new tab starts when its profile names no directory.": "profile 未指定目录时，新标签从哪里开始。",
-	"Start size": "启动大小",
-	"Columns and rows of the window when it opens; 0 keeps the size it opens with.": "打开时的列数与行数；0 表示保持默认。",
-	"Close on last tab":                                  "关最后一个标签时关窗口",
-	"Close the window when its last tab closes.":         "最后一个标签关闭时关闭窗口。",
-	"Copy on select":                                     "选中即复制",
-	"Copy the selection to the clipboard as it is made.": "选中内容后立刻复制到剪贴板。",
-	"Right click":                                        "右键行为",
-	"What a secondary click does in a terminal.":         "在终端里点右键时做什么。",
-	"Copy or paste":                                      "复制或粘贴",
-	"Paste":                                              "粘贴",
-	"Copy":                                               "复制",
-	"Menu":                                               "菜单",
-	"Nothing":                                            "无",
-	"Ask before pasting text of more than one line.": "粘贴多行文本前先确认。",
-	"Panes per tab": "每标签窗格上限",
-	"How many panes a tab may split into; 0 has no limit.": "一个标签最多分成几个窗格；0 表示不限。",
-	"Theme":                     "主题",
-	"How bright the window is.": "窗口本身的明暗。",
-	"System":                    "跟随系统",
-	"Light":                     "浅色",
-	"Dark":                      "深色",
-	"Background opacity":        "背景不透明度",
-	"How much of what is behind the window shows through.": "窗口后方的画面能透出多少。",
-	"New tab position":                  "新标签位置",
-	"Where a new tab opens.":            "新标签开在哪里。",
-	"After the last tab":                "最后一个标签之后",
-	"Before the first tab":              "第一个标签之前",
-	"Tab width":                         "标签宽度",
-	"How wide the tabs are.":            "标签有多宽。",
-	"As wide as the name":               "随名称宽度",
-	"All the same":                      "等宽",
-	"Always on top":                     "窗口置顶",
-	"Keep the window above the others.": "让窗口保持在其他窗口之上。",
-	"Title follows the pane":            "标题跟随窗格",
-	"Name the window after the pane with the keyboard.": "窗口标题跟随有键盘焦点的窗格。",
-	"Color scheme": "配色方案",
-	"The colors a terminal paints with unless its profile names another.": "终端使用的配色；profile 未另指定时用这套。",
-	"Scheme":                  "方案",
-	"Search the schemes":      "搜索配色方案",
-	"No scheme by that name.": "没有这个名称的配色方案。",
-	"Preview":                 "预览",
-	"Font":                    "字体",
-	"The monospaced families this machine has, as the terminal measures them.": "这台机器上装了、且量出来是等宽的族名。",
-	"Font size": "字号",
-	"How tall the letters of a terminal are, in DIPs.": "终端文字的大小，单位 DIP。",
-	"Line height": "行高",
-	"The height of a line of a terminal, as a multiple of the font size.": "终端行高，相对字号的倍数。",
-	"Cursor":    "光标",
-	"Bar":       "竖线",
-	"Block":     "方块",
-	"Underline": "下划线",
-	"Blink":     "闪烁",
-	"Padding":   "内边距",
-	"The space inside the edges of a terminal, in DIPs.": "终端边缘内侧的空白，单位 DIP。",
-	"Scrollback": "回滚缓冲",
-	"How much a terminal keeps to scroll back through, in MB.": "终端保留多少 MB 内容供回滚。",
-	"Duplicate":                        "复制",
-	"Remove":                           "删除",
-	"Hide":                             "隐藏",
-	"Show":                             "显示",
-	"built-in":                         "内置",
-	"Show hidden profiles":             "显示隐藏的配置文件",
-	"Add profile":                      "添加新配置文件",
-	"New profile":                      "新配置文件",
-	"copy":                             "副本",
-	"Name":                             "名称",
-	"Command":                          "命令行",
-	"Arguments":                        "参数",
-	"Directory":                        "起始目录",
-	"Icon color":                       "图标颜色",
-	"Hidden":                           "隐藏",
-	"Hide the profile from the menus.": "在菜单里隐藏这个配置文件。",
-	"One argument a line.":             "每行一个参数。",
-	"The program a tab of this profile runs.":                                   "这个配置文件运行的命令行。",
-	"Where a tab of this profile starts.":                                       "这个配置文件的标签从哪个目录开始。",
-	"Press a key…":                                                              "按一个键…",
-	"Restore the defaults":                                                      "恢复默认",
-	"What a right click does.":                                                  "在终端里点右键时做什么。",
-	"Ask before a paste that holds more than one line.":                         "粘贴多行文本前先确认。",
-	"How many panes a tab splits into; 0 for no limit.":                         "一个标签最多分成几个窗格；0 表示不限。",
-	"Command line":                                                              "命令行",
-	"Where the profile starts; empty uses the setting.":                         "这个配置文件的标签从哪个目录开始；留空则用上面的起始目录。",
-	"Copy what a selection takes as it takes it.":                               "选中内容后立刻复制到剪贴板。",
-	"The face of the window: the system's, light, dark, or a theme of its own.": "窗口的外观：跟随系统、浅色、深色，或某个主题自己的配色。",
-	"The color of the dot the tab strip marks the profile with.":                "标签栏用来标记这个配置文件的圆点颜色。",
-	"Leave the profile out of the menu that opens tabs.":                        "在新建标签的菜单里隐藏这个配置文件。",
-	"Paste multiline confirm":                                                   "多行粘贴确认",
-	"Confirm close":                                                             "关闭前确认",
-	"Ask before a tab closes while its program still runs.":                     "标签里的程序还在运行时，关标签前先问一句。",
-	"How much of what is behind the window shows through it.":                   "窗口后方的画面能透出多少。",
-	"Where a new tab goes.":                                                     "新标签开在哪里。",
-	"Select a profile.":                                                         "选择一个配置文件。",
-	"The program the profile runs; empty runs the shell the system starts.":     "这个配置文件运行的命令行；留空则用系统的默认 shell。",
-	"The arguments of the command, one on each line.":                           "命令行的参数，每行一个。",
-	"Follow the system":                                                         "跟随系统",
-	"settings.json changed on disk; discard your changes to take it.":           "settings.json 在磁盘上被改动；放弃当前修改才能应用。",
-	"settings.json: %v":                                                         "settings.json：%v",
-	"settings.json is not valid: %v; the original was kept at %s":               "settings.json 内容无效：%v；原文已保存到 %s",
-	"settings.json is not valid: %v; the original could not be kept: %v":        "settings.json 内容无效：%v；原文无法保存：%v",
-	"Paste many lines?":                                                         "粘贴多行？",
-	"This pastes %d lines into the pane.":                                       "这会往窗格里粘贴 %d 行。",
-	"Close the settings?":                                                       "关闭设置？",
-	"The settings hold changes you have not saved.":                             "设置有未保存的更改。",
-	"Close the tab?":                                                            "关闭标签？",
-	"The program in this tab is still running.":                                 "这个标签里的程序还在运行。",
-	"Still running: %s":                                                         "还在运行：%s",
-	"wt-go cannot tell whether this tab still runs a program.":                  "无法判断这个标签里是否还有程序在运行。",
-	"wt-go cannot tell whether the other tabs still run programs.":              "无法判断其它标签里是否还有程序在运行。",
-	"Closing the tab ends the shell it runs.":                                   "关闭这个标签会结束它的终端。",
-	"Closing the other tabs ends the shells they run.":                          "关闭其它标签会结束它们的终端。",
-	"While a program runs":                                                      "有程序运行时",
-	"Always":                                                                    "总是",
-	"Never":                                                                     "从不",
-	"Close the other tabs?":                                                     "关闭其它标签？",
-	"Programs in the other tabs are still running.":                             "其它标签里的程序还在运行。",
-	"Close":                                   "关闭",
-	"Copy as a custom scheme":                 "复制为自定义配色",
-	"The scheme is copied; save to keep it.":  "配色已复制；保存后才会留下。",
-	"The scheme is removed; save to keep it.": "配色已删除；保存后才会留下。",
-	"Remove the scheme":                       "删除这个配色方案",
+// Locale is the language the window is in, "" for English, the source
+// language of the catalogs, until the settings name another.
+func Locale() string { return mygoi18n.Locale() }
 
-	"Next Tab":          "下一个标签",
-	"Previous Tab":      "上一个标签",
-	"Switch to Tab %d":  "切换到第 %d 个标签",
-	"Open Profile %d":   "用第 %d 个配置文件新建标签",
-	"Split Pane":        "拆分窗格",
-	"Split Right":       "向右拆分",
-	"Split Down":        "向下拆分",
-	"Focus Left Pane":   "聚焦左窗格",
-	"Focus Right Pane":  "聚焦右窗格",
-	"Focus Up Pane":     "聚焦上窗格",
-	"Focus Down Pane":   "聚焦下窗格",
-	"Close Pane":        "关闭窗格",
-	"Close Other Panes": "关闭其它窗格",
-	"Find":              "查找",
-	"Command Palette":   "命令面板",
-	"Minimize":          "最小化",
-	"Maximize":          "最大化",
-	"Restore":           "还原",
-	"Close Window":      "关闭窗口",
-	"Tab":               "标签页",
-	"Pane":              "窗格",
-	"Window":            "窗口",
-	"Other":             "其它",
+// Languages are the languages the catalogs are translated to.
+func Languages() []string { return locales.Catalog.Languages() }
 
-	"Type the name of a command": "输入命令的名称",
-	"No command matches.":        "没有匹配的命令。",
-	"New Tab with %s":            "用 %s 新建标签",
-
-	"Previous match": "上一个匹配",
-	"Next match":     "下一个匹配",
-	"No matches":     "没有匹配",
-	"%d found":       "找到 %d 个",
-	"%d of %d":       "第 %d 个，共 %d 个",
-}
+// Autonym is the name of locale in its own language, as "简体中文", for the
+// settings to offer it by.
+func Autonym(locale string) string { return mygoi18n.Autonym(locale) }

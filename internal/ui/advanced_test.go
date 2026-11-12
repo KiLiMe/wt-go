@@ -5,8 +5,8 @@ import (
 
 	myui "github.com/egoist/mygo/ui"
 
-	"wtgo/internal/i18n"
 	"wtgo/internal/store"
+	"wtgo/locales"
 )
 
 // advancedActions is the window as the advanced page sees it: it records the
@@ -31,10 +31,10 @@ func TestAdvancedPage(t *testing.T) {
 	}, 900, 700)
 	tt.Frame()
 
-	if err := tt.Click(i18n.T("Probe")); err != nil {
+	if err := tt.Click(locales.Probe()); err != nil {
 		t.Fatalf("no button probes: %v", err)
 	}
-	if err := tt.Click(i18n.T("Delete and restart")); err != nil {
+	if err := tt.Click(locales.DeleteAndRestart()); err != nil {
 		t.Fatalf("no button resets: %v", err)
 	}
 	want := []string{AskRediscover, AskReset}
@@ -46,7 +46,7 @@ func TestAdvancedPage(t *testing.T) {
 			t.Fatalf("asked = %v, want %v", act.asked, want)
 		}
 	}
-	if err := tt.Click(i18n.T("Open")); err != nil {
+	if err := tt.Click(locales.Open()); err != nil {
 		t.Fatalf("no folder button: %v", err)
 	}
 	if len(act.opened) != 1 || act.opened[0] != "settings" {

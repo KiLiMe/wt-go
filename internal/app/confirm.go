@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/egoist/mygo/plugins/terminal"
@@ -12,6 +11,7 @@ import (
 	"wtgo/internal/store"
 	"wtgo/internal/sys"
 	"wtgo/internal/ui"
+	"wtgo/locales"
 )
 
 // ask is a question the window asks, and what its answers do.
@@ -25,7 +25,7 @@ type ask struct {
 // the dialog is its no, which the button says.
 func (a *App) ask(q ui.Confirm, yes, no func()) {
 	q.Open = true
-	q.No = i18n.T("Cancel")
+	q.No = locales.Cancel()
 	a.confirm = &ask{Confirm: q, yes: yes, no: no}
 	a.redraw()
 }
@@ -66,9 +66,9 @@ func (a *App) askPaste(term *terminal.Terminal, d transfer.Data) bool {
 		return false
 	}
 	a.ask(ui.Confirm{
-		Title: i18n.T("Paste many lines?"),
-		Text:  fmt.Sprintf(i18n.T("This pastes %d lines into the pane."), lines),
-		Yes:   i18n.T("Paste"),
+		Title: locales.ConfirmPasteTitle(),
+		Text:  i18n.F("confirmPasteText", map[string]any{"count": lines}),
+		Yes:   locales.Paste(),
 	}, func() { term.PasteData(d) }, nil)
 	return true
 }
@@ -77,9 +77,9 @@ func (a *App) askPaste(term *terminal.Terminal, d transfer.Data) bool {
 // changes it holds, and closes it when the answer is yes.
 func (a *App) askCloseSettings(tab *pane.Tab) {
 	a.ask(ui.Confirm{
-		Title: i18n.T("Close the settings?"),
-		Text:  i18n.T("The settings hold changes you have not saved."),
-		Yes:   i18n.T("Close"),
+		Title: locales.ConfirmCloseSettingsTitle(),
+		Text:  locales.ConfirmCloseSettingsText(),
+		Yes:   locales.Close(),
 	}, func() { a.closeTab(tab) }, nil)
 }
 
@@ -88,12 +88,9 @@ func (a *App) askCloseSettings(tab *pane.Tab) {
 // prompt only when the settings ask about every tab.
 func (a *App) askCloseTab(tab *pane.Tab, act tabActivity) {
 	a.ask(ui.Confirm{
-		Title: i18n.T("Close the tab?"),
-		Text: a.closeText(act,
-			"The program in this tab is still running.",
-			"wt-go cannot tell whether this tab still runs a program.",
-			"Closing the tab ends the shell it runs."),
-		Yes: i18n.T("Close"),
+		Title: locales.ConfirmCloseTabTitle(),
+		Text:  a.closeText(act, "tabRunningText", "tabUnsureText", "tabAlwaysText"),
+		Yes:   locales.Close(),
 	}, func() { a.closeTab(tab) }, nil)
 }
 
@@ -101,18 +98,16 @@ func (a *App) askCloseTab(tab *pane.Tab, act tabActivity) {
 // run, and closes them when the answer is yes.
 func (a *App) askCloseOtherTabs(keep *pane.Tab, act tabActivity) {
 	a.ask(ui.Confirm{
-		Title: i18n.T("Close the other tabs?"),
-		Text: a.closeText(act,
-			"Programs in the other tabs are still running.",
-			"wt-go cannot tell whether the other tabs still run programs.",
-			"Closing the other tabs ends the shells they run."),
-		Yes: i18n.T("Close"),
+		Title: locales.ConfirmCloseOthersTitle(),
+		Text:  a.closeText(act, "othersRunningText", "othersUnsureText", "othersAlwaysText"),
+		Yes:   locales.Close(),
 	}, func() { a.closeOtherTabs(keep) }, nil)
 }
 
 // closeText is what the question says: which programs still run, or, when the
 // settings ask about every tab, what closing it ends. What the window cannot
-// tell is said as that, and not as a program it found.
+// tell is said as that, and not as a program it found. The three are the keys
+// of the messages it may say.
 func (a *App) closeText(act tabActivity, running, unsure, always string) string {
 	switch {
 	case a.settings.ConfirmClose == store.ConfirmAlways:
@@ -122,7 +117,7 @@ func (a *App) closeText(act tabActivity, running, unsure, always string) string 
 	case len(act.programs) > 0:
 		// Naming the programs is what makes the question answerable: a
 		// shell at its prompt is not, and a program the user forgot is.
-		return strings.Replace(i18n.T("Still running: %s"), "%s", strings.Join(act.programs, ", "), 1)
+		return i18n.F("closeRunning", map[string]any{"programs": strings.Join(act.programs, ", ")})
 	}
 	return i18n.T(running)
 }

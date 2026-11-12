@@ -9,6 +9,7 @@ import (
 	"wtgo/internal/icons"
 	"wtgo/internal/store"
 	"wtgo/internal/theme"
+	"wtgo/locales"
 )
 
 // The pages the settings tab shows in its left column.
@@ -56,25 +57,25 @@ func nav(c *myui.Context, st Settings, act Actions) myui.Element {
 		myui.Scroll(c).Grow(1).MinHeight(0).Children(func() {
 			myui.Column(c).Gap(2).Children(func() {
 				for _, it := range []struct{ page, label string }{
-					{PageStartup, i18n.T("Startup")},
-					{PageInteraction, i18n.T("Interaction")},
-					{PageAppearance, i18n.T("Appearance")},
-					{PageSchemes, i18n.T("Color schemes")},
-					{PageActions, i18n.T("Actions")},
-					{PageAdvanced, i18n.T("Advanced")},
+					{PageStartup, locales.Startup()},
+					{PageInteraction, locales.Interaction()},
+					{PageAppearance, locales.Appearance()},
+					{PageSchemes, locales.ColorSchemes()},
+					{PageActions, locales.Actions()},
+					{PageAdvanced, locales.Advanced()},
 				} {
 					navItem(c, st.Page, it.page, it.label, act)
 				}
-				myui.Text(c, i18n.T("Profiles")).FontSize(11).TextColor(t.TextMuted).Padding(12, 8, 4, 8)
-				navItem(c, st.Page, PageProfiles, i18n.T("Defaults"), act)
+				myui.Text(c, locales.Profiles()).FontSize(11).TextColor(t.TextMuted).Padding(12, 8, 4, 8)
+				navItem(c, st.Page, PageProfiles, locales.Defaults(), act)
 				for _, p := range st.Profiles {
 					navItem(c, st.Page, ProfilePage(p.ID), p.Name, act)
 				}
 			})
 		})
 		myui.Column(c).Gap(2).Padding(6, 0, 0, 0).Children(func() {
-			navAction(c, icons.Add.SVG, i18n.T("Add profile"), act.AddProfile)
-			navCheck(c, st.Hidden, i18n.T("Show hidden profiles"), act.ShowHiddenProfiles)
+			navAction(c, icons.Add.SVG, locales.AddProfile(), act.AddProfile)
+			navCheck(c, st.Hidden, locales.ShowHiddenProfiles(), act.ShowHiddenProfiles)
 		})
 	})
 }
@@ -121,15 +122,15 @@ func footer(c *myui.Context, st Settings, act Actions) myui.Element {
 	return myui.Row(c).Height(48).Padding(0, 16).AlignItems(myui.Center).Gap(8).Background(t.Surface).Children(func() {
 		note := st.Note
 		if note == "" && st.Dirty {
-			note = i18n.T("Unsaved changes")
+			note = locales.UnsavedChanges()
 		}
 		if note != "" {
 			myui.Text(c, note).FontSize(11).TextColor(t.TextMuted).SingleLine().MaxWidth(420)
 		}
 		myui.Spacer(c)
-		myui.Button(c, i18n.T("Open settings folder")).OnClick(act.OpenSettingsFolder)
-		myui.Button(c, i18n.T("Discard")).Disabled(!st.Dirty).Opacity(dimmed(st.Dirty)).OnClick(act.DiscardSettings)
-		myui.PrimaryButton(c, i18n.T("Save")).Disabled(!st.Dirty).Opacity(dimmed(st.Dirty)).OnClick(act.SaveSettings)
+		myui.Button(c, locales.OpenSettingsFolder()).OnClick(act.OpenSettingsFolder)
+		myui.Button(c, locales.Discard()).Disabled(!st.Dirty).Opacity(dimmed(st.Dirty)).OnClick(act.DiscardSettings)
+		myui.PrimaryButton(c, locales.Save()).Disabled(!st.Dirty).Opacity(dimmed(st.Dirty)).OnClick(act.SaveSettings)
 	})
 }
 
@@ -174,29 +175,35 @@ func page(c *myui.Context, st Settings, act Actions) {
 // startupPage is what the window does when it opens.
 func startupPage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
-	section(c, i18n.T("Startup"), func() {
-		field(c, i18n.T("Default profile"), i18n.T("The profile a new tab runs unless it picks one."), func() {
+	section(c, locales.Startup(), func() {
+		field(c, locales.DefaultProfile(), locales.DefaultProfileNote(), func() {
 			opts := make([]option, 0, len(st.Known)+1)
-			opts = append(opts, option{"", i18n.T("None")})
+			opts = append(opts, option{"", locales.None()})
 			for _, p := range st.Known {
 				opts = append(opts, option{p.ID, p.Name})
 			}
 			choice(c, &s.DefaultProfile, opts)
 		})
-		field(c, i18n.T("Language"), "", func() {
-			choice(c, &s.Language, []option{{"zh-CN", "简体中文"}, {"en-US", "English"}})
+		field(c, locales.Language(), "", func() {
+			langs := i18n.Languages()
+			opts := make([]option, 0, len(langs)+1)
+			opts = append(opts, option{"", locales.SystemLanguage()})
+			for _, tag := range langs {
+				opts = append(opts, option{tag, i18n.Autonym(tag)})
+			}
+			choice(c, &s.Language, opts)
 		})
-		field(c, i18n.T("Start directory"), i18n.T("Where a new tab starts when its profile names no directory."), func() {
+		field(c, locales.StartDirectory(), locales.StartDirectoryNote(), func() {
 			myui.TextInput(c, &s.StartDirectory).Placeholder(store.DefaultHomeHint())
 		})
-		field(c, i18n.T("Start size"), i18n.T("Columns and rows of the window when it opens; 0 keeps the size it opens with."), func() {
+		field(c, locales.StartSize(), locales.StartSizeNote(), func() {
 			myui.Row(c).AlignItems(myui.Center).Gap(8).Children(func() {
 				count(c, &s.StartSize.Columns, 0, 400)
 				myui.Text(c, "\u00d7").TextColor(c.Theme().TextMuted)
 				count(c, &s.StartSize.Rows, 0, 200)
 			})
 		})
-		field(c, i18n.T("Close on last tab"), i18n.T("Close the window when its last tab closes."), func() {
+		field(c, locales.CloseOnLastTab(), locales.CloseOnLastTabNote(), func() {
 			myui.Switch(c, &s.CloseOnLastTab)
 		})
 	})
@@ -205,29 +212,29 @@ func startupPage(c *myui.Context, st Settings, act Actions) {
 // interactionPage is how the terminal answers the mouse and the clipboard.
 func interactionPage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
-	section(c, i18n.T("Interaction"), func() {
-		field(c, i18n.T("Copy on select"), i18n.T("Copy what a selection takes as it takes it."), func() {
+	section(c, locales.Interaction(), func() {
+		field(c, locales.CopyOnSelect(), locales.CopyOnSelectNote(), func() {
 			myui.Switch(c, &s.CopyOnSelect)
 		})
-		field(c, i18n.T("Right click"), i18n.T("What a right click does."), func() {
+		field(c, locales.RightClick(), locales.RightClickNote(), func() {
 			choice(c, &s.RightClick, []option{
-				{"copyOrPaste", i18n.T("Copy or paste")},
-				{"paste", i18n.T("Paste")},
-				{"menu", i18n.T("Menu")},
-				{"nothing", i18n.T("Nothing")},
+				{"copyOrPaste", locales.CopyOrPaste()},
+				{"paste", locales.Paste()},
+				{"menu", locales.Menu()},
+				{"nothing", locales.Nothing()},
 			})
 		})
-		field(c, i18n.T("Paste multiline confirm"), i18n.T("Ask before a paste that holds more than one line."), func() {
+		field(c, locales.PasteMultiline(), locales.PasteMultilineNote(), func() {
 			myui.Switch(c, &s.PasteMultilineConfirm)
 		})
-		field(c, i18n.T("Confirm close"), i18n.T("Ask before a tab closes while its program still runs."), func() {
+		field(c, locales.ConfirmClose(), locales.ConfirmCloseNote(), func() {
 			choice(c, &s.ConfirmClose, []option{
-				{string(store.ConfirmRunning), i18n.T("While a program runs")},
-				{string(store.ConfirmAlways), i18n.T("Always")},
-				{string(store.ConfirmNever), i18n.T("Never")},
+				{string(store.ConfirmRunning), locales.WhileProgramRuns()},
+				{string(store.ConfirmAlways), locales.Always()},
+				{string(store.ConfirmNever), locales.Never()},
 			})
 		})
-		field(c, i18n.T("Panes per tab"), i18n.T("How many panes a tab splits into; 0 for no limit."), func() {
+		field(c, locales.PanesPerTab(), locales.PanesPerTabNote(), func() {
 			count(c, &s.MaxPanes, 0, 32)
 		})
 	})
@@ -236,37 +243,37 @@ func interactionPage(c *myui.Context, st Settings, act Actions) {
 // appearancePage is how the window looks.
 func appearancePage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
-	section(c, i18n.T("Appearance"), func() {
-		field(c, i18n.T("Theme"), i18n.T("The face of the window: the system's, light, dark, or a theme of its own."), func() {
+	section(c, locales.Appearance(), func() {
+		field(c, locales.Theme(), locales.ThemeNote(), func() {
 			options := []option{
-				{"system", i18n.T("Follow the system")},
-				{"light", i18n.T("Light")},
-				{"dark", i18n.T("Dark")},
+				{"system", locales.FollowSystem()},
+				{"light", locales.Light()},
+				{"dark", locales.Dark()},
 			}
 			for _, name := range theme.UIThemes() {
 				options = append(options, option{name, name})
 			}
 			choice(c, &s.Theme, options)
 		})
-		field(c, i18n.T("Background opacity"), i18n.T("How much of what is behind the window shows through it."), func() {
+		field(c, locales.BackgroundOpacity(), locales.BackgroundOpacityNote(), func() {
 			ratio(c, &s.BackgroundOpacity, 0.3, 1, 0.05)
 		})
-		field(c, i18n.T("New tab position"), i18n.T("Where a new tab goes."), func() {
+		field(c, locales.NewTabPosition(), locales.NewTabPositionNote(), func() {
 			choice(c, &s.NewTabPosition, []option{
-				{"last", i18n.T("After the last tab")},
-				{"first", i18n.T("Before the first tab")},
+				{"last", locales.AfterLastTab()},
+				{"first", locales.BeforeFirstTab()},
 			})
 		})
-		field(c, i18n.T("Tab width"), i18n.T("How wide the tabs are."), func() {
+		field(c, locales.TabWidth(), locales.TabWidthNote(), func() {
 			choice(c, &s.TabWidth, []option{
-				{"compact", i18n.T("As wide as the name")},
-				{"equal", i18n.T("All the same")},
+				{"compact", locales.AsWideAsName()},
+				{"equal", locales.AllTheSame()},
 			})
 		})
-		field(c, i18n.T("Always on top"), i18n.T("Keep the window above the others."), func() {
+		field(c, locales.AlwaysOnTop(), locales.AlwaysOnTopNote(), func() {
 			myui.Switch(c, &s.AlwaysOnTop)
 		})
-		field(c, i18n.T("Title follows the pane"), i18n.T("Name the window after the pane with the keyboard."), func() {
+		field(c, locales.TitleFollowsPane(), locales.TitleFollowsPaneNote(), func() {
 			myui.Switch(c, &s.TitleFromActiveTerminal)
 		})
 	})
@@ -288,39 +295,39 @@ func fontOptions(families []string) []option {
 func profilesPage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
 	t := c.Theme()
-	section(c, i18n.T("Defaults"), func() {
-		field(c, i18n.T("Font"), i18n.T("The monospaced families this machine has, as the terminal measures them."), func() {
+	section(c, locales.Defaults(), func() {
+		field(c, locales.Font(), locales.FontNote(), func() {
 			choice(c, &s.Font.Family, fontOptions(st.FontFamilies))
 		})
-		field(c, i18n.T("Font size"), i18n.T("How tall the letters of a terminal are, in DIPs."), func() {
+		field(c, locales.FontSize(), locales.FontSizeNote(), func() {
 			measure(c, &s.Font.Size, 6, 48, 1)
 		})
-		field(c, i18n.T("Line height"), i18n.T("The height of a line of a terminal, as a multiple of the font size."), func() {
+		field(c, locales.LineHeight(), locales.LineHeightNote(), func() {
 			measure(c, &s.Font.LineHeight, 0.8, 2.4, 0.1)
 		})
-		field(c, i18n.T("Cursor"), "", func() {
+		field(c, locales.Cursor(), "", func() {
 			myui.Row(c).AlignItems(myui.Center).Gap(12).Children(func() {
 				choice(c, &s.CursorShape, []option{
-					{"bar", i18n.T("Bar")},
-					{"block", i18n.T("Block")},
-					{"underline", i18n.T("Underline")},
+					{"bar", locales.Bar()},
+					{"block", locales.Block()},
+					{"underline", locales.Underline()},
 				})
 				myui.Switch(c, &s.CursorBlink)
-				myui.Text(c, i18n.T("Blink")).TextColor(t.TextMuted)
+				myui.Text(c, locales.Blink()).TextColor(t.TextMuted)
 			})
 		})
-		field(c, i18n.T("Padding"), i18n.T("The space inside the edges of a terminal, in DIPs."), func() {
+		field(c, locales.Padding(), locales.PaddingNote(), func() {
 			myui.Row(c).AlignItems(myui.Center).Gap(8).Children(func() {
 				measure(c, &s.Padding.X, 0, 64, 1)
 				myui.Text(c, "\u00d7").TextColor(t.TextMuted)
 				measure(c, &s.Padding.Y, 0, 64, 1)
 			})
 		})
-		field(c, i18n.T("Scrollback"), i18n.T("How much a terminal keeps to scroll back through, in MB."), func() {
+		field(c, locales.Scrollback(), locales.ScrollbackNote(), func() {
 			count(c, &s.ScrollbackMB, 0, 1024)
 		})
 	})
-	section(c, i18n.T("Profiles"), func() {
+	section(c, locales.Profiles(), func() {
 		for _, p := range st.Profiles {
 			row(c, func() {
 				myui.Row(c).Height(32).AlignItems(myui.Center).Gap(8).Children(func() {
@@ -329,19 +336,19 @@ func profilesPage(c *myui.Context, st Settings, act Actions) {
 						name.TextColor(t.TextMuted)
 					}
 					if p.Discovered {
-						myui.Text(c, i18n.T("built-in")).FontSize(11).TextColor(t.TextMuted).
+						myui.Text(c, locales.BuiltIn()).FontSize(11).TextColor(t.TextMuted).
 							Background(t.Surface).Padding(0, 6).Radius(4)
 					}
-					myui.Button(c, i18n.T("Duplicate")).OnClick(func() { act.DuplicateProfile(p.ID) })
+					myui.Button(c, locales.Duplicate()).OnClick(func() { act.DuplicateProfile(p.ID) })
 					switch {
 					case p.Hidden:
-						myui.Button(c, i18n.T("Show")).OnClick(func() { act.ShowProfile(p.ID) })
+						myui.Button(c, locales.Show()).OnClick(func() { act.ShowProfile(p.ID) })
 					case p.Discovered:
 						// The window finds this shell again on the next start, so
 						// the page offers to hide it rather than to remove it.
-						myui.Button(c, i18n.T("Hide")).OnClick(func() { act.RemoveProfile(p.ID) })
+						myui.Button(c, locales.Hide()).OnClick(func() { act.RemoveProfile(p.ID) })
 					default:
-						myui.Button(c, i18n.T("Remove")).OnClick(func() { act.RemoveProfile(p.ID) })
+						myui.Button(c, locales.Remove()).OnClick(func() { act.RemoveProfile(p.ID) })
 					}
 				})
 			})
@@ -353,31 +360,31 @@ func profilesPage(c *myui.Context, st Settings, act Actions) {
 func profilePage(c *myui.Context, st Settings, act Actions, id string) {
 	p := st.Profile
 	if p == nil || p.ID != id {
-		myui.Text(c, i18n.T("Select a profile.")).TextColor(c.Theme().TextMuted)
+		myui.Text(c, locales.SelectProfile()).TextColor(c.Theme().TextMuted)
 		return
 	}
 	section(c, p.Name, func() {
-		field(c, i18n.T("Name"), "", func() {
+		field(c, locales.Name(), "", func() {
 			myui.TextInput(c, &p.Name)
 		})
-		field(c, i18n.T("Command line"), i18n.T("The program the profile runs; empty runs the shell the system starts."), func() {
+		field(c, locales.CommandLine(), locales.CommandLineNote(), func() {
 			myui.TextInput(c, &p.Command).Placeholder(store.DefaultShellHint())
 		})
-		field(c, i18n.T("Arguments"), i18n.T("The arguments of the command, one on each line."), func() {
+		field(c, locales.Arguments(), locales.ArgumentsNote(), func() {
 			myui.TextArea(c, st.Args).Lines(2, 6)
 		})
-		field(c, i18n.T("Start directory"), i18n.T("Where the profile starts; empty uses the setting."), func() {
+		field(c, locales.StartDirectory(), locales.ProfileStartNote(), func() {
 			myui.TextInput(c, &p.Dir).Placeholder(store.DefaultHomeHint())
 		})
-		field(c, i18n.T("Icon color"), i18n.T("The color of the dot the tab strip marks the profile with."), func() {
+		field(c, locales.IconColor(), locales.IconColorNote(), func() {
 			colorField(c, &p.Color)
 		})
-		field(c, i18n.T("Hidden"), i18n.T("Leave the profile out of the menu that opens tabs."), func() {
+		field(c, locales.Hidden(), locales.HiddenNote(), func() {
 			myui.Switch(c, &p.Hidden)
 		})
 	})
 	myui.Row(c).Gap(8).Children(func() {
-		myui.Button(c, i18n.T("Duplicate")).OnClick(func() { act.DuplicateProfile(p.ID) })
-		myui.Button(c, i18n.T("Remove")).OnClick(func() { act.RemoveProfile(p.ID) })
+		myui.Button(c, locales.Duplicate()).OnClick(func() { act.DuplicateProfile(p.ID) })
+		myui.Button(c, locales.Remove()).OnClick(func() { act.RemoveProfile(p.ID) })
 	})
 }

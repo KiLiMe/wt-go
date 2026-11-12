@@ -6,8 +6,8 @@ import (
 
 	myui "github.com/egoist/mygo/ui"
 
-	"wtgo/internal/i18n"
 	"wtgo/internal/store"
+	"wtgo/locales"
 )
 
 // schemeActions is the window as the color schemes page sees it: it records the
@@ -48,7 +48,7 @@ func TestSchemeRowRemoves(t *testing.T) {
 	}
 	tt, act := schemesOf(t, &s, schemes)
 
-	label := i18n.T("Remove the scheme")
+	label := locales.SchemeRemove()
 	if _, ok := tt.Find(label); ok {
 		t.Fatalf("the button shows while the pointer is elsewhere: %q", tt.Texts())
 	}
@@ -83,7 +83,7 @@ func TestSchemeRowPicks(t *testing.T) {
 	}
 	tt.Move(name.X+name.W/2, name.Y+name.H/2)
 	tt.Frame()
-	if _, ok := tt.Find(i18n.T("Remove the scheme")); ok {
+	if _, ok := tt.Find(locales.SchemeRemove()); ok {
 		t.Error("a scheme the settings do not write offers to be removed")
 	}
 	if err := tt.Click("Paper"); err != nil {

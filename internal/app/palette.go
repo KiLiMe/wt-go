@@ -1,8 +1,6 @@
 package app
 
 import (
-	"fmt"
-
 	"wtgo/internal/action"
 	"wtgo/internal/i18n"
 	"wtgo/internal/ui"
@@ -49,7 +47,7 @@ func (a *App) paletteCommands() []ui.Command {
 		out = append(out, ui.Command{
 			Action: cmd.ID,
 			Title:  action.Title(cmd.ID),
-			Group:  i18n.T(cmd.Group),
+			Group:  i18n.T(cmd.GroupKey),
 			Key:    a.shortcut(cmd.ID),
 		})
 	}
@@ -72,7 +70,7 @@ func (a *App) paletteCommands() []ui.Command {
 		id := action.ProfileAction(i + 1)
 		out = append(out, ui.Command{
 			Action: id,
-			Title:  fmt.Sprintf(i18n.T("New Tab with %s"), p.Name),
+			Title:  i18n.F("paletteNewTabWith", map[string]any{"profile": p.Name}),
 			Group:  i18n.T(action.GroupProfiles),
 			Key:    a.shortcut(id),
 		})

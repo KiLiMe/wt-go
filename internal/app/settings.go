@@ -2,7 +2,6 @@ package app
 
 import (
 	"bytes"
-	"fmt"
 	"log"
 	"runtime/debug"
 	"strconv"
@@ -19,13 +18,14 @@ import (
 	"wtgo/internal/sys"
 	"wtgo/internal/theme"
 	"wtgo/internal/ui"
+	"wtgo/locales"
 )
 
 // OpenSettings shows the settings, which one tab holds: it opens that tab, or
 // a new one.
 func (a *App) OpenSettings() {
 	if a.settingsTab == nil {
-		a.settingsTab = &pane.Tab{Name: i18n.T("Settings")}
+		a.settingsTab = &pane.Tab{Name: locales.Settings()}
 		a.settingsPage = ui.PageStartup
 		a.recording = ""
 		a.insertTab(a.settingsTab)
@@ -191,11 +191,11 @@ func (a *App) SaveSettings() {
 	}
 	unchanged, err := a.settingsFileUnchanged()
 	if err != nil {
-		a.setNote(fmt.Sprintf(i18n.T("settings.json: %v"), err))
+		a.setNote(i18n.F("errSettings", map[string]any{"error": err}))
 		return
 	}
 	if !unchanged {
-		a.setNote(i18n.T("settings.json changed on disk; discard your changes to take it."))
+		a.setNote(locales.SettingsChangedNote())
 		return
 	}
 	if err := sys.WriteSettings(data); err != nil {
@@ -208,7 +208,7 @@ func (a *App) SaveSettings() {
 	}
 	a.configErr = ""
 	a.file.markSeen(data)
-	a.setNote(i18n.T("Saved"))
+	a.setNote(locales.Saved())
 	a.redraw()
 }
 
@@ -278,7 +278,7 @@ func (a *App) DiscardSettings() {
 func (a *App) refreshSettings() {
 	data, ok, err := sys.ReadSettings()
 	if err != nil {
-		a.setNote(fmt.Sprintf(i18n.T("settings.json: %v"), err))
+		a.setNote(i18n.F("errSettings", map[string]any{"error": err}))
 		return
 	}
 	if !ok {
@@ -343,7 +343,7 @@ func (a *App) CopyScheme() {
 	scheme.Name = a.customSchemeName(schemeBaseName(a.settings.ColorScheme))
 	a.settings.Schemes = append(a.settings.Schemes, scheme)
 	a.settings.ColorScheme = scheme.Name
-	a.note = i18n.T("The scheme is copied; save to keep it.")
+	a.note = locales.SchemeCopied()
 	a.redraw()
 }
 
@@ -409,7 +409,7 @@ func (a *App) RemoveScheme(name string) {
 	if strings.EqualFold(a.settings.ColorScheme, name) {
 		a.settings.ColorScheme = a.schemeAfterRemoving(name)
 	}
-	a.note = i18n.T("The scheme is removed; save to keep it.")
+	a.note = locales.SchemeRemoved()
 	a.redraw()
 }
 
@@ -443,7 +443,7 @@ func (a *App) ResetKeybindings() {
 
 // AddProfile adds a profile to the file's list, and shows its page.
 func (a *App) AddProfile() {
-	p := store.Profile{ID: a.newProfileID(), Name: i18n.T("New profile")}
+	p := store.Profile{ID: a.newProfileID(), Name: locales.NewProfile()}
 	a.settings.Profiles = append(a.settings.Profiles, p)
 	a.settingsPage = ui.ProfilePage(p.ID)
 	a.editing, a.editingFrom = &p, p
@@ -510,7 +510,7 @@ func (a *App) DuplicateProfile(id string) {
 		return
 	}
 	p.ID = a.newProfileID()
-	p.Name = p.Name + " " + i18n.T("copy")
+	p.Name = p.Name + " " + locales.CopySuffix()
 	p.Discovered = false
 	a.settings.Profiles = append(a.settings.Profiles, p)
 	a.settingsPage = ui.ProfilePage(p.ID)
@@ -541,7 +541,7 @@ func (a *App) apply() {
 		return
 	}
 	s := a.settings
-	i18n.Set(s.Language)
+	locale(s.Language)
 	a.appearance()
 	a.keys = bindings(s.Keybindings)
 	a.profiles = profile.Resolve(s.Profiles, a.found)
@@ -599,7 +599,7 @@ func (a *App) poll(dispatch func(func())) {
 	}()
 	data, ok, err := sys.ReadSettings()
 	if err != nil {
-		note := fmt.Sprintf(i18n.T("settings.json: %v"), err)
+		note := i18n.F("errSettings", map[string]any{"error": err})
 		if a.file.setReadError(note) {
 			dispatch(func() { a.setNote(note) })
 		}
@@ -631,7 +631,7 @@ func (a *App) reload(data []byte) {
 			a.badData, a.configErr = nil, ""
 			a.setNote("")
 		}
-		if a.note == i18n.T("settings.json changed on disk; discard your changes to take it.") {
+		if a.note == locales.SettingsChangedNote() {
 			a.setNote("")
 		}
 		return
@@ -643,7 +643,7 @@ func (a *App) reload(data []byte) {
 		a.badData, a.configErr = nil, ""
 	}
 	if a.dirty() {
-		a.setNote(i18n.T("settings.json changed on disk; discard your changes to take it."))
+		a.setNote(locales.SettingsChangedNote())
 		return
 	}
 	settings, err := store.Parse(data)
@@ -692,7 +692,7 @@ func (a *App) safely(fn func()) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("wt-go: settings reload: %v\n%s", r, debug.Stack())
-			a.setNote(fmt.Sprintf(i18n.T("settings.json: %v"), r))
+			a.setNote(i18n.F("errSettings", map[string]any{"error": r}))
 		}
 	}()
 	fn()
@@ -796,13 +796,13 @@ func (a *App) clearNote(note string) {
 // settings: what is wrong, and where the content that was wrong is kept.
 func configError(data []byte, err error) string {
 	if data == nil {
-		return fmt.Sprintf(i18n.T("settings.json: %v"), err)
+		return i18n.F("errSettings", map[string]any{"error": err})
 	}
 	path, aerr := sys.ArchiveSettings(data)
 	if aerr != nil {
-		return fmt.Sprintf(i18n.T("settings.json is not valid: %v; the original could not be kept: %v"), err, aerr)
+		return i18n.F("errSettingsInvalidKeep", map[string]any{"error": err, "keepError": aerr})
 	}
-	return fmt.Sprintf(i18n.T("settings.json is not valid: %v; the original was kept at %s"), err, path)
+	return i18n.F("errSettingsInvalid", map[string]any{"error": err, "path": path})
 }
 
 // setNote says what the settings page says, and redraws when it is something

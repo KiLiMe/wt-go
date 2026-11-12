@@ -6,8 +6,8 @@ import (
 
 	myui "github.com/egoist/mygo/ui"
 
-	"wtgo/internal/i18n"
 	"wtgo/internal/store"
+	"wtgo/locales"
 )
 
 // navActions is the window as the settings column sees it: it counts the
@@ -42,7 +42,7 @@ func TestNavAddsProfiles(t *testing.T) {
 		profiles = append(profiles, Profile{ID: fmt.Sprintf("p%d", i), Name: fmt.Sprintf("Profile %d", i)})
 	}
 	tt, act := settingsOf(t, profiles)
-	if err := tt.Click(i18n.T("Add profile")); err != nil {
+	if err := tt.Click(locales.AddProfile()); err != nil {
 		t.Fatalf("the add row scrolled away: %v", err)
 	}
 	if act.added != 1 {
@@ -51,7 +51,7 @@ func TestNavAddsProfiles(t *testing.T) {
 	if err := tt.Click("Profile 17"); err == nil {
 		t.Fatal("the last profile is in view, so the column did not scroll")
 	}
-	if err := tt.Click(i18n.T("Show hidden profiles")); err != nil {
+	if err := tt.Click(locales.ShowHiddenProfiles()); err != nil {
 		t.Fatalf("the checkbox scrolled away: %v", err)
 	}
 	if act.hidden != 1 {
@@ -67,7 +67,7 @@ func TestNavHoldsUnderTheList(t *testing.T) {
 	if !ok {
 		t.Fatal("the profile is missing from the column")
 	}
-	add, ok := tt.Find(i18n.T("Add profile"))
+	add, ok := tt.Find(locales.AddProfile())
 	if !ok {
 		t.Fatal("the add row is missing from the column")
 	}

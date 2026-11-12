@@ -8,6 +8,7 @@ import (
 	"wtgo/internal/action"
 	"wtgo/internal/i18n"
 	"wtgo/internal/store"
+	"wtgo/locales"
 )
 
 // actionsPage lists a row for every action the window knows, by the group
@@ -15,7 +16,7 @@ import (
 // know; it records the key of the row that asks for one.
 func actionsPage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
-	section(c, i18n.T("Actions"), func() {
+	section(c, locales.Actions(), func() {
 		for _, g := range groups(s.Keybindings) {
 			myui.Text(c, i18n.T(g.title)).FontSize(12).TextColor(c.Theme().TextMuted)
 			myui.Column(c).Gap(2).Children(func() {
@@ -24,7 +25,7 @@ func actionsPage(c *myui.Context, st Settings, act Actions) {
 				}
 			})
 		}
-		myui.Button(c, i18n.T("Restore the defaults")).OnClick(act.ResetKeybindings)
+		myui.Button(c, locales.RestoreDefaults()).OnClick(act.ResetKeybindings)
 	})
 	if st.Recording != "" {
 		capture(c, act, st.Recording)
@@ -50,8 +51,8 @@ type entry struct {
 var groupOrder = func() map[string]int {
 	at := map[string]int{}
 	for _, a := range action.All() {
-		if _, ok := at[a.Group]; !ok {
-			at[a.Group] = len(at)
+		if _, ok := at[a.GroupKey]; !ok {
+			at[a.GroupKey] = len(at)
 		}
 	}
 	return at
@@ -76,15 +77,15 @@ func groups(all []store.Keybinding) []actionGroup {
 		}
 	}
 	for _, a := range action.All() {
-		at(a.Group)
-		rows[a.Group] = append(rows[a.Group], entry{action: a.ID, row: take(bound, a.ID)})
+		at(a.GroupKey)
+		rows[a.GroupKey] = append(rows[a.GroupKey], entry{action: a.ID, row: take(bound, a.ID)})
 	}
 	for _, kb := range all {
 		if action.Group(kb.Action) != "" {
 			continue
 		}
-		at("Other")
-		rows["Other"] = append(rows["Other"], entry{action: kb.Action, row: take(bound, kb.Action)})
+		at(action.GroupOther)
+		rows[action.GroupOther] = append(rows[action.GroupOther], entry{action: kb.Action, row: take(bound, kb.Action)})
 	}
 	sort.SliceStable(titles, func(i, j int) bool { return rank(titles[i]) < rank(titles[j]) })
 	out := make([]actionGroup, 0, len(titles))
@@ -124,9 +125,9 @@ func keybindingRow(c *myui.Context, st Settings, act Actions, e entry, all []sto
 	}
 	switch {
 	case st.Recording == e.action:
-		key = i18n.T("Press a key…")
+		key = locales.PressKey()
 	case key == "":
-		key = i18n.T("None")
+		key = locales.None()
 	}
 	color := t.Text
 	if clashes(all, key) {
@@ -140,7 +141,7 @@ func keybindingRow(c *myui.Context, st Settings, act Actions, e entry, all []sto
 		})
 		myui.Text(c, action.Title(e.action)).Grow(1).FontSize(12).TextColor(t.TextMuted).SingleLine().Tooltip(e.action)
 		if e.row >= 0 {
-			myui.Button(c, i18n.T("Remove")).OnClick(func() { act.RemoveKeybinding(e.action) })
+			myui.Button(c, locales.Remove()).OnClick(func() { act.RemoveKeybinding(e.action) })
 		}
 	})
 }

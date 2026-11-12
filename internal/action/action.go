@@ -5,7 +5,6 @@
 package action
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -44,13 +43,16 @@ const (
 	Profile = "profile."
 )
 
-// The groups the settings page lists the actions under.
+// The groups the settings page lists the actions under, by the key their
+// name is filed under in the catalogs.
 const (
-	GroupTab      = "Tab"
-	GroupPane     = "Pane"
-	GroupProfiles = "Profiles"
-	GroupFind     = "Find"
-	GroupWindow   = "Window"
+	GroupTab      = "tab"
+	GroupPane     = "pane"
+	GroupProfiles = "profiles"
+	GroupFind     = "find"
+	GroupWindow   = "window"
+	// GroupOther holds the keybindings of actions the window does not know.
+	GroupOther = "other"
 )
 
 // MaxNumber is the highest number a numbered action names.
@@ -60,11 +62,12 @@ const MaxNumber = 9
 type Action struct {
 	// ID is what a keybinding names and the palette runs.
 	ID string
-	// Title is what the action is called, with %d where a numbered action
-	// takes its number; Title reads it in the window's language.
-	Title string
-	// Group is what the settings page lists the action under.
-	Group string
+	// TitleKey is the key of what the action is called, in the catalogs;
+	// Title reads it in the window's language, with {n} where a numbered
+	// action takes its number.
+	TitleKey string
+	// GroupKey is the key of what the settings page lists the action under.
+	GroupKey string
 	// Keys are the keys the action starts on, the first the one the menus
 	// show. A keybinding the file holds replaces them.
 	Keys []string
@@ -73,26 +76,26 @@ type Action struct {
 // fixed are the actions that are not numbered, in the order the settings list
 // them, and the keys they start on.
 var fixed = []Action{
-	{ID: TabNew, Title: "New Tab", Group: GroupTab, Keys: []string{"ctrl+shift+t", "ctrl+t"}},
-	{ID: TabNext, Title: "Next Tab", Group: GroupTab, Keys: []string{"ctrl+tab"}},
-	{ID: TabPrev, Title: "Previous Tab", Group: GroupTab, Keys: []string{"ctrl+shift+tab"}},
-	{ID: TabDuplicate, Title: "Duplicate Tab", Group: GroupTab, Keys: []string{"ctrl+shift+d"}},
-	{ID: TabClose, Title: "Close Tab", Group: GroupTab},
+	{ID: TabNew, TitleKey: "newTab", GroupKey: GroupTab, Keys: []string{"ctrl+shift+t", "ctrl+t"}},
+	{ID: TabNext, TitleKey: "nextTab", GroupKey: GroupTab, Keys: []string{"ctrl+tab"}},
+	{ID: TabPrev, TitleKey: "previousTab", GroupKey: GroupTab, Keys: []string{"ctrl+shift+tab"}},
+	{ID: TabDuplicate, TitleKey: "duplicateTab", GroupKey: GroupTab, Keys: []string{"ctrl+shift+d"}},
+	{ID: TabClose, TitleKey: "closeTab", GroupKey: GroupTab},
 
-	{ID: PaneSplitAuto, Title: "Split Pane", Group: GroupPane, Keys: []string{"alt+shift+d"}},
-	{ID: PaneSplitRight, Title: "Split Right", Group: GroupPane, Keys: []string{"alt+shift+right"}},
-	{ID: PaneSplitDown, Title: "Split Down", Group: GroupPane, Keys: []string{"alt+shift+down"}},
-	{ID: PaneFocusLeft, Title: "Focus Left Pane", Group: GroupPane, Keys: []string{"alt+left"}},
-	{ID: PaneFocusRight, Title: "Focus Right Pane", Group: GroupPane, Keys: []string{"alt+right"}},
-	{ID: PaneFocusUp, Title: "Focus Up Pane", Group: GroupPane, Keys: []string{"alt+up"}},
-	{ID: PaneFocusDown, Title: "Focus Down Pane", Group: GroupPane, Keys: []string{"alt+down"}},
-	{ID: PaneClose, Title: "Close Pane", Group: GroupPane, Keys: []string{"ctrl+shift+w"}},
-	{ID: PaneCloseOthers, Title: "Close Other Panes", Group: GroupPane, Keys: []string{"alt+shift+w"}},
+	{ID: PaneSplitAuto, TitleKey: "splitPane", GroupKey: GroupPane, Keys: []string{"alt+shift+d"}},
+	{ID: PaneSplitRight, TitleKey: "splitRight", GroupKey: GroupPane, Keys: []string{"alt+shift+right"}},
+	{ID: PaneSplitDown, TitleKey: "splitDown", GroupKey: GroupPane, Keys: []string{"alt+shift+down"}},
+	{ID: PaneFocusLeft, TitleKey: "focusLeftPane", GroupKey: GroupPane, Keys: []string{"alt+left"}},
+	{ID: PaneFocusRight, TitleKey: "focusRightPane", GroupKey: GroupPane, Keys: []string{"alt+right"}},
+	{ID: PaneFocusUp, TitleKey: "focusUpPane", GroupKey: GroupPane, Keys: []string{"alt+up"}},
+	{ID: PaneFocusDown, TitleKey: "focusDownPane", GroupKey: GroupPane, Keys: []string{"alt+down"}},
+	{ID: PaneClose, TitleKey: "closePane", GroupKey: GroupPane, Keys: []string{"ctrl+shift+w"}},
+	{ID: PaneCloseOthers, TitleKey: "closeOtherPanes", GroupKey: GroupPane, Keys: []string{"alt+shift+w"}},
 
-	{ID: Find, Title: "Find", Group: GroupFind, Keys: []string{"ctrl+shift+f"}},
+	{ID: Find, TitleKey: "find", GroupKey: GroupFind, Keys: []string{"ctrl+shift+f"}},
 
-	{ID: Settings, Title: "Settings", Group: GroupWindow, Keys: []string{"ctrl+comma"}},
-	{ID: Palette, Title: "Command Palette", Group: GroupWindow, Keys: []string{"ctrl+shift+p"}},
+	{ID: Settings, TitleKey: "settings", GroupKey: GroupWindow, Keys: []string{"ctrl+comma"}},
+	{ID: Palette, TitleKey: "commandPalette", GroupKey: GroupWindow, Keys: []string{"ctrl+shift+p"}},
 }
 
 // all is every action: the fixed ones, and the numbered ones that bring the
@@ -101,18 +104,18 @@ var all = func() []Action {
 	out := append([]Action{}, fixed...)
 	for n := 1; n <= MaxNumber; n++ {
 		out = append(out, Action{
-			ID:    GotoAction(n),
-			Title: "Switch to Tab %d",
-			Group: GroupTab,
-			Keys:  []string{"ctrl+" + strconv.Itoa(n)},
+			ID:       GotoAction(n),
+			TitleKey: "switchToTab",
+			GroupKey: GroupTab,
+			Keys:     []string{"ctrl+" + strconv.Itoa(n)},
 		})
 	}
 	for n := 1; n <= MaxNumber; n++ {
 		out = append(out, Action{
-			ID:    ProfileAction(n),
-			Title: "Open Profile %d",
-			Group: GroupProfiles,
-			Keys:  []string{"ctrl+shift+" + strconv.Itoa(n)},
+			ID:       ProfileAction(n),
+			TitleKey: "openProfile",
+			GroupKey: GroupProfiles,
+			Keys:     []string{"ctrl+shift+" + strconv.Itoa(n)},
 		})
 	}
 	return out
@@ -140,16 +143,16 @@ func Title(id string) string {
 		return id
 	}
 	if n, ok := number(id); ok {
-		return fmt.Sprintf(i18n.T(a.Title), n)
+		return i18n.F(a.TitleKey, map[string]any{"n": n})
 	}
-	return i18n.T(a.Title)
+	return i18n.T(a.TitleKey)
 }
 
-// Group is what the settings page lists an action under, and "" for an action
-// the window does not know, which it lists last.
+// Group is the key of what the settings page lists an action under, and ""
+// for an action the window does not know, which it lists last.
 func Group(id string) string {
 	a, _ := Lookup(id)
-	return a.Group
+	return a.GroupKey
 }
 
 // number is the number an action that ends in one names, counting from one, as

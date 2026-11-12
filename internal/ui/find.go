@@ -1,13 +1,11 @@
 package ui
 
 import (
-	"fmt"
-
 	"github.com/egoist/mygo/plugins/terminal"
 	myui "github.com/egoist/mygo/ui"
 
-	"wtgo/internal/i18n"
 	"wtgo/internal/icons"
+	"wtgo/locales"
 )
 
 // The find bar's size.
@@ -53,7 +51,7 @@ func findBar(c *myui.Context, st State, act Actions) {
 		el.Children(func() {
 			in := myui.TextInputBase(c.Key("find"), &f.Text).
 				Grow(1).
-				Placeholder(i18n.T("Find"))
+				Placeholder(locales.Find())
 			// The bar holds the keyboard while it is open: a click on the
 			// pane or on a button would otherwise take the focus and leave
 			// the field deaf to the next key.
@@ -62,9 +60,9 @@ func findBar(c *myui.Context, st State, act Actions) {
 				act.Find(f.Text)
 			}
 			myui.Text(c, status(f.Status)).FontSize(11).TextColor(t.TextMuted).SingleLine()
-			findButton(c, icons.Up, i18n.T("Previous match"), act.FindPrevious)
-			findButton(c, icons.Chevron, i18n.T("Next match"), act.FindNext)
-			findButton(c, icons.Close, i18n.T("Close"), act.EndFind)
+			findButton(c, icons.Up, locales.FindPrevious(), act.FindPrevious)
+			findButton(c, icons.Chevron, locales.FindNext(), act.FindNext)
+			findButton(c, icons.Close, locales.Close(), act.EndFind)
 			// Enter picks the next match, Shift+Enter the one before it. The
 			// field takes Enter as its submit, and the bar cannot see the key
 			// itself, so the modifiers held say which one it was.
@@ -103,9 +101,9 @@ func status(s terminal.SearchStatus) string {
 	case s.Text == "":
 		return ""
 	case s.Total == 0:
-		return i18n.T("No matches")
+		return locales.FindNone()
 	case s.Selected == 0:
-		return fmt.Sprintf(i18n.T("%d found"), s.Total)
+		return locales.FindCount(s.Total)
 	}
-	return fmt.Sprintf(i18n.T("%d of %d"), s.Selected, s.Total)
+	return locales.FindPosition(s.Selected, s.Total)
 }

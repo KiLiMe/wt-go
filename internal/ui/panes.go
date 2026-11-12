@@ -3,9 +3,9 @@ package ui
 import (
 	myui "github.com/egoist/mygo/ui"
 
-	"wtgo/internal/i18n"
 	"wtgo/internal/layout"
 	"wtgo/internal/pane"
+	"wtgo/locales"
 )
 
 // grip is how wide the pointer may take the line between two panes: wider
@@ -141,7 +141,7 @@ func emptyState(c *myui.Context, act Actions) {
 		Justify(myui.Center).
 		Gap(12).
 		Children(func() {
-			myui.Text(c, i18n.T("No tabs open")).TextColor(t.TextMuted)
-			myui.Button(c, i18n.T("Open a tab")).OnClick(func() { act.NewTab("") })
+			myui.Text(c, locales.NoTabs()).TextColor(t.TextMuted)
+			myui.Button(c, locales.OpenTab()).OnClick(func() { act.NewTab("") })
 		})
 }

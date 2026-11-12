@@ -48,7 +48,7 @@ func TestGroups(t *testing.T) {
 	if want := len(action.All()) + 1; rows != want {
 		t.Errorf("the page lists %d rows, want the catalog's %d and the unknown one", rows, want)
 	}
-	if last := got[len(got)-1]; last.title != "Other" || len(last.rows) != 1 || last.rows[0].action != "no.such.action" {
+	if last := got[len(got)-1]; last.title != action.GroupOther || len(last.rows) != 1 || last.rows[0].action != "no.such.action" {
 		t.Errorf("the last group = %+v, want the unknown action under Other", last)
 	}
 	if n := rowCount(groups(nil)); n != len(action.All()) {
@@ -79,9 +79,9 @@ func TestGroupsOrder(t *testing.T) {
 	var want []string
 	seen := map[string]bool{}
 	for _, a := range action.All() {
-		if !seen[a.Group] {
-			seen[a.Group] = true
-			want = append(want, a.Group)
+		if !seen[a.GroupKey] {
+			seen[a.GroupKey] = true
+			want = append(want, a.GroupKey)
 		}
 	}
 	if len(titles) != len(want) {
