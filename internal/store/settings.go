@@ -97,10 +97,6 @@ type Settings struct {
 	AlwaysOnTop             bool `json:"alwaysOnTop"`
 	TitleFromActiveTerminal bool `json:"titleFromActiveTerminal"`
 
-	// StartSize is the grid the window starts with, in cells; zero leaves
-	// the size to the window.
-	StartSize Size `json:"startSize"`
-
 	MaxPanes int `json:"maxPanes"`
 
 	Schemes     []Scheme     `json:"schemes"`
@@ -119,12 +115,6 @@ type Font struct {
 type Padding struct {
 	X float32 `json:"x"`
 	Y float32 `json:"y"`
-}
-
-// Size is a terminal grid: how many cells wide and high.
-type Size struct {
-	Columns int `json:"columns"`
-	Rows    int `json:"rows"`
 }
 
 // Scheme is a color scheme: a background, a foreground, a cursor, a

@@ -24,8 +24,6 @@ func TestValidate(t *testing.T) {
 		{"opacity", func(s *Settings) { s.BackgroundOpacity = 1.5 }, "backgroundOpacity"},
 		{"scrollback", func(s *Settings) { s.ScrollbackMB = 1 << 20 }, "scrollbackMB"},
 		{"panes", func(s *Settings) { s.MaxPanes = 1000 }, "maxPanes"},
-		{"columns", func(s *Settings) { s.StartSize.Columns = 5000 }, "startSize.columns"},
-		{"rows", func(s *Settings) { s.StartSize.Rows = -1 }, "startSize.rows"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

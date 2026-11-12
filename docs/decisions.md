@@ -22,7 +22,7 @@
 | ADR-15 | profile 编辑用工作副本，保存时才写回 `profiles` | 有效 |
 | ADR-16 | 热重载以文件字节为准，有未保存改动时不覆盖 | 有效 |
 | ADR-17 | 多行粘贴确认在 `terminal.Options.OnPaste` 里拦 | 有效 |
-| ADR-18 | 启动大小（列×行）用两次测量，不估算单元格尺寸 | 有效 |
+| ADR-18 | 启动大小（列×行）用两次测量，不估算单元格尺寸 | 已被 ADR-46 取代 |
 | ADR-19 | 子进程收尾用“把本进程加进 Job Object” | 有效（`BREAKAWAY_OK` 已用于重置，见 ADR-35） |
 | ADR-20 | 崩溃日志写在配置目录，写完后重新 panic | 有效 |
 | ADR-21 | 失败给编号，日志写文件，`diag` 一次说完 | 有效 |
@@ -46,6 +46,11 @@
 | ADR-39 | 等 shell 出现时读内核的 children 文件，不再全量扫进程表 | 有效 |
 | ADR-40 | 性能基线（2026-11-11 单机实测，一次性记录） | 归档（数字为单机实测） |
 | ADR-41 | 文案交给 mygo 的 catalog，`internal/i18n` 只剩一个薄门面 | 有效 |
+| ADR-42 | 目录留空时回落到进程 cwd，而不是家目录 | 有效 |
+| ADR-43 | 设置页画成卡片行，弹菜单画在窗口里，「关于」只读编译期信息 | 有效 |
+| ADR-44 | 默认配置文件留空＝跟随系统，不是列表第一个 | 有效 |
+| ADR-45 | 标签前是一块方块，不是色点 | 有效 |
+| ADR-46 | 窗口开在上次的位置和大小，`startSize` 删掉 | 有效 |
 
 ---
 
@@ -275,6 +280,8 @@ Campbell / Solarized / Tango / Vintage 都不在其中。
 ---
 
 ## ADR-18 启动大小（列×行）用两次测量，不估算单元格尺寸
+
+> **已被 ADR-46 取代**：`startSize` 已删除，窗口几何由记住的窗口状态决定。以下保留为历史。
 
 **背景**：终端只报告“能放下多少格”，不报告一格多宽；mygo 也没有字体度量接口。
 第一版用“内容区宽 ÷ 列数”估算，实测 100×30 得到 97×29（还漏算了 36dp 标题栏）。
@@ -1032,3 +1039,30 @@ POSIX 上还能拿到登录 shell 的 `PATH`（`.zprofile` 里的东西不会莫
 **测试**：`internal/ui/colors_test.go` 的 `TestInkOn` 覆盖 8 个内置 shell 颜色；实机截图（2026-11-12）：
 跟随系统的 `pwsh` 灰方块、PowerShell 7 蓝方块白记号、Command Prompt 浅灰方块黑记号、设置页强调色
 方块配齿轮。
+
+---
+
+## ADR-46 窗口开在上次的位置和大小，`startSize` 删掉
+
+**背景**：`startSize`（列×行）与“记住窗口几何”是同一件事的两种说法：前者要求用户按格数猜一个尺寸，
+后者是用户调好窗口、关掉、下次还是那样。mygo 自带 `WindowOptions.StateKey` 与 `WindowStateStore`
+（关窗和退出时保存，下次创建同名 key 的窗口时还原，并检查记下的位置是否落在
+连着的屏幕上），我们早已在 `WindowOptions` 里给了 `StateKey: "main"`，所以几何一直在记 —— 只是记在
+mygo 自己的 `%APPDATA%\wt-go\window-state.json`，与 `settings.json` 不在同一个目录，谁也没看见它。
+`startSize` 那套“先撑大 120px 量两次格数再缩回来”（ADR-18）为此背着一整台状态机与启动瞬间的跳变。
+
+**决定**：删掉 `startSize`（字段、校验、设置页那一行、`internal/app/size.go` 整份、文案、文档），
+改为 `internal/app/windowstate.go` 实现 mygo 的 `WindowStateStore`，把 `window-state.json` 写到
+`settings.json` 旁边（字节由 `internal/sys` 的 `WindowStatePath`/`ReadWindowState`/`WriteWindowState` 读写）。
+没有记录时窗口按 `WindowOptions` 的 960×600 居中打开。不加“是否记住”的开关。
+
+**理由**：两个设置管同一件事，必然有一个是错的提示；用户能看见的窗口就是它下次的样子，比按格数推测
+更符合直觉（sshyard 也是记几何，只是它默认关、需要开关，而我们的默认就该是记住）。文件与设置同目录，
+`wt-go diag`、备份、整目录拷贝才是一份东西，而不是一半在 Roaming、一半在 Local。
+
+**代价**：改字体或 DPI 后，记下的像素尺寸会让格数变化（不是错，但用户可能觉得“列数变了”）；
+`window-state.json` 的坐标是屏幕绝对像素，手写无意义；旧版留下的 `%APPDATA%\wt-go\window-state.json`
+成为孤儿文件（不读、不删，用户可以自己删）。
+
+**测试**：`go test ./...`；实机：移到 140,160 / 900×650 后正常关窗 → `%LOCALAPPDATA%\wt-go\window-state.json`
+写入 `{"main":{"x":140,...}}`，再次启动窗口就在 140,160 / 900×650；删掉该文件后回到 960×600 居中。

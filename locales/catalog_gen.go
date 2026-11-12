@@ -1044,26 +1044,6 @@ func (msgs Messages) StartDirectoryNote() string {
 	return Catalog.Format(msgs.locale, "startDirectoryNote", nil)
 }
 
-// StartSize says "Start size"
-// in the language the app shows.
-func StartSize() string { return In(i18n.Locale()).StartSize() }
-
-// StartSize says "Start size"
-// in the language of msgs.
-func (msgs Messages) StartSize() string {
-	return Catalog.Format(msgs.locale, "startSize", nil)
-}
-
-// StartSizeNote says "Columns and rows of the window when it opens; 0 keeps the size it opens with."
-// in the language the app shows.
-func StartSizeNote() string { return In(i18n.Locale()).StartSizeNote() }
-
-// StartSizeNote says "Columns and rows of the window when it opens; 0 keeps the size it opens with."
-// in the language of msgs.
-func (msgs Messages) StartSizeNote() string {
-	return Catalog.Format(msgs.locale, "startSizeNote", nil)
-}
-
 // CloseOnLastTab says "Close on last tab"
 // in the language the app shows.
 func CloseOnLastTab() string { return In(i18n.Locale()).CloseOnLastTab() }

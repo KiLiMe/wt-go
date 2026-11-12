@@ -23,8 +23,6 @@ func (s Settings) Validate() error {
 	check("backgroundOpacity", between(s.BackgroundOpacity, 0, 1), "between 0 and 1")
 	check("scrollbackMB", between(float64(s.ScrollbackMB), 0, 1024), "between 0 and 1024")
 	check("maxPanes", between(float64(s.MaxPanes), 0, 64), "between 0 and 64")
-	check("startSize.columns", between(float64(s.StartSize.Columns), 0, 1000), "between 0 and 1000")
-	check("startSize.rows", between(float64(s.StartSize.Rows), 0, 1000), "between 0 and 1000")
 	check("confirmClose", s.ConfirmClose.Valid(), `"running", "always" or "never"`)
 	if len(bad) == 0 {
 		return nil

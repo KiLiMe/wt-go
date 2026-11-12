@@ -121,8 +121,6 @@
   "defaultProfileNote": "新标签默认运行的配置文件；没选时由终端自己找系统默认的 shell。",
   "startDirectory": "起始目录",
   "startDirectoryNote": "profile 未指定目录时，新标签从哪里开始。",
-  "startSize": "启动大小",
-  "startSizeNote": "打开时的列数与行数；0 表示保持默认。",
   "closeOnLastTab": "关最后一个标签时关窗口",
   "closeOnLastTabNote": "最后一个标签关闭时关闭窗口。",
   "copyOnSelect": "选中即复制",

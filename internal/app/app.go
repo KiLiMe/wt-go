@@ -128,17 +128,6 @@ type App struct {
 	editing     *store.Profile
 	editingFrom store.Profile
 	editingArgs string
-
-	// frames counts the frames drawn; measure is the step of measuring a
-	// cell for the size the settings start the window with, and sized says
-	// whether the window took it.
-	frames  int
-	measure int
-	base    reading
-	last    reading
-	cellW   float32
-	cellH   float32
-	sized   bool
 }
 
 // binding is a key, and the action it does.
@@ -181,6 +170,9 @@ func Run() (err error) {
 		}
 		a := newApp()
 		a.appearance()
+		// Before the window: the store is read when the first window with a
+		// StateKey is created, and the window opens at the geometry it holds.
+		mygo.App.SetWindowStateStore(windowState{})
 		a.win = mygo.NewWindow(mygo.WindowOptions{
 			Title:             "wt-go",
 			Width:             960,
@@ -549,7 +541,6 @@ func (a *App) view(c *myui.Context) {
 		a.palette = nil
 	}
 	a.content = ui.Content(c)
-	a.frames++
 	a.apply()
 	a.bind(c)
 	st := ui.State{
@@ -586,7 +577,6 @@ func (a *App) view(c *myui.Context) {
 		st.Tabs = append(st.Tabs, a.uiTab(tab))
 	}
 	ui.View(c, st, a)
-	a.startSize()
 	a.syncTitle()
 }
 

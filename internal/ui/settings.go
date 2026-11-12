@@ -222,13 +222,6 @@ func startupPage(c *myui.Context, st Settings, act Actions) {
 		fieldBlock(c, locales.StartDirectory(), locales.StartDirectoryNote(), func() {
 			myui.TextInput(c, &s.StartDirectory).Placeholder(store.DefaultHomeHint())
 		})
-		field(c, locales.StartSize(), locales.StartSizeNote(), func() {
-			myui.Row(c).AlignItems(myui.Center).Gap(8).Children(func() {
-				count(c, &s.StartSize.Columns, 0, 400)
-				myui.Text(c, "\u00d7").TextColor(c.Theme().TextMuted)
-				count(c, &s.StartSize.Rows, 0, 200)
-			})
-		})
 		field(c, locales.CloseOnLastTab(), locales.CloseOnLastTabNote(), func() {
 			myui.Switch(c, &s.CloseOnLastTab)
 		})
