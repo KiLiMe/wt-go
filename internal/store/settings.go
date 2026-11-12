@@ -70,7 +70,7 @@ func (c Confirm) MarshalJSON() ([]byte, error) { return json.Marshal(string(c)) 
 type Settings struct {
 	Language       string `json:"language"`
 	Theme          string `json:"theme"`
-	DefaultProfile string `json:"defaultProfile"`
+	DefaultProfile string `json:"defaultProfile,omitempty"`
 	StartOn        string `json:"startOn"`
 	StartDirectory string `json:"startDirectory"`
 

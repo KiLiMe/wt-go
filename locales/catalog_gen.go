@@ -694,6 +694,16 @@ func (msgs Messages) SystemLanguage() string {
 	return Catalog.Format(msgs.locale, "systemLanguage", nil)
 }
 
+// SystemProfile says "System"
+// in the language the app shows.
+func SystemProfile() string { return In(i18n.Locale()).SystemProfile() }
+
+// SystemProfile says "System"
+// in the language of msgs.
+func (msgs Messages) SystemProfile() string {
+	return Catalog.Format(msgs.locale, "systemProfile", nil)
+}
+
 // BuiltIn says "built-in"
 // in the language the app shows.
 func BuiltIn() string { return In(i18n.Locale()).BuiltIn() }
@@ -1004,11 +1014,11 @@ func (msgs Messages) DefaultProfile() string {
 	return Catalog.Format(msgs.locale, "defaultProfile", nil)
 }
 
-// DefaultProfileNote says "The profile a new tab runs unless it picks one."
+// DefaultProfileNote says "The profile a new tab runs unless it picks one; with none picked the terminal starts the system's own shell."
 // in the language the app shows.
 func DefaultProfileNote() string { return In(i18n.Locale()).DefaultProfileNote() }
 
-// DefaultProfileNote says "The profile a new tab runs unless it picks one."
+// DefaultProfileNote says "The profile a new tab runs unless it picks one; with none picked the terminal starts the system's own shell."
 // in the language of msgs.
 func (msgs Messages) DefaultProfileNote() string {
 	return Catalog.Format(msgs.locale, "defaultProfileNote", nil)

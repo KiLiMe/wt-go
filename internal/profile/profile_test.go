@@ -38,24 +38,21 @@ func TestResolve(t *testing.T) {
 	}
 }
 
-// TestDefault covers picking the profile a new tab runs.
+// TestDefault covers picking the profile a new tab runs: the named one, or the
+// zero profile, which runs the system's own shell.
 func TestDefault(t *testing.T) {
 	profiles := []Profile{
 		{ID: "a", Hidden: true},
 		{ID: "b"},
 		{ID: "c"},
 	}
-	if p, ok := Default(profiles, "c"); !ok || p.ID != "c" {
-		t.Errorf("named = %+v, %v", p, ok)
+	if p := Default(profiles, "c"); p.ID != "c" {
+		t.Errorf("named = %+v", p)
 	}
-	if p, ok := Default(profiles, "a"); !ok || p.ID != "b" {
-		t.Errorf("hidden named = %+v, %v", p, ok)
-	}
-	if p, ok := Default(profiles, "missing"); !ok || p.ID != "b" {
-		t.Errorf("missing named = %+v, %v", p, ok)
-	}
-	if _, ok := Default([]Profile{{ID: "a", Hidden: true}}, ""); ok {
-		t.Error("picked a hidden profile")
+	for _, id := range []string{"", "a", "missing"} {
+		if p := Default(profiles, id); p.ID != "" || p.Command != "" || p.Name != "" {
+			t.Errorf("Default(%q) = %+v, want the zero profile", id, p)
+		}
 	}
 }
 

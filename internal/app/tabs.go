@@ -16,13 +16,9 @@ import (
 	"wtgo/internal/ui"
 )
 
-// NewTab opens a tab that runs a profile; "" runs the default one.
+// NewTab opens a tab that runs a profile; "" runs the system's own shell.
 func (a *App) NewTab(profileID string) {
-	p, ok := profile.Default(a.profiles, profileID)
-	if !ok {
-		return
-	}
-	a.openTab(p, "")
+	a.openTab(profile.Default(a.profiles, profileID), "")
 }
 
 // CloseTab closes the tab at i, and with the last tab the window, when the
@@ -334,10 +330,7 @@ func (a *App) DuplicateTab(i int) {
 	if tab.Focus == nil || !tab.Focus.Pane() {
 		return
 	}
-	p, ok := profile.Default(a.profiles, tab.ProfileID)
-	if !ok {
-		return
-	}
+	p := profile.Default(a.profiles, tab.ProfileID)
 	a.openTab(p, tab.Focus.Term.Dir())
 }
 
@@ -556,13 +549,10 @@ func (a *App) splitPane(dir layout.Dir) {
 	if a.settings.MaxPanes > 0 && tab.Count() >= a.settings.MaxPanes {
 		return
 	}
-	p, ok := profile.Default(a.profiles, tab.ProfileID)
-	if !ok {
-		return
-	}
+	p := profile.Default(a.profiles, tab.ProfileID)
 	term, err := a.newTerminal(a.termOptions(p, tab.Focus.Term.Dir()))
 	if err != nil {
-		log.Printf("wt-go: %s", fault.Line(fault.ChildFailed, p.Name+": "+err.Error()))
+		log.Printf("wt-go: %s", fault.Line(fault.ChildFailed, startFailed(p, err)))
 		return
 	}
 	tab.Split(dir, term)

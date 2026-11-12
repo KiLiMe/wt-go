@@ -967,3 +967,33 @@ macOS 上 `t.TempDir()` 是 `/var/...` 而内核报 `/private/var/...`，两侧�
 
 **测试**：`internal/ui/advanced_test.go` 仍按按钮文字定位（页头加了标题、卡片重排都没动它）；
 `internal/ui/form_test.go` 覆盖 `choice`/`count`/`measure`/`ratio` 的取值映射。
+## ADR-44 默认配置文件留空＝跟随系统，不是列表第一个
+
+**背景**：设置页「启动」页的下拉里，空值那一项叫「无」，而它的实际含义是「列表里第一个可见的
+profile」（`profile.Default` 的回落循环）。于是隐藏一个 profile 就会静默改掉所有新标签跑什么，
+而「无」这个词说的是「什么都不跑」——都不对。POSIX 上它凑巧等于用户自己的 shell，只因为
+`sys.Discover` 把 `$SHELL` 排在第一位；Windows 上则等于 `pwsh7`（候选顺序的第一位）。
+
+**决定**：
+
+1. 空值＝**跟随系统**：`profile.Default(profiles, "")` 直接返回零值 profile，不再查列表。
+   零值 profile 的 `Command` 为空，`CommandLine()` 据此返回 `nil`，终端自己去找程序：
+   Windows 依次 `pwsh.exe` → `powershell.exe` → `%COMSPEC%` → `cmd.exe`；POSIX 用 `$SHELL`
+   （空则 `/bin/sh`，macOS `/bin/zsh`）并以登录 shell（`-zsh`）起。
+2. `profile.Default` 不再返回 `(Profile, bool)`：它总能给出一个 profile，零值就是「没有名字的那个」。
+   名字对不上（profile 删了、被隐藏了）也回零值，而不是换列表里的另一个。
+3. `store.Settings.DefaultProfile` 加 `omitempty`：「跟随系统」在 `settings.json` 里根本不出现。
+4. 文案用「跟随系统」（`systemProfile`，与语言栏的 `systemLanguage` 同词）；`▾` 菜单不显示解析结果
+   ——菜单是选 profile 的地方，不是解释回落链的地方。
+
+**理由**：把「默认」从**列表里的位置**变成**明文规则**，隐藏或重排 profile 不再改变新标签的行为；
+POSIX 上还能拿到登录 shell 的 `PATH`（`.zprofile` 里的东西不会莫名其妙消失）；Windows 上仍是
+`pwsh` 在前，不会因为「系统默认＝cmd」这个说法把用户推回 cmd.exe。
+
+**代价**：Windows 上只装了 `bash.exe`、没装 `pwsh`/`powershell` 的机器，默认标签从 bash 变成
+`%COMSPEC%`/`cmd.exe`；反过来，期待「跟随系统＝cmd」的人要在下拉里显式选 Command Prompt。
+老文件里写着 `"defaultProfile": ""` 的语义不变，写着具体 id 的照旧。
+
+**测试**：`internal/profile/profile_test.go` 的 `TestDefault` 覆盖空、未知、隐藏三种 id 都回零值；
+`TestCommandLine` 覆盖零 profile 返回 `nil`。实机（2026-11-12，Windows）：默认标签的子进程是
+`pwsh.exe`，与改造前一致。

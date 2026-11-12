@@ -747,13 +747,10 @@ func (a *App) onClosed() {
 	a.settingsTab = nil
 }
 
-// openFirst opens the tab the settings start with.
+// openFirst opens the tab the settings start with; with no profile named it
+// runs the system's own shell.
 func (a *App) openFirst() {
-	p, ok := profile.Default(a.profiles, a.settings.DefaultProfile)
-	if !ok {
-		return
-	}
-	a.openTab(p, "")
+	a.openTab(profile.Default(a.profiles, a.settings.DefaultProfile), "")
 }
 
 // openTab opens a tab that runs p, in dir when dir is not "", else where p,
@@ -779,7 +776,7 @@ func (a *App) openTab(p profile.Profile, dir string) {
 	opts.OnPaste = func(d transfer.Data) bool { return a.askPaste(term, d) }
 	term, err := a.newTerminal(opts)
 	if err != nil {
-		log.Printf("wt-go: %s", fault.Line(fault.ChildFailed, p.Name+": "+err.Error()))
+		log.Printf("wt-go: %s", fault.Line(fault.ChildFailed, startFailed(p, err)))
 		return
 	}
 	tab := pane.New(term)
@@ -788,6 +785,16 @@ func (a *App) openTab(p profile.Profile, dir string) {
 	a.revealTab()
 	a.syncTitle()
 	a.redraw()
+}
+
+// startFailed is what a log line says about a tab that could not start: the
+// profile it was to run, or just the error when it names none, because the
+// program that failed was the one the terminal picked.
+func startFailed(p profile.Profile, err error) string {
+	if p.Name == "" {
+		return err.Error()
+	}
+	return p.Name + ": " + err.Error()
 }
 
 // termOptions is the terminal of a tab that runs p in dir.

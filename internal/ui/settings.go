@@ -204,7 +204,7 @@ func startupPage(c *myui.Context, st Settings, act Actions) {
 	section(c, "", func() {
 		field(c, locales.DefaultProfile(), locales.DefaultProfileNote(), func() {
 			opts := make([]option, 0, len(st.Known)+1)
-			opts = append(opts, option{"", locales.None()})
+			opts = append(opts, option{"", locales.SystemProfile()})
 			for _, p := range st.Known {
 				opts = append(opts, option{p.ID, p.Name})
 			}

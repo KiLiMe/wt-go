@@ -72,9 +72,9 @@ func Color(id string) string {
 // in the order sys found them, each replaced by the settings' profile of the
 // same id, so renaming or recoloring a discovered profile keeps it, and hidden
 // ones stay out of the way; and then the profiles the settings name that no
-// shell matched. The shells come first because a settings file that names no
-// default profile starts the first profile in the list, and a profile someone
-// adds should not take over the tabs they did not ask it for.
+// shell matched. The shells come first because they are what the machine
+// already has, and a profile someone adds goes after them: adding one should
+// not push down the shells they already know.
 func Resolve(configured []store.Profile, found []Found) []Profile {
 	named := make(map[string]store.Profile, len(configured))
 	for _, p := range configured {
@@ -128,20 +128,24 @@ func fromStore(p store.Profile) Profile {
 
 // Default picks the profile a new tab runs when nothing names one: the one
 // with id when it is there and shown, else the first shown one.
-func Default(profiles []Profile, id string) (Profile, bool) {
-	if id != "" {
-		for _, p := range profiles {
-			if p.ID == id && !p.Hidden {
-				return p, true
-			}
-		}
+// Default is the profile a new tab runs: the one named id, or the zero profile
+// when id names none the window offers.
+//
+// The zero profile is what the settings call following the system: it holds no
+// program, so the terminal picks a shell itself (pwsh, then PowerShell, then
+// cmd on Windows; $SHELL elsewhere) and starts it as a login shell. Falling
+// back to the first profile in the list instead would make "the default" a
+// position in a list, which anyone can change by hiding a profile.
+func Default(profiles []Profile, id string) Profile {
+	if id == "" {
+		return Profile{}
 	}
 	for _, p := range profiles {
-		if !p.Hidden {
-			return p, true
+		if p.ID == id && !p.Hidden {
+			return p
 		}
 	}
-	return Profile{}, false
+	return Profile{}
 }
 
 // CommandLine is the program and its arguments, as a terminal starts it;
