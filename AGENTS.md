@@ -11,6 +11,7 @@
 - 动作的 id、标题、分组与默认键位只有一份：`internal/action`。菜单、命令面板、设置页、默认 `keybindings` 都从它取名，不另拼字符串；用户能看到的键位说明也只在 `docs/键位.md` 写一遍。
 - 改行为时一起改文档：`docs/使用说明.md`（用户视角）、`docs/配置参考.md`（`settings.json` 字段）、`docs/代码导读.md`（代码地图）、`docs/decisions.md`（新决策写成 ADR）、`docs/plan.md`（阶段状态）。
 - 新的失败路径要编号：`internal/fault` 里加一个码，`docs/故障排查.md` 里写它的确认与修法；日志里用 `fault.Line(code, detail)` 打印，别写自由文本。
+- 版本号与发版流程不在本文件：见 `docs/代码导读.md` 的「版本与发布」与 `docs/使用说明.md` 第 2 节。
 
 ## 路径
 
@@ -39,11 +40,3 @@
 | `docs/` | `使用说明.md` / `配置参考.md`（`settings.json` 全字段）/ `键位.md`（默认键位与键位写法）/ `故障排查.md`（故障码）/ `Linux.md` / `代码导读.md` / `decisions.md`（ADR）/ `plan.md`（阶段计划） |
 | `mygo.json` | `go tool mygo build` 的包名、版本与打包信息 |
 | `Scripts/build.ps1` / `Scripts/build.sh` | 参数：`-Test`/`--test` 先跑 vet 与测试、`-Clean`/`--clean` 清掉 `build/`、`-Package`/`--package` 只出 `dist/`、`-Version`/`--expect <版本>` 断言 `mygo.json` 的版本就是这一串（发版对 tag 用） |
-
-## 版本
-
-- `mygo.json` 的 `version` 是唯一来源：`mygo build` 把它写进 exe 的版本信息，两个构建脚本打完再从 exe 属性 / `dist` 里读回来对账，对不上就报错。别在代码里再手写一份版本号。
-- 发版：改 `mygo.json` 的 `version` → 提交推上 `main` → `git tag -a v<版本> -m "wt-go <版本>"` 推上去。tag 要带 `-a`（annotated），CI 要求 tag 与 `mygo.json` 一致才发。
-- 格式是语义化版本三段 `主.次.修订`（如 `0.3.0`）。`0.x` 期间还不承诺兼容：不兼容的改动升次版本号（`0.3.0` → `0.4.0`），新功能与修 bug 只升修订号。到 `1.0.0` 起按 SemVer：不兼容升主版本号、兼容的新功能升次版本号、只修 bug 升修订号。
-- CI 与两个构建脚本只认三段纯数字，pre-release（`v1.0.0-rc.1`）与 build metadata 暂时发不了；要发就先同时改这四处正则。`wt-go version` 自报的 `v0.3.1-dev` 来自 Go 的 build info，不是标签，两回事。
-- `wt-go version` 里 `(packaged …)` 那一段来自 `internal/cli` 的 `packagedVersion`，由两个构建脚本与 CI 的 package 步骤用 `MYGO_LDFLAGS="-X wtgo/internal/cli.packagedVersion=$target"` 注入（mygo 把它拼到自己的 `-ldflags` 后面，**不带** `-ldflags=` 前缀）。裸 `go build` 没有这一段，正好说明它不是发布包。

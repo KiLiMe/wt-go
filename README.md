@@ -25,16 +25,17 @@ pwsh ./Scripts/build.ps1                                  # 2 构建（Linux/mac
 | macOS | 能编译，CI 只跑测试、不打包 | `.github/workflows/ci.yml` 的构建矩阵 |
 | 构建工具 | 无额外依赖；PowerShell 7+（Windows）或 bash（Linux/macOS） | `Scripts/build.ps1` / `Scripts/build.sh` |
 
-## 贡献指引
+## 许可
 
-- 提交前本地跑一遍：`gofmt -l .`（必须无输出）、`go vet ./...`、`go test ./...`；
-  或 `pwsh ./Scripts/build.ps1 -Test` 一次做完。
-- 改行为的提交要同时改文档：`docs/使用说明.md`、`docs/配置参考.md`、`docs/代码导读.md`、
-  `docs/decisions.md`（新决策写 ADR）、`docs/plan.md`。
-- 包依赖方向是硬规则，由 `internal/app/deps_test.go` 用 `go list` 校验；新增包或改 import 要同步那里的规则表
-  和 `docs/代码导读.md` 的依赖图，否则 `go test ./internal/app` 失败。
-- 文案只有 `locales/en.json` 与 `locales/zh-Hans.json` 两份，改完跑 `go tool mygo generate`（写出
-  `locales/catalog_gen.go`，生成物提交）与 `go tool mygo i18n check`。
-- 注释写英文、文档写中文；提交信息用 `feat:` / `fix:` / `docs:` 前缀。
-- 报 issue 附上 `wt-go diag --redact` 的输出：个人路径会换成 `%USERPROFILE%` 之类的占位。
-- 其余约定见 [AGENTS.md](AGENTS.md)。
+wt-go 本身用 [MIT 许可证](LICENSE)，版权归 Copyright (c) 2026 KiLiMe：可以自由使用、修改、
+再分发（含商用），只需在所有副本里保留版权与许可声明。软件按“原样”提供，不含任何担保。
+
+随二进制分发的第三方组件各自保留原许可：
+
+| 组件 | 用途 | 许可 |
+| --- | --- | --- |
+| mygo v0.8.3 | UI、终端插件与打包工具 | MIT（`LICENSE`） |
+| libghostty-vt（Ghostty） | 终端内核，即 `ghostty-vt.dll` / `libghostty-vt.so` | MIT，见 [Ghostty 上游 LICENSE](https://github.com/ghostty-org/ghostty/blob/main/LICENSE) |
+| Remix Icon v4.8.0 | 界面图标，`internal/icons/svg/` | Apache-2.0（全文见 `internal/icons/LICENSE`，出处见 `internal/icons/NOTICE`） |
+
+开发与提交约定见 [AGENTS.md](AGENTS.md)。
