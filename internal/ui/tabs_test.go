@@ -215,35 +215,89 @@ func TestTabFillsStrip(t *testing.T) {
 	}
 }
 
-// TestTabAccent covers the line the tab in front draws along its top edge:
-// the theme's accent, stopped short of the tab's rounded ends, and no line at
-// all on the tab behind it.
-func TestTabAccent(t *testing.T) {
-	top := 0 // the tab is the strip's whole height
-	draw := func(active int) (*myui.Tester, func(x, y int) color.RGBA) {
-		at := &myui.ScrollState{}
-		st := &State{Tabs: []Tab{{Name: "PowerShell 7"}}, Active: active, TabsScroll: at}
-		tt := myui.NewTester(func(c *myui.Context) { strip(c, *st, &scrollActions{at: at}) }, 900, TitleBarHeight*2)
-		tt.Frame()
-		img := tt.Image()
-		return tt, func(x, y int) color.RGBA { return img.RGBAAt(x, y) }
+// TestTabWidths covers the room a tab takes: as wide as its name asks for
+// while the strip has room, narrower as more tabs come, and never narrower than
+// the parts of a tab need -- past that the strip scrolls instead of squeezing a
+// name and a close button away.
+func TestTabWidths(t *testing.T) {
+	alone := tabRoomIn(t, 1, 2400)
+	if alone > maxTabWidth {
+		t.Errorf("one tab alone takes %v DIPs, want no more than the widest tab, %v", alone, maxTabWidth)
 	}
+	if alone < minTabWidth {
+		t.Errorf("one tab alone takes %v DIPs, want no less than its parts, %v", alone, minTabWidth)
+	}
+	crowded := tabRoomIn(t, 6, 900)
+	if !(crowded < alone) {
+		t.Errorf("six tabs take %v DIPs each, one tab alone %v: the tabs do not narrow as more come",
+			crowded, alone)
+	}
+	// Forty tabs cannot fit however narrow they get: they stop at the room
+	// their parts need, and the strip scrolls the rest.
+	tt, _, at := stripOf(t, 40, 0, 900)
+	if at.MaxX <= 0 {
+		t.Fatalf("forty tabs in 900 DIPs fit: MaxX = %v", at.MaxX)
+	}
+	if got := tabRoomIn(t, 40, 900); got != minTabWidth {
+		t.Errorf("forty tabs take %v DIPs each, want the room their parts need, %v", got, minTabWidth)
+	}
+	// A maximized window has room to spare even for long names: those tabs
+	// each take the widest a tab gets, and stop there.
+	long := "Windows PowerShell (Administrator)"
+	if got := tabRoomOfNamed(t, 3, 1936, long); got != maxTabWidth {
+		t.Errorf("three long names in a 1936 DIP strip take %v DIPs each, want %v", got, maxTabWidth)
+	}
+	if tt.HasText("\u2026") {
+		t.Errorf("the name of a tab is ellipsized before the strip scrolls")
+	}
+}
 
-	_, px := draw(0)
-	line := px(int(stripGutter)+40, top)
-	body := px(int(stripGutter)+40, int(TitleBarHeight)-2)
-	if line == body {
-		t.Errorf("the tab in front draws %v along its top edge, the same as its body %v", line, body)
+// tabRoomIn draws n tabs in a strip of the width it gives, and says how wide
+// one of them is.
+func tabRoomIn(t *testing.T, n, width int) float32 {
+	t.Helper()
+	tt, _, _ := stripOf(t, n, 0, width)
+	name, ok := tt.Find("PowerShell 7")
+	if !ok {
+		t.Fatalf("%d tabs draw no name: %q", n, tt.Texts())
 	}
-	// The line is two DIPs high: the row below it is the tab's own background
-	// again, near its left end where no name is drawn.
-	if got := px(int(stripGutter)+40, top+2); got != body {
-		t.Errorf("the line is thicker than two DIPs: it draws %v below itself, want the tab's %v", got, body)
-	}
+	return name.W + tabChrome
+}
 
-	_, px = draw(1)
-	if got := px(int(stripGutter)+40, top); got != px(890, 2) {
-		t.Errorf("the tab behind draws %v along its top edge, want the strip's %v", got, px(890, 2))
+// tabRoomOfNamed is tabRoomIn for tabs that carry the name it gives.
+func tabRoomOfNamed(t *testing.T, n, width int, name string) float32 {
+	t.Helper()
+	tt, _, _ := stripOfNamed(t, n, 0, width, name)
+	found, ok := tt.Find(name)
+	if !ok {
+		t.Fatalf("%d tabs name %q draw no name: %q", n, name, tt.Texts())
+	}
+	return found.W + tabChrome
+}
+
+// TestTabsShare covers the room a tab is given out of the strip's: the strip
+// split among the tabs, less the lines between them, and the lines beside the
+// tab in front left out, that tab being the dark one they would cut.
+func TestTabsShare(t *testing.T) {
+	for _, tc := range []struct {
+		tabs, active int
+		room, want   float32
+	}{
+		// Four tabs, one line between the two behind: the tab in front takes
+		// none on either side of it.
+		{4, 1, 301, 75},
+		// With the tab in front at the start there is one more line: three
+		// tabs are left to split the rest.
+		{4, 0, 301, 74.75},
+	} {
+		st := State{Tabs: make([]Tab, tc.tabs), Active: tc.active}
+		if got := tabsShare(st, tc.room); got != tc.want {
+			t.Errorf("with tab %d of %d in front, %v DIPs split to %v a tab, want %v",
+				tc.active, tc.tabs, tc.room, got, tc.want)
+		}
+	}
+	if got := tabsShare(State{}, 900); got != 0 {
+		t.Errorf("a strip with no tabs splits %v DIPs, want none", got)
 	}
 }
 
@@ -327,11 +381,17 @@ func (a *scrollActions) ScrollTabs(by float32) {
 // size it gives.
 func stripOf(t *testing.T, n int, active int, width int) (*myui.Tester, *scrollActions, *myui.ScrollState) {
 	t.Helper()
+	return stripOfNamed(t, n, active, width, "PowerShell 7")
+}
+
+// stripOfNamed is stripOf for tabs that carry the name it gives.
+func stripOfNamed(t *testing.T, n int, active int, width int, name string) (*myui.Tester, *scrollActions, *myui.ScrollState) {
+	t.Helper()
 	at := &myui.ScrollState{}
 	act := &scrollActions{at: at}
 	st := &State{Tabs: make([]Tab, n), Active: active, TabsScroll: at}
 	for i := range st.Tabs {
-		st.Tabs[i].Name = "PowerShell 7"
+		st.Tabs[i].Name = name
 	}
 	tt := myui.NewTester(func(c *myui.Context) { strip(c, *st, act) }, width, TitleBarHeight*2)
 	tt.Frame()
