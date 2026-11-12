@@ -44,3 +44,5 @@
 
 - `mygo.json` 的 `version` 是唯一来源：`mygo build` 把它写进 exe 的版本信息，两个构建脚本打完再从 exe 属性 / `dist` 里读回来对账，对不上就报错。别在代码里再手写一份版本号。
 - 发版：改 `mygo.json` 的 `version` → 提交推上 `main` → `git tag -a v<版本> -m "wt-go <版本>"` 推上去。tag 要带 `-a`（annotated），CI 要求 tag 与 `mygo.json` 一致才发。
+- 格式是语义化版本三段 `主.次.修订`（如 `0.3.0`）。`0.x` 期间还不承诺兼容：不兼容的改动升次版本号（`0.3.0` → `0.4.0`），新功能与修 bug 只升修订号。到 `1.0.0` 起按 SemVer：不兼容升主版本号、兼容的新功能升次版本号、只修 bug 升修订号。
+- CI 与两个构建脚本只认三段纯数字，pre-release（`v1.0.0-rc.1`）与 build metadata 暂时发不了；要发就先同时改这四处正则。`wt-go version` 自报的 `v0.3.1-dev` 来自 Go 的 build info，不是标签，两回事。
