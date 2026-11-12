@@ -3,7 +3,6 @@ package sys
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 )
 
@@ -55,13 +54,13 @@ func TestStartDir(t *testing.T) {
 		}
 	}
 
-	// Nothing written is the platform's own answer: Windows opens at home,
-	// because what it starts an exe with says nothing about the person (the
-	// exe's own folder from Explorer, %SystemRoot%\System32 from the Start
-	// menu); everywhere else inheriting it is how the desktops say "open
-	// here".
+	// Nothing written is home on every platform: what a launcher starts a
+	// terminal with says nothing about the person (the exe's own folder from
+	// Explorer, %SystemRoot%\System32 from the Start menu, a desktop
+	// session's cwd), so the cwd is only read when "current" asks for it.
+	// No home directory to give is the one case that falls back to the cwd.
 	wantEmpty := want
-	if runtime.GOOS == "windows" && home != "" {
+	if home != "" {
 		wantEmpty = home
 	}
 	if got := StartDir(""); resolved(t, got) != resolved(t, wantEmpty) {

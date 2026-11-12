@@ -46,13 +46,18 @@
 | ADR-39 | 等 shell 出现时读内核的 children 文件，不再全量扫进程表 | 有效 |
 | ADR-40 | 性能基线（2026-11-11 单机实测，一次性记录） | 归档（数字为单机实测） |
 | ADR-41 | 文案交给 mygo 的 catalog，`internal/i18n` 只剩一个薄门面 | 有效 |
-| ADR-42 | 目录留空时回落到进程 cwd，而不是家目录 | 有效 |
+| ADR-42 | 目录留空时回落到进程 cwd，而不是家目录 | 已被 ADR-53 修订（Linux/macOS 部分） |
 | ADR-43 | 设置页画成卡片行，弹菜单画在窗口里，「关于」只读编译期信息 | 有效 |
 | ADR-44 | 默认配置文件留空＝跟随系统，不是列表第一个 | 有效 |
 | ADR-45 | 标签前是一块方块，不是色点 | 有效 |
 | ADR-46 | 窗口开在上次的位置和大小，`startSize` 删掉 | 有效 |
 | ADR-47 | 把 Ghostty 的四个行为做成设置：滚轮倍数、最小对比度、内边距颜色、剪贴板读写 | 有效 |
 | ADR-48 | 标签宽度按份额分，强调线删掉 | 有效 |
+| ADR-49 | 起始目录认两个词：`current` 与 `home` | 有效 |
+| ADR-50 | `-d`：这一次运行从哪开（不写文件） | 有效 |
+| ADR-51 | Windows 上「没配」就是家目录 | 已被 ADR-53 取消分平台 |
+| ADR-52 | 标签先说自己启动的 shell，再说 shell 的标题 | 有效 |
+| ADR-53 | 起始目录不再分平台：没配就是家目录 | 有效 |
 | ADR-47 | 把 Ghostty 的四个行为做成设置：滚轮倍数、最小对比度、内边距颜色、剪贴板读写 | 有效 |
 
 ---
@@ -929,6 +934,8 @@ breeze、WinTray）里 5 个用 catalog、1 个用 struct 字面量，主流是�
 
 ## ADR-42 目录留空时回落到进程 cwd，而不是家目录
 
+> **Linux/macOS 部分已被 ADR-53 修订**：目录不再跟随进程 cwd，默认也是家目录。以下保留当时的推理。
+
 **背景**：Linux 上把系统的终端（`/usr/bin/rminal`）换成 wt-go 后，在文件管理器里「在此打开终端」，
 第一个 shell 总落在用户家目录。实机抓取（2026-11-12）：wt-go 进程 cmdline 零参数、进程 cwd 是
 `/home/<user>/Applications`，而它拉起的 `/bin/bash` 的 cwd 是 `/home/<user>`。链路是
@@ -1209,6 +1216,8 @@ mygo 自己的 `%APPDATA%\wt-go\window-state.json`，与 `settings.json` 不在�
 
 ## ADR-51 Windows 上「没配」就是家目录
 
+> **已被 ADR-53 修订**：`defaultStartDir` 不再分平台，两处都返回家目录。以下保留当时的推理。
+
 **背景**：ADR-42 让「什么都没配」回落到进程 cwd，理由是「文件管理器只能用 chdir+exec 传目录」。这在
 Linux/macOS 成立（`TerminalDirCommand`、`xdg-terminal-exec --working-directory`），在 Windows 不成立：
 资源管理器双击 exe 时 cwd 是 exe 自己的文件夹，开始菜单/任务栏启动是 `%SystemRoot%\System32`；
@@ -1263,3 +1272,32 @@ OSC 0/2，标签就一直写着「跟随系统」，而设置页里同一个词�
 **代价**：`runsOf` 复制了 mygo 选默认 shell 的规则（取第一项），两家不一致时标签会在首个标题到达前
 说错一小会儿，`runsOf` 的注释点名了这个依赖。测试：`TestLabel`（两级新用例）、`TestRunsOf`
 （Windows/POSIX 路径与空列表）、`TestTabNamesTheShellItRuns`（标题前、以及有 profile 名时各叫什么）。
+
+## ADR-53 起始目录不再分平台：没配就是家目录
+
+**背景**：ADR-42 让「什么都没配」回落到进程 cwd，理由是 Linux/macOS 的文件管理器只能用 chdir+exec
+传目录；ADR-51 又把 Windows 单独改成家目录。实机反馈（2026-11-12）：在文件管理器里打开
+`build/linux-amd64/wt-go`，新标签落在 `build/linux-amd64` —— cwd 这条通道里混着启动器自己的习惯，
+人无法从「点了个可执行文件」推出「终端开在它旁边」。同一个字段两套默认，还得在文档、设置页说明与
+测试里各讲一遍。
+
+**决定**：
+
+1. `sys.defaultStartDir()` 只剩一份（`internal/sys/startdir.go`，没有 build tag）：`Home()`，拿不到
+   主目录时才回落 `WorkDir()`；`startdir_windows.go` 与 `startdir_other.go` 删除。
+2. `"startDirectory": ""` 与 profile 的空 `dir` 在两个平台都等于 `home`；`current` 仍然可用，
+   只是要明说。
+3. 「在此打开终端」改由参数表达：`wt-go -d "$PWD"`。`-d` 与保留词（`current`/`home`）的语义不变
+   （ADR-49、ADR-50）。
+
+**理由**：cwd 里没有「是谁要这个目录」的信息。资源管理器给 exe 目录、开始菜单给 `%SystemRoot%\System32`、
+桌面会话给它自己被启动的地方，而 Linux 上同一个 chdir+exec 既可能来自文件管理器的「在此打开」，
+也可能来自双击一个可执行文件。既然分不出，默认就答一个稳定的地方，把「在此打开」留成必须明说的意图。
+家目录也与 Windows Terminal 的 `startingDirectory` 默认一致，两平台一个答案。
+
+**代价**：把 wt-go 设成桌面终端的 Linux 用户，文件管理器的「在此打开终端」不再落在目标目录；要旧行为
+就写 `"startDirectory": "current"`，或在集成处传 `-d`（`xdg-terminal-exec --working-directory` 这类
+调用方本来就在传参数）。ADR-42 的 Linux/macOS 部分与 ADR-51 的第 1 条由本条取代。
+
+**测试**：`internal/sys/workdir_test.go` 的 `TestStartDir` 去掉 `runtime.GOOS` 分支：`""` 期望家目录
+（拿不到家目录时期望 `os.Chdir` 到的目录），`current` 仍是 chdir 后的目录，路径原样返回。

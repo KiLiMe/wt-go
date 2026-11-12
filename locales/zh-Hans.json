@@ -120,7 +120,7 @@
   "defaultProfile": "默认配置文件",
   "defaultProfileNote": "新标签默认运行的配置文件；没选时由终端自己找系统默认的 shell。",
   "startDirectory": "起始目录",
-  "startDirectoryNote": "profile 未指定目录时，新标签从哪里开始：current（wt-go 启动时所在的目录）、home（主目录），或一个路径。留空时 Windows 用主目录，其他平台用 current。",
+  "startDirectoryNote": "profile 未指定目录时，新标签从哪里开始：current（wt-go 启动时所在的目录）、home（主目录），或一个路径。留空时用主目录。",
   "closeOnLastTab": "关最后一个标签时关窗口",
   "closeOnLastTabNote": "最后一个标签关闭时关闭窗口。",
   "copyOnSelect": "选中即复制",

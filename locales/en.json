@@ -120,7 +120,7 @@
   "defaultProfile": "Default profile",
   "defaultProfileNote": "The profile a new tab runs unless it picks one; with none picked the terminal starts the system's own shell.",
   "startDirectory": "Start directory",
-  "startDirectoryNote": "Where a new tab starts when its profile names no directory: current (where wt-go was started), home, or a path. Empty means home on Windows and current elsewhere.",
+  "startDirectoryNote": "Where a new tab starts when its profile names no directory: current (where wt-go was started), home, or a path. Empty means home.",
   "closeOnLastTab": "Close on last tab",
   "closeOnLastTabNote": "Close the window when its last tab closes.",
   "copyOnSelect": "Copy on select",
