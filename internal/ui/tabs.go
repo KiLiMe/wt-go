@@ -10,14 +10,9 @@ import (
 
 // TitleBarHeight is the height of the tab strip, which is the title bar: the
 // window keeps it clear of its window controls, and the strip runs under
-// them. It is the height of Windows Terminal's, so that a window beside one
-// keeps the two bars level.
-const TitleBarHeight = 40
-
-// tabHeight is the height of a tab, less than the strip's: the tab in front
-// floats clear of the window's top edge, so that its rounded top corners are
-// drawn rather than cut off, the way Windows Terminal's are.
-const tabHeight float32 = 32
+// them. It is Windows Terminal's 30 DIP, so that a window beside one keeps
+// the two bars level and its pane starts where the other one's does.
+const TitleBarHeight = 30
 
 // tabLine is how thick the line along the top of the tab in front is, and
 // tabLineInset how far it stops short of the tab's ends: the tab's top corners
@@ -30,6 +25,9 @@ const (
 // stripGutter is the room the strip keeps between the window's left edge and
 // the first tab, for the same reason.
 const stripGutter float32 = 8
+
+// nameBold is the weight a bold name is drawn in, as myui's Bold names it.
+const nameBold = 700
 
 // tabWidth is how wide a tab is while the settings make them all alike.
 const tabWidth float32 = 176
@@ -301,7 +299,7 @@ func stepButton(c *myui.Context, st State, act Actions, dir int) myui.Element {
 // and the buttons that open a tab after the last of them.
 func tabs(c *myui.Context, st State, act Actions) {
 	var move *tabMove
-	myui.Row(c).Height(TitleBarHeight).AlignItems(myui.End).Gap(4).Children(func() {
+	myui.Row(c).Height(TitleBarHeight).Gap(4).Children(func() {
 		for i := range st.Tabs {
 			el := tab(c, st, act, i)
 			if d, ok := myui.Drop[tabDrag](el); ok && move == nil {
@@ -340,7 +338,7 @@ func tab(c *myui.Context, st State, act Actions, i int) myui.Element {
 	active := i == st.Active
 	menu := func(m *myui.Menu) { tabMenu(m, st, act, i) }
 	el := myui.Row(c).
-		Height(tabHeight).
+		Height(TitleBarHeight).
 		AlignItems(myui.Center).
 		Gap(8).
 		Padding(0, 8, 0, 12).
@@ -348,7 +346,13 @@ func tab(c *myui.Context, st State, act Actions, i int) myui.Element {
 		OnClick(func() { act.FocusTab(i) }).
 		Drag(tabDrag{from: i}).
 		ContextMenu(menu)
-	name := measuredName(c, tb.Name)
+	nameWeight := 0
+	if active {
+		// The tab in front is the one the eye looks for first: it names itself
+		// in bold, as Windows Terminal's does.
+		nameWeight = nameBold
+	}
+	name := measuredName(c, tb.Name, nameWeight)
 	if st.EqualTabs {
 		// Every tab as wide as the others, whatever its name takes.
 		el = el.Width(tabWidth)
@@ -361,7 +365,8 @@ func tab(c *myui.Context, st State, act Actions, i int) myui.Element {
 		// The tab in front carries the terminal's background up into the
 		// strip, rounded at the top the way Windows Terminal does, and draws
 		// the accent along its top edge: the tab joins the pane below it, so
-		// the line is what tells the two apart at a glance.
+		// the line is what tells the two apart at a glance. It is the strip's
+		// whole height, so the round meets the window's edge.
 		el = el.Background(t.Background).Radius(8, 8, 0, 0).
 			Draw(func(p *myui.Painter, r myui.Rect) {
 				p.Fill(myui.Rect{X: r.X + tabLineInset, Y: r.Y, W: r.W - 2*tabLineInset, H: tabLine},
@@ -391,9 +396,14 @@ func tab(c *myui.Context, st State, act Actions, i int) myui.Element {
 		// the tab's menu itself: an unselectable element ends the search for
 		// one above it, so a menu only on the row would not open over the
 		// name, the widest part of the tab.
-		myui.Text(c, tb.Name).
+		text := myui.Text(c, tb.Name).
 			SingleLine().MaxWidth(name).Ellipsis("…").TextColor(nameColor).
 			Unselectable().ContextMenu(menu)
+		if nameWeight != 0 {
+			// Bold sets the weight on the element already drawing: the call
+			// mutates it, so its result is not needed.
+			text.Bold()
+		}
 		if active || el.Hovered() {
 			closeButton(c, act, i, active)
 		} else {
@@ -414,10 +424,12 @@ func tabAccent(t *myui.Theme) myui.Color {
 }
 
 // measuredName is how wide a tab draws its name: as wide as the name takes
-// in the theme's font, within the room a tab may take.
-func measuredName(c *myui.Context, name string) float32 {
+// in the theme's font, within the room a tab may take. Weight is the weight
+// the name is drawn in, so that a bold name is measured bold: a regular
+// width would ellipsize it in the tab it is widest in.
+func measuredName(c *myui.Context, name string, weight int) float32 {
 	t := c.Theme()
-	w, _ := c.MeasureText(0, myui.Span{Text: name, Font: t.Font, Size: t.FontSize})
+	w, _ := c.MeasureText(0, myui.Span{Text: name, Font: t.Font, Size: t.FontSize, Weight: weight})
 	return nameWidth(w)
 }
 

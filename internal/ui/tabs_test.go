@@ -192,10 +192,10 @@ func TestStripButtons(t *testing.T) {
 	}
 }
 
-// TestTabFloats covers the tab in front: it is shorter than the strip and
-// starts in from the window's edge, so that its rounded top corners are drawn
-// rather than cut off by the window's edge.
-func TestTabFloats(t *testing.T) {
+// TestTabFillsStrip covers the tab in the strip: it is the strip's whole
+// height, as Windows Terminal's is, so that the surface above it does not
+// push the pane down, and it starts in from the window's edge.
+func TestTabFillsStrip(t *testing.T) {
 	tt, _, _ := stripOf(t, 1, 0, 900)
 	img := tt.Image()
 	px := func(x, y int) color.RGBA { return img.RGBAAt(x, y) }
@@ -204,14 +204,14 @@ func TestTabFloats(t *testing.T) {
 	if surface.A != 0xff {
 		t.Fatalf("the strip draws %v at its far end", surface)
 	}
-	if got := px(int(stripGutter)+2, 2); got != surface {
-		t.Errorf("the strip draws %v above the tab, want the surface %v", got, surface)
-	}
 	if got := px(int(stripGutter)/2, TitleBarHeight-1); got != surface {
 		t.Errorf("the strip draws %v left of the tab, want the surface %v", got, surface)
 	}
-	if got := px(int(stripGutter)+20, TitleBarHeight-1); got == surface {
-		t.Errorf("the tab does not reach the bottom of the strip: it draws %v", got)
+	// The tab reaches both edges of the strip: no surface above or below it.
+	for _, y := range []int{0, TitleBarHeight - 1} {
+		if got := px(int(stripGutter)+40, y); got == surface {
+			t.Errorf("the strip draws the surface %v at height %d, over the tab", got, y)
+		}
 	}
 }
 
@@ -219,7 +219,7 @@ func TestTabFloats(t *testing.T) {
 // the theme's accent, stopped short of the tab's rounded ends, and no line at
 // all on the tab behind it.
 func TestTabAccent(t *testing.T) {
-	top := int(TitleBarHeight - tabHeight)
+	top := 0 // the tab is the strip's whole height
 	draw := func(active int) (*myui.Tester, func(x, y int) color.RGBA) {
 		at := &myui.ScrollState{}
 		st := &State{Tabs: []Tab{{Name: "PowerShell 7"}}, Active: active, TabsScroll: at}
@@ -237,7 +237,7 @@ func TestTabAccent(t *testing.T) {
 	}
 	// The line is two DIPs high: the row below it is the tab's own background
 	// again, near its left end where no name is drawn.
-	if got := px(int(stripGutter)+6, top+2); got != body {
+	if got := px(int(stripGutter)+40, top+2); got != body {
 		t.Errorf("the line is thicker than two DIPs: it draws %v below itself, want the tab's %v", got, body)
 	}
 
