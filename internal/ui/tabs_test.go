@@ -247,12 +247,26 @@ func TestTabAccent(t *testing.T) {
 	}
 }
 
-// TestTabDivider covers the line between two tabs that are both behind: one
-// DIP wide, sixteen high and centered in the strip, and none beside the tab in
-// front, which is the dark rounded one the line would cut.
-func TestTabDivider(t *testing.T) {
-	for _, active := range []int{0, 2} {
-		tt, _, _ := stripOf(t, 3, active, 900)
+// TestStripDividers covers the lines the strip draws: one DIP wide, sixteen
+// high and centered in the strip, between two tabs that are both behind and on
+// both sides of the button that opens a tab — but none beside the tab in front,
+// which is the dark rounded one the line would cut, and that counts for the
+// line on the left of the button too when that button sits against it.
+func TestStripDividers(t *testing.T) {
+	for _, tc := range []struct {
+		tabs, active, want int
+	}{
+		// One tab, and it is in front: only the line past the button.
+		{1, 0, 1},
+		// Two tabs: the one behind keeps its lines, the one in front keeps none.
+		{2, 0, 2},
+		{2, 1, 1},
+		// Three tabs: the line between two of them behind, plus the button's.
+		{3, 0, 3},
+		{3, 1, 2},
+		{3, 2, 2},
+	} {
+		tt, _, _ := stripOf(t, tc.tabs, tc.active, 900)
 		open, ok := tt.Find(locales.NewTab())
 		if !ok {
 			t.Fatal("the strip draws no button to open a tab")
@@ -262,9 +276,9 @@ func TestTabDivider(t *testing.T) {
 		mid := int(TitleBarHeight) / 2
 		surface := px(890, 2)
 		var found []int
-		// The two lines beside the button that opens a tab stand 4 DIP off it,
-		// in the button's own room: this looks between the tabs.
-		for x := 1; x < int(open.X)-8; x++ {
+		// The window's own buttons are past the one that picks a profile, so
+		// this stops before them.
+		for x := 1; x < int(open.X)+60; x++ {
 			if px(x, mid) == surface || px(x-1, mid) != surface || px(x+1, mid) != surface {
 				continue
 			}
@@ -278,9 +292,9 @@ func TestTabDivider(t *testing.T) {
 			}
 			found = append(found, x)
 		}
-		if len(found) != 1 {
-			t.Errorf("with tab %d in front the strip draws %d lines between two tabs, want 1: %v",
-				active, len(found), found)
+		if len(found) != tc.want {
+			t.Errorf("with tab %d of %d in front the strip draws %d lines, want %d: %v",
+				tc.active, tc.tabs, len(found), tc.want, found)
 		}
 	}
 }

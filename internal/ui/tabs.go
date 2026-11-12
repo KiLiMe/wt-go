@@ -207,7 +207,7 @@ func stripTabs(c *myui.Context, st State, act Actions) {
 	if st.TabsScroll == nil {
 		myui.Row(c).Height(TitleBarHeight).Grow(1).AlignItems(myui.Center).Children(func() {
 			tabs(c, st, act)
-			stripButtons(c, st, act)
+			stripButtons(c, st, act, true)
 		})
 		return
 	}
@@ -228,7 +228,7 @@ func stripTabs(c *myui.Context, st State, act Actions) {
 		// The buttons that open a tab sit past the tabs rather than in them:
 		// however many tabs there are, a tab is a press away rather than a
 		// scroll to the end away.
-		stripButtons(c, st, act)
+		stripButtons(c, st, act, !scrolls)
 	})
 }
 
@@ -322,10 +322,17 @@ func tabs(c *myui.Context, st State, act Actions) {
 // and the menu that picks the profile it runs, with the lines Windows Terminal
 // draws on both sides of the button that opens a tab. They sit right after the
 // tabs rather than at the far end of a wide window, so that a tab is a press
-// away whatever the strip shows.
-func stripButtons(c *myui.Context, st State, act Actions) myui.Element {
+// away whatever the strip shows. beside says the buttons touch the last tab
+// rather than standing past the arrows that scroll it.
+func stripButtons(c *myui.Context, st State, act Actions, beside bool) myui.Element {
+	// The line on the left belongs to the tab it separates from, and a tab in
+	// front is given none: beside the tab in front, that line is left out, as
+	// Windows Terminal leaves it out between two of its own.
+	front := len(st.Tabs) > 0 && st.Active == len(st.Tabs)-1
 	return myui.Row(c).Height(TitleBarHeight).AlignItems(myui.Center).Gap(2).Children(func() {
-		stripDivider(c).Margin(0, 4)
+		if !beside || !front {
+			stripDivider(c).Margin(0, 4)
+		}
 		newTabButton(c, act)
 		stripDivider(c).Margin(0, 4)
 		profilesMenu(c, st, act)
