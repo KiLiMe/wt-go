@@ -107,6 +107,10 @@ jobs:
       # the Windows installer are left out (the installer would download NSIS
       # on every push).
       - name: package
+        # Same injection as Scripts/build.*: the release archives must answer with
+        # the version they are labelled.
+        env:
+          MYGO_LDFLAGS: -X wtgo/internal/cli.packagedVersion=${{ steps.version.outputs.version }}
         run: go tool mygo build -platform "${{ matrix.platforms }}" -skip-dmg -skip-installer -o dist
       # The version in the exe's properties comes from mygo.json alone. Read it
       # back: a stray .syso in the package makes mygo skip its own resources, and
@@ -122,6 +126,17 @@ jobs:
             exit 1
           }
           Write-Host "  [OK] exe v$got"
+          # wt-go is a GUI binary: pwsh does not wait for it, so ask for the wait
+          # and for the output to land in a file instead of a pipe.
+          $out = Join-Path $env:RUNNER_TEMP 'wt-go-version.txt'
+          Start-Process -FilePath 'dist/windows-amd64/wt-go.exe' -ArgumentList 'version' `
+            -NoNewWindow -Wait -RedirectStandardOutput $out
+          $says = (Get-Content -Raw -LiteralPath $out).Trim()
+          if ($says -notlike "*packaged $got*") {
+            Write-Host "::error::the exe reports '$says', wanted a packaged $got in it"
+            exit 1
+          }
+          Write-Host "  [OK] $says"
       # A release carries one portable archive per platform, both .zip: the
       # executable with the native library beside it, unpacked anywhere. No
       # installer, no .deb, no PKGBUILD: mygo build still writes those, they are
