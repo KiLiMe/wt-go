@@ -347,7 +347,7 @@ func tab(c *myui.Context, st State, act Actions, i int) myui.Element {
 	if st.EqualTabs {
 		// Every tab as wide as the others, whatever its name takes.
 		el = el.Width(tabWidth)
-		name = tabWidth - 60
+		name = tabWidth - 70
 	}
 	// A tab keeps its width when the strip is short of room: it is the strip
 	// that scrolls, not the name and the close button that go.
@@ -376,9 +376,7 @@ func tab(c *myui.Context, st State, act Actions, i int) myui.Element {
 		}
 	})
 	el.Children(func() {
-		if dot := colorOf(tb.Color); dot.A > 0 {
-			myui.Box(c).Size(8, 8).Radius(4).Background(dot)
-		}
+		tabIcon(c, tb, active)
 		nameColor := t.TextMuted
 		if active {
 			nameColor = t.Text
@@ -443,6 +441,35 @@ func tabMenu(m *myui.Menu, st State, act Actions, i int) {
 	if m.Item(locales.CloseOtherTabs()).Disabled(len(st.Tabs) < 2).Chosen() {
 		act.CloseOtherTabs(i)
 	}
+}
+
+// tabIcon is the mark before a tab's name: a square of the color of the
+// profile the tab runs, with the terminal in it, or a gear for the tab that
+// holds the settings. A profile without a color gets the quiet square, since
+// a color the user never chose should not be the loudest thing in the strip.
+func tabIcon(c *myui.Context, tb Tab, active bool) {
+	t := c.Theme()
+	switch face := colorOf(tb.Color); {
+	case tb.Page != nil:
+		iconTile(c, icons.Settings, t.Accent, inkOn(t.Accent), active)
+	case face.A > 0:
+		iconTile(c, icons.Terminal, face, inkOn(face), active)
+	default:
+		iconTile(c, icons.Terminal, t.Border, t.TextMuted, active)
+	}
+}
+
+// iconTile is the square a tab wears: the mark in it, on a face of the color
+// of the profile, dimmed when the tab is not in front, the way its name is.
+func iconTile(c *myui.Context, ic *icons.Icon, face, mark myui.Color, active bool) {
+	const size float32 = 18
+	if !active {
+		face = face.Alpha(0.85)
+		mark = mark.Alpha(0.85)
+	}
+	myui.Box(c).Size(size, size).Shrink(0).Radius(size * 0.28).Background(face).Center().Children(func() {
+		myui.Icon(c, ic.SVG).Size(size*0.58, size*0.58).TextColor(mark)
+	})
 }
 
 // closeButton closes a tab. It takes the surface under the pointer, so that

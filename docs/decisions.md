@@ -1000,3 +1000,35 @@ POSIX 上还能拿到登录 shell 的 `PATH`（`.zprofile` 里的东西不会莫
 **测试**：`internal/profile/profile_test.go` 的 `TestDefault` 覆盖空、未知、隐藏三种 id 都回零值；
 `TestCommandLine` 覆盖零 profile 返回 `nil`。实机（2026-11-12，Windows）：默认标签的子进程是
 `pwsh.exe`，与改造前一致。
+
+## ADR-45 标签前是一块方块，不是色点
+
+**背景**：标签名前只有一个 8 DIP 的色点（`myui.Box(c).Size(8,8).Radius(4)`），那个尺寸在 40 DIP
+的栏里几乎看不出是什么；设置页那个标签根本没有点；profile 一多，作者只能靠名字分辨。
+
+**决定**：
+
+1. 色点换成 18 DIP 的圆角方块（半径 0.28×边长），中间是记号：终端标签用 `icons.Terminal`
+   （Remix 的 `terminal-line`），设置页标签（`tb.Page != nil`）用 `icons.Settings`（`settings-3-line`）
+   加强调色底。
+2. 底色是该 profile 的颜色；**记号颜色按 WCAG 对比度选**（`internal/ui/colors.go` 的 `inkOn`：
+   黑色只在对比度高出白色 1.8 倍时才用）。因为 wt-go 的 shell 颜色里有浅的（cmd `#cccccc`、
+   zsh `#e5c07b`、sh `#b0b0b0`、bash `#4eaa25`），照参考实现那样一律白字会糊；但深蓝
+   （`#3b78ff`）上黑字也不好，所以用「明显更好才换」的门槛，而不是亮度阈值。
+3. 没配颜色的 profile（跟随系统、用户自建）用 `t.Border` 底 + `t.TextMuted` 记号：一块安静的灰方块，
+   用户没选过的颜色不该成为栏里最响的东西。
+4. 不在前面的标签，方块与记号都 `Alpha(0.85)`，与名字变灰同步。
+5. 两个 SVG 从 Remix Icon v4.8.0 取（与 jsDelivr 上 `remixicon@4.8.0` 的原文逐字节一致，分类是
+   `Development/terminal-line.svg`、`System/settings-3-line.svg`），`internal/icons` 的 LICENSE/NOTICE
+   不用改。
+
+**理由**：全部用现成的 `myui.Box` + `myui.Icon`（`Center()` 居中、`Radius` 圆角、`Size` 定尺寸），
+不写自绘代码；参考实现（sshyard `internal/app/style.go:50` 的 `tile`）也是同一个写法，
+但 `Size(20)` 在 wt-go 32 DIP 的标签里偏高，取 18。
+
+**代价**：每个标签宽约 10 DIP，`EqualTabs` 时名字宽度从 `tabWidth-60` 改成 `tabWidth-70`，
+一屏能放下的标签少半个；`inkOn` 只是启发式，极端的自定义颜色仍可能不够对比。
+
+**测试**：`internal/ui/colors_test.go` 的 `TestInkOn` 覆盖 8 个内置 shell 颜色；实机截图（2026-11-12）：
+跟随系统的 `pwsh` 灰方块、PowerShell 7 蓝方块白记号、Command Prompt 浅灰方块黑记号、设置页强调色
+方块配齿轮。

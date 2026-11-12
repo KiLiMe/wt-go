@@ -44,4 +44,8 @@ var (
 	Left    = load("arrow-left-s-line") // the tabs the strip scrolled past
 	Right   = load("arrow-right-s-line")
 	Close   = load("close-line") // a close button
+	// Terminal is the mark of a tab that runs a program.
+	Terminal = load("terminal-line")
+	// Settings is the mark of the tab that holds the settings.
+	Settings = load("settings-3-line")
 )
