@@ -747,14 +747,20 @@ func (a *App) openFirst() {
 	a.openTab(p, "")
 }
 
-// openTab opens a tab that runs p, in dir when dir is not "", else where p
-// and the settings say.
+// openTab opens a tab that runs p, in dir when dir is not "", else where p,
+// the settings and this process say, in that order.
 func (a *App) openTab(p profile.Profile, dir string) {
 	if dir == "" {
 		dir = p.Dir
 	}
 	if dir == "" {
 		dir = a.settings.StartDirectory
+	}
+	// Nothing configured: start where we were started, which is what a file
+	// manager's "open a terminal here" passes and what mygo would otherwise
+	// replace with the home directory.
+	if dir == "" {
+		dir = sys.WorkDir()
 	}
 	dir = sys.ExpandPath(dir)
 	var term *terminal.Terminal

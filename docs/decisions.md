@@ -902,3 +902,35 @@ breeze、WinTray）里 5 个用 catalog、1 个用 struct 字面量，主流是�
 **测试**：`locales/locales_test.go`（key 覆盖率、占位符声明与消息正文一致、动作 key 都在目录里、语言列表以原文打头）；
 `internal/i18n/i18n_test.go`（原文回退、缺 key 回显 key、`F` 填占位符、`Valid` 的边界、`Autonym`）；
 `internal/action/action_test.go` 钉住编号动作的标题与未知 id；`internal/ui/keybindings_test.go` 钉住未知动作落在 `other` 组。
+
+---
+
+## ADR-42 目录留空时回落到进程 cwd，而不是家目录
+
+**背景**：Linux 上把系统的终端（`/usr/bin/rminal`）换成 wt-go 后，在文件管理器里「在此打开终端」，
+第一个 shell 总落在用户家目录。实机抓取（2026-11-12）：wt-go 进程 cmdline 零参数、进程 cwd 是
+`/home/<user>/Applications`，而它拉起的 `/bin/bash` 的 cwd 是 `/home/<user>`。链路是
+`internal/app/app.go` 的 `openTab`：profile 的 `dir` 与 `settings.json` 的 `startDirectory` 都是 `""`
+时 `Dir: ""` 交给 mygo，`plugins/terminal/terminal.go` 的 `if dir == "" { dir, _ = os.UserHomeDir() }`
+把 pty 开到家里。桌面与文件管理器只能用「chdir 后 exec」表达「开在这里」，进程 cwd 是它唯一的传递通道。
+`PWD` 虽然也是继承来的（实测值正是目标目录），但它由 shell 维护、可能与真实 cwd 不符，Windows 上也没有。
+
+**决定**：
+
+1. `internal/sys` 新增 `WorkDir()`：`os.Getwd()`，出错返回 `""`。`internal/sys` 是全部 OS 副作用的出口，
+   `internal/app` 因此仍不直接 import `os`。
+2. `app.openTab` 的目录按 `profile.dir` → `startDirectory` → `sys.WorkDir()` 三级回落，之后才 `sys.ExpandPath`。
+3. 不读 `PWD`，也不加环境变量/CLI 参数（读 `WT_GO_START_DIR` 那种方案留给需要区分「图标启动回家目录」的场合）。
+4. 不改 mygo 侧：`Options.Dir == ""` → 家目录是它的文档契约。
+
+**理由**：exec 式启动器没有别的办法说目录；这一级补上之后，文件管理器、桌面图标、脚本里 `cd` 后启动
+都自然落在启动处，与多数 Linux 终端的默认一致。前两级（profile 的 `dir`、`startDirectory`）仍优先，
+配置过的人不受影响。
+
+**代价**：点图标/按快捷键启动时也跟随会话的 cwd（实测 NDE 会话是 `/home/<user>/Applications`），
+不再固定家目录；要严格区分就得让 shim 在 `exec` 前导出 `WT_GO_START_DIR="$PWD"`，那是另一套功能。
+`os.Getwd()` 在 cwd 已被删除时失败，这时返回空字符串，仍由 mygo 交给家目录。
+
+**测试**：`internal/sys/workdir_test.go` 的 `TestWorkDirFollowsChdir` 钉住「跟随 chdir 到的目录」；
+macOS 上 `t.TempDir()` 是 `/var/...` 而内核报 `/private/var/...`，两侧各套一次 `filepath.EvalSymlinks` 再比。
+
