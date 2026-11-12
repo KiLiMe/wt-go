@@ -82,11 +82,32 @@ type Settings struct {
 	CursorBlink       bool    `json:"cursorBlink"`
 	ScrollbackMB      int     `json:"scrollbackMB"`
 
+	// PaddingColor is what the room around a terminal's grid shows:
+	// "background" is the window's, "extend" the cells nearest to it, so
+	// that a program that paints its own background reaches the edges,
+	// and "always" extends them whatever they hold.
+	PaddingColor string `json:"paddingColor"`
+	// MinimumContrast is the least contrast text has with the background
+	// it is drawn on, as a WCAG ratio from 0 to 21: 0 leaves every cell as
+	// the program drew it, 4.5 is the ratio the guidelines call readable.
+	MinimumContrast float32 `json:"minimumContrast"`
+
 	CopyOnSelect          bool    `json:"copyOnSelect"`
 	RightClick            string  `json:"rightClick"`
 	PasteMultilineConfirm bool    `json:"pasteMultilineConfirm"`
 	ConfirmClose          Confirm `json:"confirmClose"`
 	CloseOnLastTab        bool    `json:"closeOnLastTab"`
+	// ScrollMultiplier scales how far the wheel and the touchpad scroll:
+	// 1 scrolls the way the wheel's own setting says.
+	ScrollMultiplier float32 `json:"scrollMultiplier"`
+	// ClipboardRead is what a program reading the clipboard gets:
+	// "deny", "allow" or "ask". ClipboardWrite is whether a program may
+	// set the clipboard: "allow" or "deny". Both are the policies of
+	// Ghostty, whose default for a read is to ask; here a read is refused
+	// until the user allows it, since the window has no way to ask a
+	// question a program is waiting on.
+	ClipboardRead  string `json:"clipboardRead"`
+	ClipboardWrite string `json:"clipboardWrite"`
 
 	// NewTabPosition is where a tab opens: "last" or "first". TabWidth is
 	// how wide tabs are: "compact", to the name, or "equal", all alike.
@@ -164,6 +185,11 @@ func Default() Settings {
 		CursorShape:           "bar",
 		CursorBlink:           true,
 		ScrollbackMB:          10,
+		PaddingColor:          "background",
+		MinimumContrast:       0,
+		ScrollMultiplier:      1,
+		ClipboardRead:         "deny",
+		ClipboardWrite:        "allow",
 		RightClick:            "copyOrPaste",
 		PasteMultilineConfirm: true,
 		ConfirmClose:          ConfirmRunning,

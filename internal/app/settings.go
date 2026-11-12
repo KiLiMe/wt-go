@@ -551,11 +551,14 @@ func (a *App) apply() {
 	if s.CopyOnSelect {
 		copyOnSelect = terminal.CopyOnSelectClipboard
 	}
+	multiplier := scrollMultiplier(s.ScrollMultiplier)
 	for _, tab := range a.panes.Tabs {
 		for _, term := range tab.Terminals() {
 			term.SetFont(font)
 			term.SetTheme(colors, nil)
 			term.SetCopyOnSelect(copyOnSelect)
+			term.SetScrollMultiplier(multiplier)
+			term.SetMinimumContrast(s.MinimumContrast)
 		}
 	}
 	if a.win != nil {

@@ -56,6 +56,10 @@ func TestParseKeepsDefaults(t *testing.T) {
 	if s.Theme != "dark" || len(s.Keybindings) == 0 {
 		t.Errorf("unnamed settings lost their defaults: %+v", s)
 	}
+	if s.ScrollMultiplier != 1 || s.PaddingColor != "background" ||
+		s.ClipboardRead != "deny" || s.ClipboardWrite != "allow" {
+		t.Errorf("the settings added later lost their defaults: %+v", s)
+	}
 }
 
 // TestParseLegacyLanguage covers the language files of earlier versions named by

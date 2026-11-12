@@ -23,6 +23,11 @@ func TestValidate(t *testing.T) {
 		{"padding", func(s *Settings) { s.Padding.X = -1 }, "padding.x"},
 		{"opacity", func(s *Settings) { s.BackgroundOpacity = 1.5 }, "backgroundOpacity"},
 		{"scrollback", func(s *Settings) { s.ScrollbackMB = 1 << 20 }, "scrollbackMB"},
+		{"scroll multiplier", func(s *Settings) { s.ScrollMultiplier = 0 }, "scrollMultiplier"},
+		{"contrast", func(s *Settings) { s.MinimumContrast = 21.5 }, "minimumContrast"},
+		{"padding color", func(s *Settings) { s.PaddingColor = "extended" }, "paddingColor"},
+		{"clipboard read", func(s *Settings) { s.ClipboardRead = "maybe" }, "clipboardRead"},
+		{"clipboard write", func(s *Settings) { s.ClipboardWrite = "ask" }, "clipboardWrite"},
 		{"panes", func(s *Settings) { s.MaxPanes = 1000 }, "maxPanes"},
 	}
 	for _, tt := range tests {

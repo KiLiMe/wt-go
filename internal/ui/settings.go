@@ -243,6 +243,22 @@ func interactionPage(c *myui.Context, st Settings, act Actions) {
 				{"nothing", locales.Nothing()},
 			})
 		})
+		field(c, locales.ScrollMultiplier(), locales.ScrollMultiplierNote(), func() {
+			measure(c, &s.ScrollMultiplier, 0.5, 5, 0.5)
+		})
+		field(c, locales.ClipboardRead(), locales.ClipboardReadNote(), func() {
+			choice(c, &s.ClipboardRead, []option{
+				{"deny", locales.Deny()},
+				{"allow", locales.Allow()},
+				{"ask", locales.Ask()},
+			})
+		})
+		field(c, locales.ClipboardWrite(), locales.ClipboardWriteNote(), func() {
+			choice(c, &s.ClipboardWrite, []option{
+				{"allow", locales.Allow()},
+				{"deny", locales.Deny()},
+			})
+		})
 		field(c, locales.PasteMultiline(), locales.PasteMultilineNote(), func() {
 			myui.Switch(c, &s.PasteMultilineConfirm)
 		})
@@ -341,6 +357,16 @@ func profilesPage(c *myui.Context, st Settings, act Actions) {
 				myui.Text(c, "\u00d7").TextColor(t.TextMuted)
 				measure(c, &s.Padding.Y, 0, 64, 1)
 			})
+		})
+		field(c, locales.PaddingColor(), locales.PaddingColorNote(), func() {
+			choice(c, &s.PaddingColor, []option{
+				{"background", locales.WindowBackground()},
+				{"extend", locales.NearbyCells()},
+				{"always", locales.AlwaysCells()},
+			})
+		})
+		field(c, locales.MinimumContrast(), locales.MinimumContrastNote(), func() {
+			measure(c, &s.MinimumContrast, 0, 21, 0.5)
 		})
 		field(c, locales.Scrollback(), locales.ScrollbackNote(), func() {
 			count(c, &s.ScrollbackMB, 0, 1024)

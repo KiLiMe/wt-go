@@ -22,6 +22,11 @@ func (s Settings) Validate() error {
 	check("padding.y", between(float64(s.Padding.Y), 0, 256), "between 0 and 256")
 	check("backgroundOpacity", between(s.BackgroundOpacity, 0, 1), "between 0 and 1")
 	check("scrollbackMB", between(float64(s.ScrollbackMB), 0, 1024), "between 0 and 1024")
+	check("scrollMultiplier", between(float64(s.ScrollMultiplier), 0.1, 10), "between 0.1 and 10")
+	check("minimumContrast", between(float64(s.MinimumContrast), 0, 21), "between 0 and 21")
+	check("paddingColor", oneOf(s.PaddingColor, "background", "extend", "always"), `"background", "extend" or "always"`)
+	check("clipboardRead", oneOf(s.ClipboardRead, "deny", "allow", "ask"), `"deny", "allow" or "ask"`)
+	check("clipboardWrite", oneOf(s.ClipboardWrite, "allow", "deny"), `"allow" or "deny"`)
 	check("maxPanes", between(float64(s.MaxPanes), 0, 64), "between 0 and 64")
 	check("confirmClose", s.ConfirmClose.Valid(), `"running", "always" or "never"`)
 	if len(bad) == 0 {
@@ -33,4 +38,14 @@ func (s Settings) Validate() error {
 // between reports whether v is in the range lo through hi, both included.
 func between(v, lo, hi float64) bool {
 	return v >= lo && v <= hi
+}
+
+// oneOf reports whether v is one of the words a setting is written as.
+func oneOf(v string, words ...string) bool {
+	for _, w := range words {
+		if v == w {
+			return true
+		}
+	}
+	return false
 }

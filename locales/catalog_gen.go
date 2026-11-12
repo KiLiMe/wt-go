@@ -1104,6 +1104,96 @@ func (msgs Messages) RightClickNote() string {
 	return Catalog.Format(msgs.locale, "rightClickNote", nil)
 }
 
+// ScrollMultiplier says "Scroll multiplier"
+// in the language the app shows.
+func ScrollMultiplier() string { return In(i18n.Locale()).ScrollMultiplier() }
+
+// ScrollMultiplier says "Scroll multiplier"
+// in the language of msgs.
+func (msgs Messages) ScrollMultiplier() string {
+	return Catalog.Format(msgs.locale, "scrollMultiplier", nil)
+}
+
+// ScrollMultiplierNote says "How far a notch of the wheel and a touchpad's scrolling go; 1 scrolls the way the system's own setting does."
+// in the language the app shows.
+func ScrollMultiplierNote() string { return In(i18n.Locale()).ScrollMultiplierNote() }
+
+// ScrollMultiplierNote says "How far a notch of the wheel and a touchpad's scrolling go; 1 scrolls the way the system's own setting does."
+// in the language of msgs.
+func (msgs Messages) ScrollMultiplierNote() string {
+	return Catalog.Format(msgs.locale, "scrollMultiplierNote", nil)
+}
+
+// ClipboardRead says "Clipboard read"
+// in the language the app shows.
+func ClipboardRead() string { return In(i18n.Locale()).ClipboardRead() }
+
+// ClipboardRead says "Clipboard read"
+// in the language of msgs.
+func (msgs Messages) ClipboardRead() string {
+	return Catalog.Format(msgs.locale, "clipboardRead", nil)
+}
+
+// ClipboardReadNote says "What a program gets when it asks for the clipboard. Refused unless allowed here: a program that can read it sees what…"
+// in the language the app shows.
+func ClipboardReadNote() string { return In(i18n.Locale()).ClipboardReadNote() }
+
+// ClipboardReadNote says "What a program gets when it asks for the clipboard. Refused unless allowed here: a program that can read it sees what…"
+// in the language of msgs.
+func (msgs Messages) ClipboardReadNote() string {
+	return Catalog.Format(msgs.locale, "clipboardReadNote", nil)
+}
+
+// ClipboardWrite says "Clipboard write"
+// in the language the app shows.
+func ClipboardWrite() string { return In(i18n.Locale()).ClipboardWrite() }
+
+// ClipboardWrite says "Clipboard write"
+// in the language of msgs.
+func (msgs Messages) ClipboardWrite() string {
+	return Catalog.Format(msgs.locale, "clipboardWrite", nil)
+}
+
+// ClipboardWriteNote says "Whether a program may put text on the clipboard. Applies to new tabs."
+// in the language the app shows.
+func ClipboardWriteNote() string { return In(i18n.Locale()).ClipboardWriteNote() }
+
+// ClipboardWriteNote says "Whether a program may put text on the clipboard. Applies to new tabs."
+// in the language of msgs.
+func (msgs Messages) ClipboardWriteNote() string {
+	return Catalog.Format(msgs.locale, "clipboardWriteNote", nil)
+}
+
+// Deny says "Refuse"
+// in the language the app shows.
+func Deny() string { return In(i18n.Locale()).Deny() }
+
+// Deny says "Refuse"
+// in the language of msgs.
+func (msgs Messages) Deny() string {
+	return Catalog.Format(msgs.locale, "deny", nil)
+}
+
+// Allow says "Allow"
+// in the language the app shows.
+func Allow() string { return In(i18n.Locale()).Allow() }
+
+// Allow says "Allow"
+// in the language of msgs.
+func (msgs Messages) Allow() string {
+	return Catalog.Format(msgs.locale, "allow", nil)
+}
+
+// Ask says "Ask"
+// in the language the app shows.
+func Ask() string { return In(i18n.Locale()).Ask() }
+
+// Ask says "Ask"
+// in the language of msgs.
+func (msgs Messages) Ask() string {
+	return Catalog.Format(msgs.locale, "ask", nil)
+}
+
 // PasteMultiline says "Paste multiline confirm"
 // in the language the app shows.
 func PasteMultiline() string { return In(i18n.Locale()).PasteMultiline() }
@@ -1512,6 +1602,76 @@ func PaddingNote() string { return In(i18n.Locale()).PaddingNote() }
 // in the language of msgs.
 func (msgs Messages) PaddingNote() string {
 	return Catalog.Format(msgs.locale, "paddingNote", nil)
+}
+
+// PaddingColor says "Padding color"
+// in the language the app shows.
+func PaddingColor() string { return In(i18n.Locale()).PaddingColor() }
+
+// PaddingColor says "Padding color"
+// in the language of msgs.
+func (msgs Messages) PaddingColor() string {
+	return Catalog.Format(msgs.locale, "paddingColor", nil)
+}
+
+// PaddingColorNote says "What the room around the text shows: the window's background, the cells nearest to it, so that a program that paints …"
+// in the language the app shows.
+func PaddingColorNote() string { return In(i18n.Locale()).PaddingColorNote() }
+
+// PaddingColorNote says "What the room around the text shows: the window's background, the cells nearest to it, so that a program that paints …"
+// in the language of msgs.
+func (msgs Messages) PaddingColorNote() string {
+	return Catalog.Format(msgs.locale, "paddingColorNote", nil)
+}
+
+// WindowBackground says "Window background"
+// in the language the app shows.
+func WindowBackground() string { return In(i18n.Locale()).WindowBackground() }
+
+// WindowBackground says "Window background"
+// in the language of msgs.
+func (msgs Messages) WindowBackground() string {
+	return Catalog.Format(msgs.locale, "windowBackground", nil)
+}
+
+// NearbyCells says "Cells beside it"
+// in the language the app shows.
+func NearbyCells() string { return In(i18n.Locale()).NearbyCells() }
+
+// NearbyCells says "Cells beside it"
+// in the language of msgs.
+func (msgs Messages) NearbyCells() string {
+	return Catalog.Format(msgs.locale, "nearbyCells", nil)
+}
+
+// AlwaysCells says "Always the cells"
+// in the language the app shows.
+func AlwaysCells() string { return In(i18n.Locale()).AlwaysCells() }
+
+// AlwaysCells says "Always the cells"
+// in the language of msgs.
+func (msgs Messages) AlwaysCells() string {
+	return Catalog.Format(msgs.locale, "alwaysCells", nil)
+}
+
+// MinimumContrast says "Minimum contrast"
+// in the language the app shows.
+func MinimumContrast() string { return In(i18n.Locale()).MinimumContrast() }
+
+// MinimumContrast says "Minimum contrast"
+// in the language of msgs.
+func (msgs Messages) MinimumContrast() string {
+	return Catalog.Format(msgs.locale, "minimumContrast", nil)
+}
+
+// MinimumContrastNote says "The least contrast text has with its background, from 0 to 21: 0 draws every cell as the program wrote it, 4.5 is wha…"
+// in the language the app shows.
+func MinimumContrastNote() string { return In(i18n.Locale()).MinimumContrastNote() }
+
+// MinimumContrastNote says "The least contrast text has with its background, from 0 to 21: 0 draws every cell as the program wrote it, 4.5 is wha…"
+// in the language of msgs.
+func (msgs Messages) MinimumContrastNote() string {
+	return Catalog.Format(msgs.locale, "minimumContrastNote", nil)
 }
 
 // Scrollback says "Scrollback"

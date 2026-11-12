@@ -51,6 +51,7 @@
 | ADR-44 | 默认配置文件留空＝跟随系统，不是列表第一个 | 有效 |
 | ADR-45 | 标签前是一块方块，不是色点 | 有效 |
 | ADR-46 | 窗口开在上次的位置和大小，`startSize` 删掉 | 有效 |
+| ADR-47 | 把 Ghostty 的四个行为做成设置：滚轮倍数、最小对比度、内边距颜色、剪贴板读写 | 有效 |
 
 ---
 
@@ -1066,3 +1067,35 @@ mygo 自己的 `%APPDATA%\wt-go\window-state.json`，与 `settings.json` 不在�
 
 **测试**：`go test ./...`；实机：移到 140,160 / 900×650 后正常关窗 → `%LOCALAPPDATA%\wt-go\window-state.json`
 写入 `{"main":{"x":140,...}}`，再次启动窗口就在 140,160 / 900×650；删掉该文件后回到 960×600 居中。
+
+## ADR-47 把 Ghostty 的四个行为做成设置：滚轮倍数、最小对比度、内边距颜色、剪贴板读写
+
+**背景**：mygo 的终端把 Ghostty 的行为翻成 Go 选项，我们只接了 11 个。`scrollMultiplier`、
+`minimumContrast`、`paddingColor`、`clipboardRead`/`clipboardWrite` 一直空着，而它们各解决一个
+看得见的问题：滚轮一格太慢、浅色方案里某些颜色糊成一片、全屏程序自己画的背景铺不到留白里，
+以及程序能不能悄悄读你复制的东西。
+
+**决定**：
+
+1. 五个都做成 `settings.json` 的字段与设置页的一行：`scrollMultiplier`（0.1–10，默认 1）、
+   `minimumContrast`（0–21，默认 0 即不干预）、`paddingColor`（`background`/`extend`/`always`，
+   默认 `background`）、`clipboardRead`（`deny`/`allow`/`ask`，默认 `deny`）、
+   `clipboardWrite`（`allow`/`deny`，默认 `allow`）。
+2. 滚轮倍数同时给触摸板（`Precision`）与滚轮（`Discrete = 3×`）：mygo 的 `Discrete` 把 3 当
+   「按系统设置的行数」，乘同一个数，两种输入的手感才一致。
+3. 剪贴板读取默认**拒绝**（Ghostty 默认「询问」）：要问就得有地方画那句询问，默认值取安全的那一侧；
+   选 `ask` 时由 mygo 在视图里画自己的询问条。
+4. `paddingColor` 与两个剪贴板策略只在**建终端时**给：mygo 没有对应的 setter，所以改完是对新标签生效，
+   设置页那三行的说明里写明「新标签生效」；`scrollMultiplier` 与 `minimumContrast` 有 setter，
+   进 `apply()`，当场生效。
+
+**理由**：这些键都是 Ghostty 自己的名字与范围，照搬过来，用户从 Ghostty 或 Windows Terminal
+迁过来时不用重新学一套；默认值全取「与改造前行为一致」的那一侧（滚轮 1、对比度 0、留白画窗口底色、
+读拒绝写允许），升级后不会有任何可见变化。
+
+**代价**：多五个字段、五行设置，`docs/配置参考.md` 与设置页都得跟着长；`paddingColor` 的
+`extend` 在程序只画了一部分背景时会显得留白不一致（这正是 Ghostty 把它做成选择而不是默认的原因）。
+
+**测试**：`internal/store/validate_test.go` 加了五个越界用例与「旧文件缺字段取默认值」；
+`internal/app/options_test.go` 覆盖三个词到枚举的映射与未知词的兜底；实机截图确认五行都在
+「交互」与「默认值」页，设置页改动后已有标签也拿到新的滚轮倍数与对比度（`apply()` 里的两个 setter）。
