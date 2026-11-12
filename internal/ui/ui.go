@@ -56,6 +56,12 @@ type Actions interface {
 	OpenSettingsFolder()
 	// OpenProgramFolder opens the folder the program runs from.
 	OpenProgramFolder()
+	// OpenAbout shows the dialog that says what the program is.
+	OpenAbout()
+	// CloseAbout closes the about dialog.
+	CloseAbout()
+	// OpenProjectPage opens the page of the program in the browser.
+	OpenProjectPage()
 	// AskAdvanced asks the question a button of the advanced page needs
 	// answered, which is AskRediscover or AskReset.
 	AskAdvanced(kind string)
@@ -196,6 +202,27 @@ type Settings struct {
 	FontFamilies []string
 }
 
+// About is the dialog that says what the program is: the version it runs, what
+// it was built from, and what it is licensed under.
+type About struct {
+	// Open is whether the dialog shows; the dialog closes it.
+	Open bool
+	// Version is the build as `wt-go version` says it, such as
+	// "v0.3.1-dev (packaged 0.3.0)", and Revision the commit it was built
+	// from, "" in a build with no history.
+	Version  string
+	Revision string
+	// Go and Platform are what it runs on.
+	Go       string
+	Platform string
+	// Project is the address of the program's page, which the dialog opens.
+	Project string
+	// Note is what went wrong the last time the dialog opened the page, which
+	// it says in place of the silent button a desktop without a browser
+	// leaves.
+	Note string
+}
+
 // Confirm is the question the window asks before it does something it cannot
 // take back, as closing the settings with changes it has not saved.
 type Confirm struct {
@@ -222,6 +249,9 @@ type State struct {
 	Settings *Settings
 	// Confirm is the question the window asks, nil while it asks none.
 	Confirm *Confirm
+	// About is the dialog that says what the program is, nil while it is
+	// closed.
+	About *About
 	// Palette is the command palette, nil while it is not open.
 	Palette *Palette
 	// Find is the bar that asks the terminal for text, nil while it is
@@ -261,6 +291,7 @@ func View(c *myui.Context, st State, act Actions) {
 	})
 	rename(c, st, act)
 	confirm(c, st, act)
+	about(c, st, act)
 	findBar(c, st, act)
 	palette(c, st, act)
 }

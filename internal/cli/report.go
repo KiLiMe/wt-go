@@ -130,12 +130,7 @@ func Collect() Report {
 
 // version is what `wt-go version` and the report call this build: which one
 // answered, and, in a build a script stamped, the release it was packaged as.
-func (r Report) version() string {
-	if r.Packaged == "" {
-		return r.Version
-	}
-	return r.Version + " (packaged " + r.Packaged + ")"
-}
+func (r Report) version() string { return versionLabel(r.Version, r.Packaged) }
 
 // buildInfo is the version the toolchain stamped into the exe and the commit
 // it was built from: a report says which build answered.

@@ -495,6 +495,9 @@ func profilesMenu(c *myui.Context, st State, act Actions) myui.Element {
 		if it.Chosen() {
 			act.OpenSettings()
 		}
+		if about := m.Item(locales.About()); about.Chosen() {
+			act.OpenAbout()
+		}
 	})
 	return stripButton(c, base).Children(func() {
 		myui.Icon(c, icons.Chevron.SVG).Size(14, 14).TextColor(stripIcon(c, base))

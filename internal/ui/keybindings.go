@@ -16,16 +16,17 @@ import (
 // know; it records the key of the row that asks for one.
 func actionsPage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
-	section(c, locales.Actions(), func() {
-		for _, g := range groups(s.Keybindings) {
-			myui.Text(c, i18n.T(g.title)).FontSize(12).TextColor(c.Theme().TextMuted)
-			myui.Column(c).Gap(2).Children(func() {
-				for _, e := range g.rows {
-					keybindingRow(c, st, act, e, s.Keybindings)
-				}
-			})
-		}
-		myui.Button(c, locales.RestoreDefaults()).OnClick(act.ResetKeybindings)
+	for _, g := range groups(s.Keybindings) {
+		section(c, i18n.T(g.title), func() {
+			for _, e := range g.rows {
+				keybindingRow(c, st, act, e, s.Keybindings)
+			}
+		})
+	}
+	card(c, cardFace(c.Theme()), cardLine(c.Theme()), func() {
+		row(c, func() {
+			myui.Button(c, locales.RestoreDefaults()).OnClick(act.ResetKeybindings)
+		})
 	})
 	if st.Recording != "" {
 		capture(c, act, st.Recording)
@@ -133,7 +134,8 @@ func keybindingRow(c *myui.Context, st Settings, act Actions, e entry, all []sto
 	if clashes(all, key) {
 		color = t.Danger
 	}
-	myui.Row(c).Height(30).AlignItems(myui.Center).Gap(8).Children(func() {
+	myui.Row(c).Padding(8, 16).AlignItems(myui.Center).Gap(8).
+		BorderWidth(0, 0, 1, 0).BorderColor(cardLine(t)).Children(func() {
 		myui.Box(c).Width(160).Height(26).Padding(0, 8).Justify(myui.Center).Radius(4).
 			Background(t.Surface).Cursor(myui.CursorPointer).
 			OnClick(func() { act.RecordKeybinding(e.action) }).Children(func() {

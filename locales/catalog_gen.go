@@ -784,6 +784,16 @@ func (msgs Messages) Startup() string {
 	return Catalog.Format(msgs.locale, "startup", nil)
 }
 
+// StartupNote says "What the window does when it opens."
+// in the language the app shows.
+func StartupNote() string { return In(i18n.Locale()).StartupNote() }
+
+// StartupNote says "What the window does when it opens."
+// in the language of msgs.
+func (msgs Messages) StartupNote() string {
+	return Catalog.Format(msgs.locale, "startupNote", nil)
+}
+
 // Interaction says "Interaction"
 // in the language the app shows.
 func Interaction() string { return In(i18n.Locale()).Interaction() }
@@ -792,6 +802,16 @@ func Interaction() string { return In(i18n.Locale()).Interaction() }
 // in the language of msgs.
 func (msgs Messages) Interaction() string {
 	return Catalog.Format(msgs.locale, "interaction", nil)
+}
+
+// InteractionNote says "How the terminal answers the mouse and the clipboard."
+// in the language the app shows.
+func InteractionNote() string { return In(i18n.Locale()).InteractionNote() }
+
+// InteractionNote says "How the terminal answers the mouse and the clipboard."
+// in the language of msgs.
+func (msgs Messages) InteractionNote() string {
+	return Catalog.Format(msgs.locale, "interactionNote", nil)
 }
 
 // Appearance says "Appearance"
@@ -804,6 +824,16 @@ func (msgs Messages) Appearance() string {
 	return Catalog.Format(msgs.locale, "appearance", nil)
 }
 
+// AppearanceNote says "How the window looks, and where its tabs go."
+// in the language the app shows.
+func AppearanceNote() string { return In(i18n.Locale()).AppearanceNote() }
+
+// AppearanceNote says "How the window looks, and where its tabs go."
+// in the language of msgs.
+func (msgs Messages) AppearanceNote() string {
+	return Catalog.Format(msgs.locale, "appearanceNote", nil)
+}
+
 // ColorSchemes says "Color schemes"
 // in the language the app shows.
 func ColorSchemes() string { return In(i18n.Locale()).ColorSchemes() }
@@ -812,6 +842,16 @@ func ColorSchemes() string { return In(i18n.Locale()).ColorSchemes() }
 // in the language of msgs.
 func (msgs Messages) ColorSchemes() string {
 	return Catalog.Format(msgs.locale, "colorSchemes", nil)
+}
+
+// SchemesNote says "The colors the terminals paint with, and the schemes the settings keep."
+// in the language the app shows.
+func SchemesNote() string { return In(i18n.Locale()).SchemesNote() }
+
+// SchemesNote says "The colors the terminals paint with, and the schemes the settings keep."
+// in the language of msgs.
+func (msgs Messages) SchemesNote() string {
+	return Catalog.Format(msgs.locale, "schemesNote", nil)
 }
 
 // Actions says "Actions"
@@ -824,6 +864,16 @@ func (msgs Messages) Actions() string {
 	return Catalog.Format(msgs.locale, "actions", nil)
 }
 
+// ActionsNote says "What the window does, the keys it does it on, and which keys the file binds."
+// in the language the app shows.
+func ActionsNote() string { return In(i18n.Locale()).ActionsNote() }
+
+// ActionsNote says "What the window does, the keys it does it on, and which keys the file binds."
+// in the language of msgs.
+func (msgs Messages) ActionsNote() string {
+	return Catalog.Format(msgs.locale, "actionsNote", nil)
+}
+
 // Advanced says "Advanced"
 // in the language the app shows.
 func Advanced() string { return In(i18n.Locale()).Advanced() }
@@ -834,6 +884,16 @@ func (msgs Messages) Advanced() string {
 	return Catalog.Format(msgs.locale, "advanced", nil)
 }
 
+// AdvancedNote says "Probe the shells, open the folders the settings live in, or start over from the defaults."
+// in the language the app shows.
+func AdvancedNote() string { return In(i18n.Locale()).AdvancedNote() }
+
+// AdvancedNote says "Probe the shells, open the folders the settings live in, or start over from the defaults."
+// in the language of msgs.
+func (msgs Messages) AdvancedNote() string {
+	return Catalog.Format(msgs.locale, "advancedNote", nil)
+}
+
 // Defaults says "Defaults"
 // in the language the app shows.
 func Defaults() string { return In(i18n.Locale()).Defaults() }
@@ -842,6 +902,66 @@ func Defaults() string { return In(i18n.Locale()).Defaults() }
 // in the language of msgs.
 func (msgs Messages) Defaults() string {
 	return Catalog.Format(msgs.locale, "defaults", nil)
+}
+
+// DefaultsNote says "The settings a profile starts from, and the profiles this machine has."
+// in the language the app shows.
+func DefaultsNote() string { return In(i18n.Locale()).DefaultsNote() }
+
+// DefaultsNote says "The settings a profile starts from, and the profiles this machine has."
+// in the language of msgs.
+func (msgs Messages) DefaultsNote() string {
+	return Catalog.Format(msgs.locale, "defaultsNote", nil)
+}
+
+// About says "About"
+// in the language the app shows.
+func About() string { return In(i18n.Locale()).About() }
+
+// About says "About"
+// in the language of msgs.
+func (msgs Messages) About() string {
+	return Catalog.Format(msgs.locale, "about", nil)
+}
+
+// AboutCommit says "Commit"
+// in the language the app shows.
+func AboutCommit() string { return In(i18n.Locale()).AboutCommit() }
+
+// AboutCommit says "Commit"
+// in the language of msgs.
+func (msgs Messages) AboutCommit() string {
+	return Catalog.Format(msgs.locale, "aboutCommit", nil)
+}
+
+// AboutRuntime says "Runtime"
+// in the language the app shows.
+func AboutRuntime() string { return In(i18n.Locale()).AboutRuntime() }
+
+// AboutRuntime says "Runtime"
+// in the language of msgs.
+func (msgs Messages) AboutRuntime() string {
+	return Catalog.Format(msgs.locale, "aboutRuntime", nil)
+}
+
+// License says "License"
+// in the language the app shows.
+func License() string { return In(i18n.Locale()).License() }
+
+// License says "License"
+// in the language of msgs.
+func (msgs Messages) License() string {
+	return Catalog.Format(msgs.locale, "license", nil)
+}
+
+// ProjectPage says "Project page"
+// in the language the app shows.
+func ProjectPage() string { return In(i18n.Locale()).ProjectPage() }
+
+// ProjectPage says "Project page"
+// in the language of msgs.
+func (msgs Messages) ProjectPage() string {
+	return Catalog.Format(msgs.locale, "projectPage", nil)
 }
 
 // UnsavedChanges says "Unsaved changes"
@@ -1872,6 +1992,16 @@ func ErrOpenFolder(error string) string { return In(i18n.Locale()).ErrOpenFolder
 // in the language of msgs.
 func (msgs Messages) ErrOpenFolder(error string) string {
 	return Catalog.Format(msgs.locale, "errOpenFolder", map[string]any{"error": error})
+}
+
+// ErrOpenLink says "The link could not be opened: {error}"
+// in the language the app shows.
+func ErrOpenLink(error string) string { return In(i18n.Locale()).ErrOpenLink(error) }
+
+// ErrOpenLink says "The link could not be opened: {error}"
+// in the language of msgs.
+func (msgs Messages) ErrOpenLink(error string) string {
+	return Catalog.Format(msgs.locale, "errOpenLink", map[string]any{"error": error})
 }
 
 // ErrSettings says "settings.json: {error}"

@@ -95,12 +95,24 @@
   "restoreDefaults": "恢复默认",
   "pressKey": "按一个键…",
   "startup": "启动",
+  "startupNote": "窗口打开时做什么。",
   "interaction": "交互",
+  "interactionNote": "终端如何回应鼠标与剪贴板。",
   "appearance": "外观",
+  "appearanceNote": "窗口长什么样，标签放在哪。",
   "colorSchemes": "配色方案",
+  "schemesNote": "终端用什么颜色，以及设置里保存了哪些方案。",
   "actions": "操作",
+  "actionsNote": "窗口能做什么、用什么键做，以及文件里写了哪些键位。",
   "advanced": "高级",
+  "advancedNote": "管理 Shell 自动探测、本地配置目录以及配置文件重置选项。",
   "defaults": "默认值",
+  "defaultsNote": "配置文件从哪套默认值开始，以及这台机器上的配置文件。",
+  "about": "关于",
+  "aboutCommit": "提交",
+  "aboutRuntime": "运行环境",
+  "license": "许可",
+  "projectPage": "项目主页",
   "unsavedChanges": "有未保存的更改",
   "saved": "已保存",
   "openSettingsFolder": "打开设置目录",
@@ -233,6 +245,14 @@
   },
   "errOpenFolder": "打不开目录：{error}",
   "@errOpenFolder": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errOpenLink": "打不开链接：{error}",
+  "@errOpenLink": {
     "placeholders": {
       "error": {
         "type": "String"

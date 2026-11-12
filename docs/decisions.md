@@ -934,3 +934,36 @@ breeze、WinTray）里 5 个用 catalog、1 个用 struct 字面量，主流是�
 **测试**：`internal/sys/workdir_test.go` 的 `TestWorkDirFollowsChdir` 钉住「跟随 chdir 到的目录」；
 macOS 上 `t.TempDir()` 是 `/var/...` 而内核报 `/private/var/...`，两侧各套一次 `filepath.EvalSymlinks` 再比。
 
+
+## ADR-43 设置页画成卡片行，弹菜单画在窗口里，「关于」只读编译期信息
+
+**背景**：设置页原来用 `myui.Form`/`myui.Field`：标签左对齐成一列、控件拉满右侧整行，
+一眼看过去全是按钮，和 Windows Terminal 的设置页差得远；弹菜单交给桌面画，深色窗口旁边浮出一块
+系统灰的菜单，像另一个程序的。同时项目没有「关于」，版本、许可、项目地址只能从 README 里找。
+
+**决定**：
+
+1. 设置页的骨架改成自己画（`internal/ui/form.go`）：`section` 是一张卡片，`field` 是「左字右控件」的一行。
+   卡片面 = `Theme.Background` 向 `Theme.Text` 混 7%（`cardFace`），边线混 14%（`cardLine`）。
+   **不用 `Theme.Surface`**：它是按钮与输入框的脸（背景向文字混 16%），卡片用它会把里面的控件吃掉。
+2. 危险操作（「重置」）用 `dangerSection`：面是背景向 `Danger` 混 10%，边线是 `Danger` 半透明；
+   按钮红底白字。红卡片放在页面最后：误点的人得先滑到底。
+3. 页头由 `intro` 写这一页的名字与一句说明；页名已经在页头，卡片就不再写一遍组名，
+   只有一页里真的分成几组（如「高级」的 Shell / 目录 / 重置）才给卡片标题。
+4. 不用 `myui.Field` 换来左右布局的代价是标签与控件不再自动成对：每行用 `Role(RoleGroup).Label(标题)`
+   把一行说成一组，读屏与 `TestAdvancedPage` 这类按名字点控件的测试都还认得。
+5. 弹菜单改为窗口内自绘：`app.view` 里 `c.SetMenuPresentation(myui.PopoverMenus)`。
+   标签右键、`▾`、终端右键、编辑菜单一起换过来，键盘（上下、回车、`Esc`、首字母、子菜单）由 mygo 自带，
+   不必自己画一套 `menuEntry`（sshyard 那样做是因为它要图标与多行）。
+6. 「关于」的数据只读编译期信息（`internal/cli/about.go` 的 `About()`：版本、提交、Go、平台），
+   不跑 `Collect()`：对话框不该顺手探测一遍 shell。打开项目主页失败时记 `E209`，并把同一行显示在对话框里
+   ——按了没反应的按钮比一句实话更糟。
+
+**理由**：卡片行把「这是什么 / 现在是什么」分开摆，按钮成为控件而不是背景；配色全部从主题推导，
+换方案、换明暗都跟着走，不需要为卡片另配一套颜色。弹菜单跟着窗口走，视觉上是一体的。
+
+**代价**：`myui.Form` 的对齐、标签点击聚焦、a11y 自动关联都放弃了，靠 `Role`/`Label` 与固定的
+`controlWidth`（320）兜底；卡片底色是推导值，主题方案极端（纯黑底 + 纯黑文字）时对比会不够。
+
+**测试**：`internal/ui/advanced_test.go` 仍按按钮文字定位（页头加了标题、卡片重排都没动它）；
+`internal/ui/form_test.go` 覆盖 `choice`/`count`/`measure`/`ratio` 的取值映射。

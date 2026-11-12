@@ -16,7 +16,7 @@ import (
 func schemesPage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
 	t := c.Theme()
-	section(c, locales.ColorScheme(), func() {
+	card(c, cardFace(t), cardLine(t), func() {
 		field(c, locales.Scheme(), locales.ColorSchemeNote(), func() {
 			choice(c, &s.ColorScheme, schemeOptions(st.Schemes))
 		})
@@ -27,6 +27,8 @@ func schemesPage(c *myui.Context, st Settings, act Actions) {
 		})
 	})
 	names := search(st.Schemes, filter(st))
+	// Not a card: the preview is as wide as its swatches, and a card's padding
+	// is what it would have to take that width from.
 	myui.Row(c).AlignItems(myui.Start).Gap(24).Children(func() {
 		myui.Column(c).Width(320).Gap(6).Children(func() {
 			if st.Filter != nil {
@@ -128,12 +130,12 @@ func preview(c *myui.Context, th *terminal.Theme) {
 			myui.Text(c, "The quick brown fox").TextColor(th.Foreground).SingleLine()
 			myui.Text(c, "jumps over the lazy dog").TextColor(th.Foreground).SingleLine()
 		})
-		myui.Row(c).Gap(6).Children(func() {
+		myui.Row(c).Gap(6).Wrap().Children(func() {
 			for _, col := range []myui.Color{th.Background, th.Foreground, th.Cursor, th.Selection} {
 				myui.Box(c).Size(26, 26).Radius(4).Background(col).BorderWidth(1).BorderColor(t.Border)
 			}
 		})
-		myui.Row(c).Gap(4).Children(func() {
+		myui.Row(c).Gap(4).Wrap().Children(func() {
 			for _, col := range th.Palette {
 				myui.Box(c).Size(22, 22).Radius(3).Background(col)
 			}

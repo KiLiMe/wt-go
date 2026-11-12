@@ -617,6 +617,8 @@ func (a *App) act(id string) {
 		a.closeOtherPanes(a.panes.Active)
 	case action.Settings:
 		a.OpenSettings()
+	case action.About:
+		a.OpenAbout()
 	case action.Palette:
 		a.OpenPalette()
 	case action.Find:

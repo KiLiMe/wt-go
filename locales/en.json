@@ -95,12 +95,24 @@
   "restoreDefaults": "Restore the defaults",
   "pressKey": "Press a key…",
   "startup": "Startup",
+  "startupNote": "What the window does when it opens.",
   "interaction": "Interaction",
+  "interactionNote": "How the terminal answers the mouse and the clipboard.",
   "appearance": "Appearance",
+  "appearanceNote": "How the window looks, and where its tabs go.",
   "colorSchemes": "Color schemes",
+  "schemesNote": "The colors the terminals paint with, and the schemes the settings keep.",
   "actions": "Actions",
+  "actionsNote": "What the window does, the keys it does it on, and which keys the file binds.",
   "advanced": "Advanced",
+  "advancedNote": "Probe the shells, open the folders the settings live in, or start over from the defaults.",
   "defaults": "Defaults",
+  "defaultsNote": "The settings a profile starts from, and the profiles this machine has.",
+  "about": "About",
+  "aboutCommit": "Commit",
+  "aboutRuntime": "Runtime",
+  "license": "License",
+  "projectPage": "Project page",
   "unsavedChanges": "Unsaved changes",
   "saved": "Saved",
   "openSettingsFolder": "Open settings folder",
@@ -233,6 +245,14 @@
   },
   "errOpenFolder": "The folder could not be opened: {error}",
   "@errOpenFolder": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errOpenLink": "The link could not be opened: {error}",
+  "@errOpenLink": {
     "placeholders": {
       "error": {
         "type": "String"

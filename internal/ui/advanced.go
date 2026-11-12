@@ -25,15 +25,6 @@ func advancedPage(c *myui.Context, st Settings, act Actions) {
 				myui.Button(c, locales.Probe()).OnClick(func() { act.AskAdvanced(AskRediscover) })
 			})
 	})
-	section(c, locales.Reset(), func() {
-		field(c, locales.DeleteSettings(),
-			locales.DeleteSettingsNote(),
-			func() {
-				myui.Button(c, locales.DeleteAndRestart()).
-					Background(t.Danger).TextColor(myui.Hex("#ffffff")).
-					OnClick(func() { act.AskAdvanced(AskReset) })
-			})
-	})
 	section(c, locales.Folders(), func() {
 		field(c, locales.SettingsFolder(),
 			locales.SettingsFolderNote(),
@@ -44,6 +35,17 @@ func advancedPage(c *myui.Context, st Settings, act Actions) {
 			locales.ProgramFolderNote(),
 			func() {
 				myui.Button(c, locales.Open()).OnClick(act.OpenProgramFolder)
+			})
+	})
+	// Last, and in the danger color: the row that starts over is the one a
+	// person comes to by mistake.
+	dangerSection(c, locales.Reset(), func() {
+		field(c, locales.DeleteSettings(),
+			locales.DeleteSettingsNote(),
+			func() {
+				myui.Button(c, locales.DeleteAndRestart()).
+					Background(t.Danger).TextColor(myui.Hex("#ffffff")).
+					OnClick(func() { act.AskAdvanced(AskReset) })
 			})
 	})
 }

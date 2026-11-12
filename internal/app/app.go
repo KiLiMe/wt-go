@@ -43,6 +43,7 @@ type App struct {
 	keys       []binding
 	renaming   *ui.Rename
 	confirm    *ask
+	about      *ui.About
 	palette    *ui.Palette
 	find       *ui.Find
 	findTerm   *terminal.Terminal
@@ -531,11 +532,18 @@ func (a *App) view(c *myui.Context) {
 	if a.uiTheme != nil {
 		c.SetTheme(a.uiTheme)
 	}
+	// The popup menus are drawn in the window with the theme's look rather
+	// than by the desktop: a menu of the desktop's beside the window's own
+	// strip reads as another program's.
+	c.SetMenuPresentation(myui.PopoverMenus)
 	if a.renaming != nil && !a.renaming.Open {
 		a.renaming = nil
 	}
 	if a.confirm != nil && !a.confirm.Open {
 		a.confirm = nil
+	}
+	if a.about != nil && !a.about.Open {
+		a.about = nil
 	}
 	if a.palette != nil && !a.palette.Open {
 		a.palette = nil
@@ -567,6 +575,7 @@ func (a *App) view(c *myui.Context) {
 	if a.confirm != nil {
 		st.Confirm = &a.confirm.Confirm
 	}
+	st.About = a.about
 	st.Palette = a.paletteState()
 	st.Find = a.findState()
 	if a.settingsTab != nil {

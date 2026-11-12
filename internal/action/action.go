@@ -38,6 +38,9 @@ const (
 	Palette = "palette.open"
 	// Settings opens the settings tab.
 	Settings = "settings.open"
+	// About says what the program is: its version, what it was built from
+	// and its license.
+	About = "about.open"
 	// Profile is the prefix of the actions that open a tab that runs the
 	// nth profile: "profile.1" to "profile.9".
 	Profile = "profile."
@@ -96,6 +99,7 @@ var fixed = []Action{
 
 	{ID: Settings, TitleKey: "settings", GroupKey: GroupWindow, Keys: []string{"ctrl+comma"}},
 	{ID: Palette, TitleKey: "commandPalette", GroupKey: GroupWindow, Keys: []string{"ctrl+shift+p"}},
+	{ID: About, TitleKey: "about", GroupKey: GroupWindow},
 }
 
 // all is every action: the fixed ones, and the numbered ones that bring the

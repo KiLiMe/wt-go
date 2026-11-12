@@ -40,6 +40,7 @@ func SettingsTab(c *myui.Context, st Settings, act Actions) myui.Element {
 			nav(c, st, act)
 			myui.Scroll(c).Grow(1).Children(func() {
 				myui.Column(c).Padding(24, 24, 16, 24).Gap(24).Children(func() {
+					pageIntro(c, st)
 					page(c, st, act)
 				})
 			})
@@ -143,6 +144,30 @@ func dimmed(live bool) float32 {
 	return 0.4
 }
 
+// pageIntro is the name of the page in front and what the page is for.
+func pageIntro(c *myui.Context, st Settings) {
+	switch st.Page {
+	case PageStartup:
+		intro(c, locales.Startup(), locales.StartupNote())
+	case PageInteraction:
+		intro(c, locales.Interaction(), locales.InteractionNote())
+	case PageAppearance:
+		intro(c, locales.Appearance(), locales.AppearanceNote())
+	case PageSchemes:
+		intro(c, locales.ColorSchemes(), locales.SchemesNote())
+	case PageActions:
+		intro(c, locales.Actions(), locales.ActionsNote())
+	case PageAdvanced:
+		intro(c, locales.Advanced(), locales.AdvancedNote())
+	default:
+		if id, ok := ProfileID(st.Page); ok && st.Profile != nil && st.Profile.ID == id {
+			intro(c, st.Profile.Name, "")
+			return
+		}
+		intro(c, locales.Defaults(), locales.DefaultsNote())
+	}
+}
+
 // page is the fields of the page in front.
 func page(c *myui.Context, st Settings, act Actions) {
 	if st.Draft == nil {
@@ -175,7 +200,8 @@ func page(c *myui.Context, st Settings, act Actions) {
 // startupPage is what the window does when it opens.
 func startupPage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
-	section(c, locales.Startup(), func() {
+	// The page's name is the intro above it, so the first card needs none.
+	section(c, "", func() {
 		field(c, locales.DefaultProfile(), locales.DefaultProfileNote(), func() {
 			opts := make([]option, 0, len(st.Known)+1)
 			opts = append(opts, option{"", locales.None()})
@@ -193,7 +219,7 @@ func startupPage(c *myui.Context, st Settings, act Actions) {
 			}
 			choice(c, &s.Language, opts)
 		})
-		field(c, locales.StartDirectory(), locales.StartDirectoryNote(), func() {
+		fieldBlock(c, locales.StartDirectory(), locales.StartDirectoryNote(), func() {
 			myui.TextInput(c, &s.StartDirectory).Placeholder(store.DefaultHomeHint())
 		})
 		field(c, locales.StartSize(), locales.StartSizeNote(), func() {
@@ -212,7 +238,7 @@ func startupPage(c *myui.Context, st Settings, act Actions) {
 // interactionPage is how the terminal answers the mouse and the clipboard.
 func interactionPage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
-	section(c, locales.Interaction(), func() {
+	section(c, "", func() {
 		field(c, locales.CopyOnSelect(), locales.CopyOnSelectNote(), func() {
 			myui.Switch(c, &s.CopyOnSelect)
 		})
@@ -243,7 +269,7 @@ func interactionPage(c *myui.Context, st Settings, act Actions) {
 // appearancePage is how the window looks.
 func appearancePage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
-	section(c, locales.Appearance(), func() {
+	section(c, "", func() {
 		field(c, locales.Theme(), locales.ThemeNote(), func() {
 			options := []option{
 				{"system", locales.FollowSystem()},
@@ -295,7 +321,7 @@ func fontOptions(families []string) []option {
 func profilesPage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
 	t := c.Theme()
-	section(c, locales.Defaults(), func() {
+	section(c, "", func() {
 		field(c, locales.Font(), locales.FontNote(), func() {
 			choice(c, &s.Font.Family, fontOptions(st.FontFamilies))
 		})
@@ -363,17 +389,17 @@ func profilePage(c *myui.Context, st Settings, act Actions, id string) {
 		myui.Text(c, locales.SelectProfile()).TextColor(c.Theme().TextMuted)
 		return
 	}
-	section(c, p.Name, func() {
+	section(c, "", func() {
 		field(c, locales.Name(), "", func() {
 			myui.TextInput(c, &p.Name)
 		})
-		field(c, locales.CommandLine(), locales.CommandLineNote(), func() {
+		fieldBlock(c, locales.CommandLine(), locales.CommandLineNote(), func() {
 			myui.TextInput(c, &p.Command).Placeholder(store.DefaultShellHint())
 		})
-		field(c, locales.Arguments(), locales.ArgumentsNote(), func() {
+		fieldBlock(c, locales.Arguments(), locales.ArgumentsNote(), func() {
 			myui.TextArea(c, st.Args).Lines(2, 6)
 		})
-		field(c, locales.StartDirectory(), locales.ProfileStartNote(), func() {
+		fieldBlock(c, locales.StartDirectory(), locales.ProfileStartNote(), func() {
 			myui.TextInput(c, &p.Dir).Placeholder(store.DefaultHomeHint())
 		})
 		field(c, locales.IconColor(), locales.IconColorNote(), func() {
@@ -383,7 +409,8 @@ func profilePage(c *myui.Context, st Settings, act Actions, id string) {
 			myui.Switch(c, &p.Hidden)
 		})
 	})
-	myui.Row(c).Gap(8).Children(func() {
+	t := c.Theme()
+	myui.Row(c).Padding(12, 16).Gap(8).BorderWidth(1, 0, 0, 0).BorderColor(cardLine(t)).Children(func() {
 		myui.Button(c, locales.Duplicate()).OnClick(func() { act.DuplicateProfile(p.ID) })
 		myui.Button(c, locales.Remove()).OnClick(func() { act.RemoveProfile(p.ID) })
 	})
