@@ -20,12 +20,19 @@ import (
 	"wtgo/internal/sys"
 )
 
+// packagedVersion is the version mygo.json announces, passed in by the build
+// scripts with -ldflags -X. It is not the same number as the one the toolchain
+// stamps into the binary: that one says which build answered, this one says
+// which release it is meant to be.
+var packagedVersion string
+
 // Report is what wt-go knows about itself from outside: a fresh process
 // reading the files the window reads.
 type Report struct {
 	Program    string          `json:"program"`
 	Version    string          `json:"version"`
 	Revision   string          `json:"revision,omitempty"`
+	Packaged   string          `json:"packaged,omitempty"`
 	Go         string          `json:"go"`
 	Platform   string          `json:"platform"`
 	Executable string          `json:"executable,omitempty"`
@@ -107,6 +114,7 @@ func Collect() Report {
 		Platform: runtime.GOOS + "/" + runtime.GOARCH,
 	}
 	r.Version, r.Revision = buildInfo()
+	r.Packaged = packagedVersion
 	if exe, err := sys.Executable(); err == nil {
 		r.Executable = exe
 	}
@@ -118,6 +126,15 @@ func Collect() Report {
 	r.Log = logReport()
 	r.Checks = checks(r)
 	return r
+}
+
+// version is what `wt-go version` and the report call this build: which one
+// answered, and, in a build a script stamped, the release it was packaged as.
+func (r Report) version() string {
+	if r.Packaged == "" {
+		return r.Version
+	}
+	return r.Version + " (packaged " + r.Packaged + ")"
 }
 
 // buildInfo is the version the toolchain stamped into the exe and the commit
@@ -386,7 +403,7 @@ func (r Report) JSON() (string, error) {
 // Text writes the report as lines a person reads.
 func (r Report) Text(w io.Writer) {
 	line := func(format string, a ...any) { fmt.Fprintf(w, format+"\n", a...) }
-	line("wt-go %s %s %s", r.Version, r.Revision, r.Platform)
+	line("wt-go %s %s %s", r.version(), r.Revision, r.Platform)
 	line("exe:      %s", or(r.Executable, "unknown"))
 	line("settings: %s", or(r.Settings.Path, "not available"))
 	if r.Settings.Error != "" {

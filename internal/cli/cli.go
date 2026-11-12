@@ -33,7 +33,7 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) (handled bool, code
 		return true, servemcp(in, out, errOut)
 	case "version":
 		r := Collect()
-		fmt.Fprintf(out, "wt-go %s %s\n", r.Version, r.Revision)
+		fmt.Fprintf(out, "wt-go %s %s\n", r.version(), r.Revision)
 		return true, 0
 	case "help", "-h", "--help", "-help":
 		fmt.Fprint(out, Usage)

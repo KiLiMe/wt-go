@@ -89,6 +89,10 @@ if [ -n "$expect" ] && [ "$expect" != "$target" ]; then
     exit 1
 fi
 
+# So `wt-go version` names the release as well as the build: mygo appends this
+# to its own -ldflags, hence no -ldflags= prefix here.
+export MYGO_LDFLAGS="-X wtgo/internal/cli.packagedVersion=$target"
+
 # Ask go instead of guessing, so macOS gets build/darwin-arm64/ without a flag.
 goos=$(go env GOOS)
 goarch=$(go env GOARCH)

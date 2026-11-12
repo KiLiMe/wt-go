@@ -46,3 +46,4 @@
 - 发版：改 `mygo.json` 的 `version` → 提交推上 `main` → `git tag -a v<版本> -m "wt-go <版本>"` 推上去。tag 要带 `-a`（annotated），CI 要求 tag 与 `mygo.json` 一致才发。
 - 格式是语义化版本三段 `主.次.修订`（如 `0.3.0`）。`0.x` 期间还不承诺兼容：不兼容的改动升次版本号（`0.3.0` → `0.4.0`），新功能与修 bug 只升修订号。到 `1.0.0` 起按 SemVer：不兼容升主版本号、兼容的新功能升次版本号、只修 bug 升修订号。
 - CI 与两个构建脚本只认三段纯数字，pre-release（`v1.0.0-rc.1`）与 build metadata 暂时发不了；要发就先同时改这四处正则。`wt-go version` 自报的 `v0.3.1-dev` 来自 Go 的 build info，不是标签，两回事。
+- `wt-go version` 里 `(packaged …)` 那一段来自 `internal/cli` 的 `packagedVersion`，由两个构建脚本用 `MYGO_LDFLAGS="-X wtgo/internal/cli.packagedVersion=$target"` 注入（mygo 把它拼到自己的 `-ldflags` 后面，**不带** `-ldflags=` 前缀）。裸 `go build` 没有这一段，正好说明它不是发布包。

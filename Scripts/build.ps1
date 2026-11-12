@@ -52,6 +52,11 @@ if ($Version -and $Version -ne $target) {
     exit 1
 }
 
+# 让 wt-go version 也能报出发布版本：build info 说的是“哪个构建回答的”，
+# 这个值是 mygo.json 宣布的版本。mygo 把自己的 -ldflags 与这个值拼在一起，
+# 所以这里不带 -ldflags= 前缀。
+$env:MYGO_LDFLAGS = "-X wtgo/internal/cli.packagedVersion=$target"
+
 if ($Clean -and (Test-Path -LiteralPath $BuildDir)) {
     Remove-Item -LiteralPath $BuildDir -Recurse -Force
 }
