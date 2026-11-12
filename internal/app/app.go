@@ -177,6 +177,8 @@ func Run() (err error) {
 			Title:             "wt-go",
 			Width:             960,
 			Height:            600,
+			MinWidth:          int(ui.MinWindowWidth),
+			MinHeight:         int(ui.MinWindowHeight),
 			TitleBarStyle:     titleBarStyle(),
 			TitleBarHeight:    ui.TitleBarHeight,
 			HideWindowButtons: hideWindowButtons(),

@@ -398,6 +398,52 @@ func stripOfNamed(t *testing.T, n int, active int, width int, name string) (*myu
 	return tt, act, at
 }
 
+// TestTabNameFillsItsRoom covers the room a tab gives its name: the whole of
+// it, so that the button that closes the tab sits on the tab's edge rather
+// than a gap short of it, where a short name leaves nothing drawn.
+func TestTabNameFillsItsRoom(t *testing.T) {
+	tt, _, _ := stripOfNamed(t, 1, 0, 900, "pwsh")
+	name, ok := tt.Find("pwsh")
+	if !ok {
+		t.Fatalf("the tab draws no name: %q", tt.Texts())
+	}
+	if name.W != minTabName {
+		t.Errorf("the name takes %v DIPs of the %v a tab gives it: the close button stands %v short of the edge",
+			name.W, minTabName, minTabName-name.W)
+	}
+}
+
+// TestMinWindowWidth covers the floor the window is held to: at it the strip
+// still holds a tab, and the buttons that move the tabs and the desktop's own
+// buttons are drawn beside it rather than over it.
+func TestMinWindowWidth(t *testing.T) {
+	width := int(MinWindowWidth)
+	tt, _, at := stripOf(t, 20, 19, width)
+	if at.MaxX <= 0 {
+		t.Fatalf("twenty tabs of %v DIPs each fit a window of %d: MaxX = %v", minTabWidth, width, at.MaxX)
+	}
+	if !tt.HasText(locales.ScrollTabsLeft()) || !tt.HasText(locales.ScrollTabsRight()) {
+		t.Errorf("the strip hides the buttons that move the tabs: %q", tt.Texts())
+	}
+	if !tt.HasText("PowerShell 7") {
+		t.Errorf("the strip draws no tab of the twenty: %q", tt.Texts())
+	}
+}
+
+// TestMinWindowHeight covers the floor of the height: the title bar, then a
+// pane that still holds a line of output below its padding, rather than a
+// sliver of a window.
+func TestMinWindowHeight(t *testing.T) {
+	if MinWindowHeight != TitleBarHeight+3*16+2*8 {
+		t.Errorf("the shortest window is %v DIPs tall, want the title bar %v and three rows with the padding",
+			MinWindowHeight, TitleBarHeight)
+	}
+	if MinWindowHeight <= TitleBarHeight+2*8+16 {
+		t.Errorf("the pane of the shortest window is %v DIPs tall: less than a line of output with its padding",
+			MinWindowHeight-TitleBarHeight)
+	}
+}
+
 // TestStripFits covers a strip the tabs do not outgrow: it does not scroll,
 // it shows no buttons to move the tabs, and every tab is as wide as it would
 // be alone.

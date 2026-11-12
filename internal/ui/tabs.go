@@ -79,6 +79,16 @@ const windowIcon float32 = 10
 // about one tab, so that a press brings the next tabs into view.
 const tabStep float32 = 176
 
+// MinWindowWidth is the narrowest the window may be and still show a tab: the
+// room of one tab at its narrowest, the buttons beside the tabs, the room that
+// moves the window, the two buttons that scroll the tabs, and the desktop's
+// own window buttons -- three of them at the widest a desktop draws them, which
+// is Windows' 46 DIP each, so that macOS' traffic lights fit too. Narrower than
+// this the strip shows no tab at all, only the buttons that move tabs that are
+// not there. It is a variable because stripButtonsWidth is a function.
+var MinWindowWidth = stripGutter + minTabWidth + dragRoom +
+	stripButtonsWidth(false) + 2*stepWidth + 3*46
+
 // tabDrag is a tab on its way to another place in the strip.
 type tabDrag struct {
 	from int
@@ -88,6 +98,13 @@ type tabDrag struct {
 type tabMove struct {
 	from, to int
 }
+
+// MinWindowHeight is the shortest the window may be: the strip tall enough for
+// the title bar, and a pane below it tall enough for a prompt and the two lines
+// above it at the default font and padding -- three rows of 16 DIPs and the
+// padding of 8 above and below. Short of it the pane holds no line of output at
+// all, and the window has nothing to show.
+const MinWindowHeight float32 = TitleBarHeight + 3*16 + 2*8
 
 // strip is the title bar: the window's buttons where the window draws them,
 // the tabs with the buttons that open one, and the room that moves the window.
@@ -480,6 +497,10 @@ func tab(c *myui.Context, st State, act Actions, i int, share float32) myui.Elem
 		text := myui.Text(c, tb.Name).
 			SingleLine().MaxWidth(name).Ellipsis("…").TextColor(nameColor).
 			Unselectable().ContextMenu(menu)
+		// The name takes the room the tab gives it, not only what its letters
+		// need: a short name would otherwise leave the close button a gap short
+		// of the tab's edge, where nothing is drawn.
+		text = text.Grow(1)
 		if nameWeight != 0 {
 			// Bold sets the weight on the element already drawing: the call
 			// mutates it, so its result is not needed.
