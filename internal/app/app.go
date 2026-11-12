@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime/debug"
 	"strconv"
@@ -695,15 +696,17 @@ func label(name, title, profileName string) string {
 // programName is the name of the program a path points at, without the .exe
 // that says it is one: a title that is a path still names its shell, and
 // "pwsh" says more than nothing does.
-func programName(path string) string {
-	if path == "" {
+func programName(p string) string {
+	if p == "" {
 		return ""
 	}
-	base := filepath.Base(path)
+	// A shell's title can carry the other platform's separator (a remote or
+	// WSL session), so split on both instead of on the host's own.
+	base := path.Base(strings.ReplaceAll(p, `\`, "/"))
 	for _, ext := range []string{".exe", ".EXE"} {
 		base = strings.TrimSuffix(base, ext)
 	}
-	if base == "." || base == string(filepath.Separator) {
+	if base == "." || base == "/" {
 		return ""
 	}
 	return base
