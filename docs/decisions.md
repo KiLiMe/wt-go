@@ -1016,16 +1016,17 @@ POSIX 上还能拿到登录 shell 的 `PATH`（`.zprofile` 里的东西不会莫
 
 **决定**：
 
-1. 色点换成 18 DIP 的圆角方块（半径 0.28×边长），中间是记号：终端标签用 `icons.Terminal`
+1. 色点换成 16 DIP 的圆角方块（半径 0.3×边长），中间是记号：终端标签用 `icons.Terminal`
    （Remix 的 `terminal-line`），设置页标签（`tb.Page != nil`）用 `icons.Settings`（`settings-3-line`）
    加强调色底。
 2. 底色是该 profile 的颜色；**记号颜色按 WCAG 对比度选**（`internal/ui/colors.go` 的 `inkOn`：
    黑色只在对比度高出白色 1.8 倍时才用）。因为 wt-go 的 shell 颜色里有浅的（cmd `#cccccc`、
    zsh `#e5c07b`、sh `#b0b0b0`、bash `#4eaa25`），照参考实现那样一律白字会糊；但深蓝
    （`#3b78ff`）上黑字也不好，所以用「明显更好才换」的门槛，而不是亮度阈值。
-3. 没配颜色的 profile（跟随系统、用户自建）用 `t.Border` 底 + `t.TextMuted` 记号：一块安静的灰方块，
-   用户没选过的颜色不该成为栏里最响的东西。
-4. 不在前面的标签，方块与记号都 `Alpha(0.85)`，与名字变灰同步。
+3. 没配颜色的 profile（跟随系统、用户自建）用 `t.Border` 底 + `t.Text` 记号：方块是安静的，
+   记号是亮的。第一版给的是 `t.TextMuted` 记号，截图里 `#545454` 压在 `#414141` 上，对比度约
+   1.4:1，方块看上去像一块空的灰格子。
+4. 不在前面的标签只给**底色** `Alpha(0.85)`，记号不变：记号跟底色一起压暗时同样读不出来。
 5. 两个 SVG 从 Remix Icon v4.8.0 取（与 jsDelivr 上 `remixicon@4.8.0` 的原文逐字节一致，分类是
    `Development/terminal-line.svg`、`System/settings-3-line.svg`），`internal/icons` 的 LICENSE/NOTICE
    不用改。
@@ -1038,8 +1039,8 @@ POSIX 上还能拿到登录 shell 的 `PATH`（`.zprofile` 里的东西不会莫
 一屏能放下的标签少半个；`inkOn` 只是启发式，极端的自定义颜色仍可能不够对比。
 
 **测试**：`internal/ui/colors_test.go` 的 `TestInkOn` 覆盖 8 个内置 shell 颜色；实机截图（2026-11-12）：
-跟随系统的 `pwsh` 灰方块、PowerShell 7 蓝方块白记号、Command Prompt 浅灰方块黑记号、设置页强调色
-方块配齿轮。
+跟随系统的 `pwsh` 灰方块白记号、PowerShell 7 蓝方块白记号、Command Prompt 浅灰方块黑记号、设置页
+强调色方块配齿轮。
 
 ---
 

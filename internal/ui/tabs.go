@@ -455,20 +455,24 @@ func tabIcon(c *myui.Context, tb Tab, active bool) {
 	case face.A > 0:
 		iconTile(c, icons.Terminal, face, inkOn(face), active)
 	default:
-		iconTile(c, icons.Terminal, t.Border, t.TextMuted, active)
+		// The quiet square still needs a mark that reads on it: TextMuted on
+		// Border is a smudge at this size, and a profile without a color is the
+		// one every tab of a fresh install wears.
+		iconTile(c, icons.Terminal, t.Border, t.Text, active)
 	}
 }
 
 // iconTile is the square a tab wears: the mark in it, on a face of the color
 // of the profile, dimmed when the tab is not in front, the way its name is.
+// Only the face is dimmed: a mark dimmed with its face stops reading at this
+// size, and the name beside it already says which tab is in front.
 func iconTile(c *myui.Context, ic *icons.Icon, face, mark myui.Color, active bool) {
-	const size float32 = 18
+	const size float32 = 16
 	if !active {
 		face = face.Alpha(0.85)
-		mark = mark.Alpha(0.85)
 	}
-	myui.Box(c).Size(size, size).Shrink(0).Radius(size * 0.28).Background(face).Center().Children(func() {
-		myui.Icon(c, ic.SVG).Size(size*0.58, size*0.58).TextColor(mark)
+	myui.Box(c).Size(size, size).Shrink(0).Radius(size * 0.3).Background(face).Center().Children(func() {
+		myui.Icon(c, ic.SVG).Size(size*0.62, size*0.62).TextColor(mark)
 	})
 }
 
