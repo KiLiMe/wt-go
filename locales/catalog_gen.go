@@ -1034,11 +1034,11 @@ func (msgs Messages) StartDirectory() string {
 	return Catalog.Format(msgs.locale, "startDirectory", nil)
 }
 
-// StartDirectoryNote says "Where a new tab starts when its profile names no directory."
+// StartDirectoryNote says "Where a new tab starts when its profile names no directory: current (where wt-go was started), home, or a path. Empty…"
 // in the language the app shows.
 func StartDirectoryNote() string { return In(i18n.Locale()).StartDirectoryNote() }
 
-// StartDirectoryNote says "Where a new tab starts when its profile names no directory."
+// StartDirectoryNote says "Where a new tab starts when its profile names no directory: current (where wt-go was started), home, or a path. Empty…"
 // in the language of msgs.
 func (msgs Messages) StartDirectoryNote() string {
 	return Catalog.Format(msgs.locale, "startDirectoryNote", nil)
@@ -1744,11 +1744,11 @@ func (msgs Messages) ArgumentsNote() string {
 	return Catalog.Format(msgs.locale, "argumentsNote", nil)
 }
 
-// ProfileStartNote says "Where the profile starts; empty uses the setting."
+// ProfileStartNote says "Where the profile starts: current, home, a path, or empty to use the setting above."
 // in the language the app shows.
 func ProfileStartNote() string { return In(i18n.Locale()).ProfileStartNote() }
 
-// ProfileStartNote says "Where the profile starts; empty uses the setting."
+// ProfileStartNote says "Where the profile starts: current, home, a path, or empty to use the setting above."
 // in the language of msgs.
 func (msgs Messages) ProfileStartNote() string {
 	return Catalog.Format(msgs.locale, "profileStartNote", nil)

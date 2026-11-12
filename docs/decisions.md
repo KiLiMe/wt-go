@@ -1146,3 +1146,91 @@ mygo 自己的 `%APPDATA%\wt-go\window-state.json`，与 `settings.json` 不在�
 严格窄于 1 标签；40 标签在 900 宽恰为 116、`MaxX > 0` 且名字没被 `…`）、`TestTabsShare`
 （4 标签在前的是第 2 个、301 宽 → 75；在前的是第 1 个 → 74.75；没标签 → 0）、
 `TestStripFits`（一个标签在窄条里仍与独自时同宽）。
+
+## ADR-49 起始目录认两个词：`current` 与 `home`
+
+**背景**：`startDirectory` 与 profile 的 `dir` 只能写路径。要「开在主目录」得写 `%USERPROFILE%`（Windows）
+或 `~`（Linux/macOS）——同一个意思两套写法；而「跟随启动目录」只能靠留空，与「没配」共用一个值，
+用户没法定它。ADR-42 把第三级回落定成进程 cwd，于是 Windows 上双击 exe 时 cwd 是 exe 所在目录，
+「什么都没配」就等于「开在 build 目录」，与本意（跟随调用方的 chdir）只在从文件管理器启动时一致。
+
+**决定**：
+
+1. `internal/sys` 加 `Home()`（`os.UserHomeDir()`，失败返回 `""`）与 `StartDir(pref string) string`：
+   `home` → 主目录，`current` 与 `""` → `WorkDir()`，其余原样返回。
+2. `app.openTab` 在合并 profile 的 `dir` 与 `startDirectory` 之后、`sys.ExpandPath` 之前调用一次
+   `sys.StartDir`，所以 profile 的 `dir` 也认这两个词。
+3. 关键词判定放 `internal/sys` 而不是 `internal/store`：`store` 是纯函数包，不 import `os`（AGENTS.md）。
+4. 本步不改任何现有行为：`""` 仍等于 `current`，两平台默认仍是进程 cwd。Windows 是否把 `""` 改成
+   `home`，是后续 ADR 的事（它必须同时给出「显式传目录」的入口，否则桌面「在此打开」会失效）。
+
+**理由**：路径写法已由 `sys.ExpandPath` 做到跨平台（`~`、`~/`、`~\`、`%NAME%`、`$NAME`、`${NAME}`），
+缺的只是「平台中立地表达主目录」。用词而不是路径，也让将来「默认值」成为词汇的一部分，而不是又加一个
+环境变量：ADR-42 否决 `PWD` 的理由（Windows 上没有、可被父进程伪造、`chdir` 后不更新会过期）一条不少。
+参考同类实现（kero 的 `newSessionDir`：`current`/`project`/`home`/`custom`）也是这个词表。
+
+**代价**：`current`、`home` 成了保留词，真叫这两个名字的相对目录要写 `./current`、`./home`；两个字段的
+取值不再是单一类型（词或路径），设置页的两句说明得说清三态。
+
+**测试**：`internal/sys/workdir_test.go` 的 `TestStartDir`：`""`/`current` 跟随 `os.Chdir`（用既有的
+`resolved()` 比符号链接），`home` 等于 `os.UserHomeDir()`，`C:\code`、`/opt/src`、`./current`、`sub`
+原样返回（带盘符的路径不被误认成词）。
+
+## ADR-50 `wt-go -d <目录>`：命令行比设置更近
+
+**背景**：ADR-49 把「开在哪」变成词，但 Windows 上「什么都没配」仍等于进程 cwd；一旦默认改成 `home`
+（下一步），文件管理器与桌面快捷方式的「在此打开」就失效，而 wt-go 没有别的入口能说「开在这里」：
+`internal/cli.Run` 只认 `diag`/`mcp`/`version`/`help`，其余算未知命令（退出码 2）。Windows Terminal 的
+答案是 `wt -d <目录>`，`TerminalDirCommand` 那类集成也是靠参数把目录传进来。
+
+**决定**：
+
+1. `wt-go -d DIR`（同义 `--dir DIR`）只在命令行最前面解析：`cli.windowFlags` 取走 `-d`/`--dir` 与它的值，
+   其余仍是命令；`-d` 与命令同时出现是用法错误（退出码 2），因为 `-d` 要的是窗口，命令不开窗口。
+2. `cli.Run` 返回 `Result{Handled, Code, StartDir}`，`StartDir` 就是 `-d` 说的目录；`app.Run` 把它交给
+   `newApp(startDir)`，存在 `App.startDir`。
+3. 取值链变成 profile 的 `dir` → `App.startDirectory()`（`-d` 非空则用它，否则用 `startDirectory`）→
+   `sys.StartDir`（`current`/`home`）→ `sys.ExpandPath`。`-d` 不写文件，不改设置页看到的值，只影响
+   这一次运行，包括之后新开的标签。
+4. 词也照收：`-d home`、`-d current` 与写在设置里同一个意思（同一个 `sys.StartDir`），路径则经
+   `sys.ExpandPath` 展开 `~` 与环境变量。
+
+**理由**：文件管理器集成靠「chdir 后 exec」传目录，Windows 上还有一类启动方式（Start 菜单、快捷方式、
+`wt.exe` 转发）拿不到调用方的 cwd，只能靠参数说；参数还说清了「这一次」与「以后每次」的区别，设置里
+不该为一次运行留下痕迹。优先级取「profile 的 `dir` 最高」：profile 是用户点名要的程序加上它固定的落脚点，
+比一个笼统的窗口参数更具体。
+
+**代价**：`Run` 的签名从 `(handled bool, code int)` 变成 `Result`，`internal/cli` 的测试助手跟着改；
+`-d` 只在最前面生效（`wt-go diag -d x` 里那个 `-d` 会被 `diag` 当成未知开关），文档要写清。
+
+**测试**：`internal/cli/window_test.go` 的 `TestDirFlagNamesTheStart`（`-d`/`--dir`、后一个生效、
+无参数时 `StartDir` 为空）与 `TestDirFlagMustStandAlone`（缺值、空值、与 `diag` 同用都是退出码 2 且有
+提示）；`internal/app/startup_test.go` 的 `TestStartDirectoryPrefersTheFlag`（`-d` 压过设置、清掉后回到设置）。
+
+## ADR-51 Windows 上「没配」就是家目录
+
+**背景**：ADR-42 让「什么都没配」回落到进程 cwd，理由是「文件管理器只能用 chdir+exec 传目录」。这在
+Linux/macOS 成立（`TerminalDirCommand`、`xdg-terminal-exec --working-directory`），在 Windows 不成立：
+资源管理器双击 exe 时 cwd 是 exe 自己的文件夹，开始菜单/任务栏启动是 `%SystemRoot%\System32`；
+Windows 传目录靠的是 `wt -d` 那样的参数（ADR-50 已给 wt-go 补上）。于是「跟随启动目录」在 Windows 上
+跟随的是启动器：双击 `build\windows-amd64\wt-go.exe` 就落在 build 目录。Windows Terminal 的默认
+（`"startingDirectory": "%USERPROFILE%"`）与此一致地选了家目录。
+
+**决定**：
+
+1. `sys.defaultStartDir()` 按平台分叉（`startdir_windows.go` / `startdir_other.go`）：Windows 返回
+   `Home()`（拿不到主目录时才回落到 `WorkDir()`），其他平台返回 `WorkDir()`。
+2. `sys.StartDir("")` 返回它；`"current"` 仍是 `WorkDir()` 且两个平台同义，所以想保留旧行为的人写
+   `"startDirectory": "current"` 即可，不必换平台配置。
+3. profile 的 `dir` 与命令行 `-d` 的优先级不变；`""` 仍然只是「没写」，`settings.json` 不因此改写。
+
+**理由**：默认值应该答「用户最可能想要的地方」。Windows 上双击启动不带任何目录信息，家目录是有信息的
+猜测；Linux/macOS 上 cwd 是从启动器继承的意图，换掉它才是丢信息。同一个字段两平台默认不同，但两平台
+都能用词把它写成确定值（`home`/`current`），这正是 ADR-49 留出词汇的用处。
+
+**代价**：`startDirectory` 的默认值不再是一个词，文档、设置页说明与故障排查都要讲平台差异；从旧版
+升级的人会发现双击落点从 exe 目录变成家目录（想回去写 `current`，不改写设置文件，只在文档里说明）。
+ADR-42 的回落理由在 Windows 上被本 ADR 取代，Linux/macOS 部分仍然有效。
+
+**测试**：`internal/sys/workdir_test.go` 的 `TestStartDir` 里 `""` 的期望按 `runtime.GOOS` 取家目录或
+chdir 后的目录（取不到家目录时断言回落到 cwd）；`current` 的断言两平台不变。

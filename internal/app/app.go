@@ -34,9 +34,14 @@ import (
 
 // App is the window and what it holds.
 type App struct {
-	win        *mygo.Window
-	closed     bool
-	settings   store.Settings
+	win      *mygo.Window
+	closed   bool
+	settings store.Settings
+
+	// startDir is the directory the command line's -d named: it stands in for
+	// the setting with the same job, for this run only. A profile's own dir is
+	// still the more specific answer and still wins.
+	startDir   string
 	profiles   []profile.Profile
 	found      []profile.Found
 	panes      pane.Set
@@ -139,10 +144,12 @@ type binding struct {
 
 // Run opens the window and runs until it closes.
 func Run() (err error) {
-	// The commands that answer without a window: `wt-go diag` and `wt-go mcp`.
-	if handled, code := cli.Run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr); handled {
-		if code != 0 {
-			os.Exit(code)
+	// The command line: the commands that answer without a window (`wt-go diag`,
+	// `wt-go mcp`), and -d, which says where the window's new tabs start.
+	command := cli.Run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr)
+	if command.Handled {
+		if command.Code != 0 {
+			os.Exit(command.Code)
 		}
 		return nil
 	}
@@ -168,7 +175,7 @@ func Run() (err error) {
 		if !sys.FixTextColor() {
 			log.Print(fault.Line(fault.NoFontconfig, ""))
 		}
-		a := newApp()
+		a := newApp(command.StartDir)
 		a.appearance()
 		// Before the window: the store is read when the first window with a
 		// StateKey is created, and the window opens at the geometry it holds.
@@ -242,9 +249,16 @@ func locale(tag string) {
 }
 
 // newApp reads the settings and finds the shells, and says what went wrong
-// when it could not: the window opens with the defaults.
-func newApp() *App {
-	a := &App{settings: store.Default(), shells: map[*terminal.Terminal]sys.ShellProc{}, watchStop: make(chan struct{}), relaunch: sys.Relaunch}
+// when it could not: the window opens with the defaults. startDir is where the
+// command line said new tabs start, "" when it said nothing.
+func newApp(startDir string) *App {
+	a := &App{
+		settings:  store.Default(),
+		startDir:  startDir,
+		shells:    map[*terminal.Terminal]sys.ShellProc{},
+		watchStop: make(chan struct{}),
+		relaunch:  sys.Relaunch,
+	}
 	settings, data, fresh, err := load()
 	if err == nil {
 		a.settings = settings
@@ -769,21 +783,29 @@ func (a *App) openFirst() {
 	a.openTab(profile.Default(a.profiles, a.settings.DefaultProfile), "")
 }
 
+// startDirectory is where a tab starts when neither it nor its profile names
+// a directory: what -d said for this run, else the setting.
+func (a *App) startDirectory() string {
+	if a.startDir != "" {
+		return a.startDir
+	}
+	return a.settings.StartDirectory
+}
+
 // openTab opens a tab that runs p, in dir when dir is not "", else where p,
-// the settings and this process say, in that order.
+// the command line or the settings, and this process say, in that order.
 func (a *App) openTab(p profile.Profile, dir string) {
 	if dir == "" {
 		dir = p.Dir
 	}
 	if dir == "" {
-		dir = a.settings.StartDirectory
+		dir = a.startDirectory()
 	}
-	// Nothing configured: start where we were started, which is what a file
-	// manager's "open a terminal here" passes and what mygo would otherwise
-	// replace with the home directory.
-	if dir == "" {
-		dir = sys.WorkDir()
-	}
+	// Either source may name the directory with a word: "current" is where we
+	// were started, which is what a file manager's "open a terminal here"
+	// passes and what mygo would otherwise replace with the home directory;
+	// "home" is the user's. A path goes on to ExpandPath as it is.
+	dir = sys.StartDir(dir)
 	dir = sys.ExpandPath(dir)
 	var term *terminal.Terminal
 	opts := a.termOptions(p, dir)

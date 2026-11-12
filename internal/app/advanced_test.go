@@ -25,7 +25,7 @@ func TestNewAppOnlyProbesWithoutAFile(t *testing.T) {
 	if err := sys.WriteSettings(data); err != nil {
 		t.Fatal(err)
 	}
-	a := newApp()
+	a := newApp("")
 	if len(a.found) != 0 {
 		t.Errorf("probed %d shells with a file in place", len(a.found))
 	}
@@ -96,7 +96,7 @@ func TestAdoptAgainHidesAndShows(t *testing.T) {
 // program starts again, and the window closes so that there are not two.
 func TestResetDeletesTheFileAndRestarts(t *testing.T) {
 	settingsDir(t)
-	a := newApp()
+	a := newApp("")
 	if _, ok, err := sys.ReadSettings(); err != nil || !ok {
 		t.Fatalf("the first start wrote no file: %v, %v", err, ok)
 	}

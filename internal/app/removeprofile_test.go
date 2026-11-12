@@ -12,7 +12,7 @@ import (
 // start would find it again, and can be shown again from the page.
 func TestRemoveProfile(t *testing.T) {
 	settingsDir(t)
-	a := newApp()
+	a := newApp("")
 	a.settings.Profiles = []store.Profile{
 		{ID: "cmd", Name: "Command Prompt", Command: `C:\Windows\system32\cmd.exe`, Discovered: true},
 		{ID: "mine", Name: "我的", Command: "cmd.exe"},

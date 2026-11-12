@@ -12,8 +12,8 @@ import (
 func run(t *testing.T, args ...string) (out, errOut string, handled bool, code int) {
 	t.Helper()
 	var o, e bytes.Buffer
-	handled, code = Run(args, strings.NewReader(""), &o, &e)
-	return o.String(), e.String(), handled, code
+	r := Run(args, strings.NewReader(""), &o, &e)
+	return o.String(), e.String(), r.Handled, r.Code
 }
 
 func TestNoArgumentsOpenTheWindow(t *testing.T) {

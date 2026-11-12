@@ -62,7 +62,7 @@ func TestNewAppKeepsABadFile(t *testing.T) {
 	if err := sys.WriteSettings(bad); err != nil {
 		t.Fatal(err)
 	}
-	a := newApp()
+	a := newApp("")
 	if a.configErr == "" {
 		t.Fatal("no note about the bad file")
 	}
