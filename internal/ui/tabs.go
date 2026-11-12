@@ -315,14 +315,19 @@ func tabs(c *myui.Context, st State, act Actions) {
 }
 
 // stripButtons are the buttons after the last tab: the one that opens a tab
-// and the menu that picks the profile it runs, with the line Windows Terminal
-// draws between them. They scroll with the tabs, so that they stay beside the
-// tab they open next to rather than drift to the far end of a wide window.
+// and the menu that picks the profile it runs, with the lines Windows Terminal
+// draws on both sides of the button that opens a tab. They sit right after the
+// tabs rather than at the far end of a wide window, so that a tab is a press
+// away whatever the strip shows.
 func stripButtons(c *myui.Context, st State, act Actions) myui.Element {
 	t := c.Theme()
-	return myui.Row(c).Height(TitleBarHeight).AlignItems(myui.Center).Gap(2).Children(func() {
-		newTabButton(c, act)
+	divider := func() {
 		myui.Box(c).Width(1).Height(16).Margin(0, 4).Background(t.Border)
+	}
+	return myui.Row(c).Height(TitleBarHeight).AlignItems(myui.Center).Gap(2).Children(func() {
+		divider()
+		newTabButton(c, act)
+		divider()
 		profilesMenu(c, st, act)
 	})
 }
