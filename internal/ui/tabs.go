@@ -158,8 +158,11 @@ func windowButton(c *myui.Context, b *WindowButtons, act Actions, name string) {
 			// 1px minus and box.
 			myui.Box(c).Size(windowIcon, windowIcon).Draw(func(p *myui.Painter, r myui.Rect) {
 				const in = 0.5
-				p.Line(r.X+in, r.Y+in, r.X+r.W-in, r.Y+r.H-in, 1, color)
-				p.Line(r.X+r.W-in, r.Y+in, r.X+in, r.Y+r.H-in, 1, color)
+				// Painter.Line paints only horizontal or vertical lines: given a
+				// slant it paints the top edge of the box between the points, which
+				// showed this cross as a second minus. StrokePolyline draws the slant.
+				p.StrokePolyline([][2]float32{{r.X + in, r.Y + in}, {r.X + r.W - in, r.Y + r.H - in}}, 1, color)
+				p.StrokePolyline([][2]float32{{r.X + r.W - in, r.Y + in}, {r.X + in, r.Y + r.H - in}}, 1, color)
 			})
 		}
 	default:
