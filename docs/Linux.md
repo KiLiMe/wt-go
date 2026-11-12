@@ -36,7 +36,8 @@ sudo dnf install gtk3 pango pangocairo google-noto-sans-cjk-fonts
 # Arch
 sudo pacman -S gtk3 pango noto-fonts-cjk
 
-go build -o wt-go .
+go build -o wt-go .         # 裸二进制：没有图标、版本号
+./Scripts/build.sh          # 日常构建走它：与发布版一致，mygo 注入图标、版本与 libghostty-vt.so
 ./wt-go                     # 前台跑：原生库失败只写 stdout 一行 log
 GDK_BACKEND=x11 ./wt-go     # 指定后端；不设则自动选，两种都要试
 xvfb-run -a ./wt-go         # 无头冒烟：只验证"窗口能开、不崩"
