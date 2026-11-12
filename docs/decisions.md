@@ -993,6 +993,9 @@ POSIX 上还能拿到登录 shell 的 `PATH`（`.zprofile` 里的东西不会莫
 **代价**：Windows 上只装了 `bash.exe`、没装 `pwsh`/`powershell` 的机器，默认标签从 bash 变成
 `%COMSPEC%`/`cmd.exe`；反过来，期待「跟随系统＝cmd」的人要在下拉里显式选 Command Prompt。
 老文件里写着 `"defaultProfile": ""` 的语义不变，写着具体 id 的照旧。
+零值 profile 没有名字可显示，标签名因此多了一级回落：标题是程序路径就取文件名去 `.exe`
+（`pwsh`、`cmd`、`zsh`），连标题都没有才写「跟随系统」（ADR-44 补丁，`internal/app/app.go` 的
+`label`/`programName`）。
 
 **测试**：`internal/profile/profile_test.go` 的 `TestDefault` 覆盖空、未知、隐藏三种 id 都回零值；
 `TestCommandLine` 覆盖零 profile 返回 `nil`。实机（2026-11-12，Windows）：默认标签的子进程是

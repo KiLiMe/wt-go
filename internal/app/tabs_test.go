@@ -6,6 +6,7 @@ import (
 	"github.com/egoist/mygo/plugins/terminal"
 
 	"wtgo/internal/action"
+	"wtgo/internal/i18n"
 	"wtgo/internal/layout"
 	"wtgo/internal/pane"
 	"wtgo/internal/store"
@@ -23,6 +24,12 @@ func TestLabel(t *testing.T) {
 		{"", "pwsh.exe", "PowerShell 7", "PowerShell 7"},
 		{"", "/usr/bin/zsh", "Shell", "Shell"},
 		{"", "", "PowerShell 7", "PowerShell 7"},
+		// A tab that runs no named profile runs the system's own shell, and
+		// says which one it got when that shell left its path as the title.
+		{"", `D:\Applications\pwsh\pwsh.exe`, "", "pwsh"},
+		{"", `C:\Windows\System32\cmd.exe`, "", "cmd"},
+		{"", "/usr/bin/zsh", "", "zsh"},
+		{"", "", "", i18n.T("systemProfile")},
 	} {
 		if got := label(tc.name, tc.title, tc.profile); got != tc.want {
 			t.Errorf("label(%q, %q, %q) = %q, want %q", tc.name, tc.title, tc.profile, got, tc.want)

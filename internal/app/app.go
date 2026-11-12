@@ -667,16 +667,40 @@ func (a *App) tabName(tab *pane.Tab) string {
 
 // label is what a tab is called: the name it was given, else the title its
 // program set, unless that title is the path of the program, which is what a
-// shell sets when it has no title of its own; else the name of its profile.
+// shell sets when it has no title of its own; else the name of its profile;
+// else the name of the program itself, because a tab that runs no named
+// profile runs whatever shell the system has, and a tab with no name at all
+// cannot be told from the empty strip beside it.
 func label(name, title, profileName string) string {
 	switch {
 	case name != "":
 		return name
 	case title != "" && !isProgramPath(title):
 		return title
-	default:
+	case profileName != "":
 		return profileName
+	case programName(title) != "":
+		return programName(title)
+	default:
+		return i18n.T("systemProfile")
 	}
+}
+
+// programName is the name of the program a path points at, without the .exe
+// that says it is one: a title that is a path still names its shell, and
+// "pwsh" says more than nothing does.
+func programName(path string) string {
+	if path == "" {
+		return ""
+	}
+	base := filepath.Base(path)
+	for _, ext := range []string{".exe", ".EXE"} {
+		base = strings.TrimSuffix(base, ext)
+	}
+	if base == "." || base == string(filepath.Separator) {
+		return ""
+	}
+	return base
 }
 
 // isProgramPath reports whether s is the path of a program rather than a
