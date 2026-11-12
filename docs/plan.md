@@ -100,6 +100,8 @@
 
 **本阶段新增的配置字段**：`startSize{columns,rows}`、`newTabPosition`、`tabWidth`、`alwaysOnTop`、`titleFromActiveTerminal`。
 
+**后续变更**（2026-11-12，ADR-41）：`language` 改存 BCP 47（`""` 跟随系统、`zh-Hans`、`en`），界面文案搬进 `locales/` 由 mygo 的 catalog 生成，设置页的语言项是「跟随系统」＋各语言自称；加一种语言＝加一份 `locales/<tag>.json` 再跑 `go tool mygo generate`。
+
 ---
 
 ## 阶段 4：交互细节
