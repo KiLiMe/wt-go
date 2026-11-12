@@ -38,6 +38,11 @@ type Tab struct {
 	Color       string
 	// Name is the name the user gave the tab.
 	Name string
+	// Runs is the program the tab started when its profile names no command
+	// of its own: the shell the machine has, as `bash` or `pwsh`. The strip
+	// says it until the program sets a title, because a tab with neither a
+	// name nor a title cannot be told from the empty strip beside it.
+	Runs string
 }
 
 // New is a tab that holds term.

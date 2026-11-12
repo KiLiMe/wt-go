@@ -10,30 +10,70 @@ import (
 	"wtgo/internal/layout"
 	"wtgo/internal/pane"
 	"wtgo/internal/store"
+	"wtgo/internal/sys"
 )
 
 // TestLabel covers what a tab is called.
 func TestLabel(t *testing.T) {
 	for _, tc := range []struct {
-		name, title, profile, want string
+		name, title, profile, runs, want string
 	}{
-		{"build", "whatever", "PowerShell 7", "build"},
-		{"", "vim main.go", "PowerShell 7", "vim main.go"},
-		{"", `D:\Applications\pwsh\pwsh.exe`, "PowerShell 7", "PowerShell 7"},
-		{"", `C:\Windows\System32\cmd.exe`, "Command Prompt", "Command Prompt"},
-		{"", "pwsh.exe", "PowerShell 7", "PowerShell 7"},
-		{"", "/usr/bin/zsh", "Shell", "Shell"},
-		{"", "", "PowerShell 7", "PowerShell 7"},
+		{"build", "whatever", "PowerShell 7", "pwsh", "build"},
+		{"", "vim main.go", "PowerShell 7", "pwsh", "vim main.go"},
+		{"", `D:\Applications\pwsh\pwsh.exe`, "PowerShell 7", "pwsh", "PowerShell 7"},
+		{"", `C:\Windows\System32\cmd.exe`, "Command Prompt", "pwsh", "Command Prompt"},
+		{"", "pwsh.exe", "PowerShell 7", "pwsh", "PowerShell 7"},
+		{"", "/usr/bin/zsh", "Shell", "pwsh", "Shell"},
+		{"", "", "PowerShell 7", "pwsh", "PowerShell 7"},
 		// A tab that runs no named profile runs the system's own shell, and
 		// says which one it got when that shell left its path as the title.
-		{"", `D:\Applications\pwsh\pwsh.exe`, "", "pwsh"},
-		{"", `C:\Windows\System32\cmd.exe`, "", "cmd"},
-		{"", "/usr/bin/zsh", "", "zsh"},
-		{"", "", "", i18n.T("systemProfile")},
+		{"", `D:\Applications\pwsh\pwsh.exe`, "", "bash", "pwsh"},
+		{"", `C:\Windows\System32\cmd.exe`, "", "bash", "cmd"},
+		{"", "/usr/bin/zsh", "", "bash", "zsh"},
+		// Before any title, the tab says which shell it started: an empty
+		// strip with a close button on it is what the word below was for.
+		{"", "", "", "bash", "bash"},
+		{"", "", "", "pwsh", "pwsh"},
+		{"", "", "", "", i18n.T("systemProfile")},
 	} {
-		if got := label(tc.name, tc.title, tc.profile); got != tc.want {
-			t.Errorf("label(%q, %q, %q) = %q, want %q", tc.name, tc.title, tc.profile, got, tc.want)
+		if got := label(tc.name, tc.title, tc.profile, tc.runs); got != tc.want {
+			t.Errorf("label(%q, %q, %q, %q) = %q, want %q",
+				tc.name, tc.title, tc.profile, tc.runs, got, tc.want)
 		}
+	}
+}
+
+// TestRunsOf covers the name of the shell a tab with no command starts.
+func TestRunsOf(t *testing.T) {
+	for _, tc := range []struct {
+		shells []sys.Shell
+		want   string
+	}{
+		{[]sys.Shell{{Command: `C:\Program Files\PowerShell\7\pwsh.exe`}}, "pwsh"},
+		{[]sys.Shell{{Command: `/bin/bash`}}, "bash"},
+		{[]sys.Shell{{Command: `C:\Program Files\Git\bin\bash.exe`}}, "bash"},
+		{[]sys.Shell{{Command: `/usr/bin/fish`}, {Command: `/bin/bash`}}, "fish"},
+		{nil, ""},
+	} {
+		if got := runsOf(tc.shells); got != tc.want {
+			t.Errorf("runsOf(%v) = %q, want %q", tc.shells, got, tc.want)
+		}
+	}
+}
+
+// TestTabNamesTheShellItRuns covers the tab itself: it says the shell before
+// that shell has a title, and the title once it has one.
+func TestTabNamesTheShellItRuns(t *testing.T) {
+	a := &App{runs: "bash"}
+	a.settings.TitleFromActiveTerminal = true
+	tab := pane.New(nil)
+	tab.Runs = a.runs
+	if got := a.tabName(tab); got != "bash" {
+		t.Errorf("tabName() = %q, want bash", got)
+	}
+	tab.ProfileName = "Ubuntu"
+	if got := a.tabName(tab); got != "Ubuntu" {
+		t.Errorf("tabName() = %q with a profile name, want Ubuntu", got)
 	}
 }
 

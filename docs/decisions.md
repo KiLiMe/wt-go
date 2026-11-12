@@ -1234,3 +1234,32 @@ ADR-42 的回落理由在 Windows 上被本 ADR 取代，Linux/macOS 部分仍�
 
 **测试**：`internal/sys/workdir_test.go` 的 `TestStartDir` 里 `""` 的期望按 `runtime.GOOS` 取家目录或
 chdir 后的目录（取不到家目录时断言回落到 cwd）；`current` 的断言两平台不变。
+
+## ADR-52 标签先说自己启动的 shell，再说 shell 的标题
+
+**背景**：ADR-44 让「跟随系统」没有 profile 名，标签名于是落到最后一级的词「跟随系统」。Windows 上看
+不出来：conhost 启动时把标题设成程序路径，`programName` 取成 `pwsh`。POSIX 上 `bash -l` 默认不发
+OSC 0/2，标签就一直写着「跟随系统」，而设置页里同一个词说的是「没指定 profile」，两处含义不同。
+
+**决定**：
+
+1. `sys.Discover()` 的第一项（POSIX 是 `$SHELL`，Windows 是 `pwsh.exe`）经 `programName` 变成
+   `bash`/`pwsh`：`newApp` 存进 `App.runs`，`openTab` 只在 profile 没写命令时写进 `pane.Tab.Runs`。
+2. `label` 在「标题里的程序名」之后、「跟随系统」之前加一级：名字 > 非路径标题 > profile 名 >
+   标题里的程序名 > `Runs` > 「跟随系统」。
+3. 「跟随系统」只剩在机器上探测不到任何 shell 时用。
+
+**理由**：一个空白标签条和一个写着「跟随系统」的标签都不回答问题，而「这个标签跑的是什么」在启动
+瞬间就有答案，只是 mygo 不把它告诉我们。这一级排在标题之后而不是之前，是因为标题是程序自己说的，
+比我们按 `Discover()` 的顺序猜准。
+
+**为什么不显式传命令**：mygo 的 `command()`（`plugins/terminal/terminal.go:769-793`）对显式命令按
+`argv = 命令本身`，POSIX 上会从 `-bash`（登录 shell，读 `.bash_profile`）变成 `bash`。为一个标签名
+改掉启动语义不划算。
+
+**为什么不设 `Tab.Name` 或 `ProfileName`**：这两级在 `label` 里是常驻分支，设了之后就再也跟不了 shell
+的标题（`titleFromActiveTerminal` 一并失效）。新增一级才保得住「标题一到就跟随」。
+
+**代价**：`runsOf` 复制了 mygo 选默认 shell 的规则（取第一项），两家不一致时标签会在首个标题到达前
+说错一小会儿，`runsOf` 的注释点名了这个依赖。测试：`TestLabel`（两级新用例）、`TestRunsOf`
+（Windows/POSIX 路径与空列表）、`TestTabNamesTheShellItRuns`（标题前、以及有 profile 名时各叫什么）。

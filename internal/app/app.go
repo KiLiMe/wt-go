@@ -42,7 +42,11 @@ type App struct {
 	// startDir is the directory the command line's -d named: it stands in for
 	// the setting with the same job, for this run only. A profile's own dir is
 	// still the more specific answer and still wins.
-	startDir   string
+	startDir string
+	// runs is what the strip calls a tab that runs no profile command: the
+	// name of the shell the machine starts, `bash` or `pwsh`, as the profile's
+	// own name answers for the tabs that have one.
+	runs       string
 	profiles   []profile.Profile
 	found      []profile.Found
 	panes      pane.Set
@@ -256,6 +260,7 @@ func newApp(startDir string) *App {
 	a := &App{
 		settings:  store.Default(),
 		startDir:  startDir,
+		runs:      runsOf(sys.Discover()),
 		shells:    map[*terminal.Terminal]sys.ShellProc{},
 		watchStop: make(chan struct{}),
 		relaunch:  sys.Relaunch,
@@ -661,9 +666,9 @@ func (a *App) tabName(tab *pane.Tab) string {
 	}
 	term := n.Term
 	if term == nil {
-		return label(tab.Name, "", tab.ProfileName)
+		return label(tab.Name, "", tab.ProfileName, tab.Runs)
 	}
-	name := label(tab.Name, term.Title(), tab.ProfileName)
+	name := label(tab.Name, term.Title(), tab.ProfileName, tab.Runs)
 	select {
 	case <-term.Done():
 		return name + " - " + locales.TabExited() + " (" + strconv.Itoa(term.ExitCode()) + ")"
@@ -677,8 +682,10 @@ func (a *App) tabName(tab *pane.Tab) string {
 // shell sets when it has no title of its own; else the name of its profile;
 // else the name of the program itself, because a tab that runs no named
 // profile runs whatever shell the system has, and a tab with no name at all
-// cannot be told from the empty strip beside it.
-func label(name, title, profileName string) string {
+// cannot be told from the empty strip beside it; else the shell it started,
+// for the same reason while that shell has set no title yet. Only a machine
+// with no shell at all falls through to the word for following the system.
+func label(name, title, profileName, runs string) string {
 	switch {
 	case name != "":
 		return name
@@ -688,6 +695,8 @@ func label(name, title, profileName string) string {
 		return profileName
 	case programName(title) != "":
 		return programName(title)
+	case runs != "":
+		return runs
 	default:
 		return i18n.T("systemProfile")
 	}
@@ -722,6 +731,18 @@ func isProgramPath(s string) bool {
 		return true
 	}
 	return strings.HasSuffix(strings.ToLower(s), ".exe")
+}
+
+// runsOf is what the strip calls a tab whose profile names no command: the
+// shell the machine has, in Discover's order, which is the one a terminal
+// starts when it is given none -- $SHELL on a POSIX system, pwsh.exe on
+// Windows. It is a copy of the terminal's own choice, and only the strip's
+// first guess: a shell that sets a title speaks for itself from then on.
+func runsOf(shells []sys.Shell) string {
+	if len(shells) == 0 {
+		return ""
+	}
+	return programName(shells[0].Command)
 }
 
 // syncTitle gives the window the title of the tab in front, when it changed.
@@ -822,6 +843,11 @@ func (a *App) openTab(p profile.Profile, dir string) {
 	}
 	tab := pane.New(term)
 	tab.ProfileID, tab.ProfileName, tab.Color = p.ID, p.Name, p.Color
+	// Only a profile that names no program leaves the shell to the terminal,
+	// and only then does the strip have to say which shell that was.
+	if len(p.CommandLine()) == 0 {
+		tab.Runs = a.runs
+	}
 	a.insertTab(tab)
 	a.revealTab()
 	a.syncTitle()
