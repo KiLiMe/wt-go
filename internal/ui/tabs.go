@@ -548,27 +548,20 @@ func profilesMenu(c *myui.Context, st State, act Actions) myui.Element {
 		}
 	})
 	return stripButton(c, base).Children(func() {
-		myui.Icon(c, icons.Chevron.SVG).Size(14, 14).TextColor(stripIcon(c, base))
+		myui.Icon(c, icons.Chevron.SVG).Size(14, 14).TextColor(c.Theme().Text)
 	})
 }
 
 // stripButton is one of the buttons beside the tabs: a square in the room of a
 // glyph and a half, which takes the surface under the pointer, as the window's
-// own buttons do, so that a mark in the strip reads as a button.
+// own buttons do, so that a mark in the strip reads as a button. Its mark takes
+// the text color, as Windows Terminal's own + and ▾ do: at 14 DIP a muted mark
+// reads as a disabled control, and the surface is enough to say it is a button.
 func stripButton(c *myui.Context, el myui.Element) myui.Element {
 	if el.Hovered() {
 		return el.Background(c.Theme().SurfaceHover)
 	}
 	return el
-}
-
-// stripIcon is the color of a strip button's mark: the text color while the
-// pointer is over the button, the muted one otherwise.
-func stripIcon(c *myui.Context, el myui.Element) myui.Color {
-	if el.Hovered() {
-		return c.Theme().Text
-	}
-	return c.Theme().TextMuted
 }
 
 // shortcut shows an action's key by a menu item, when the window knows one.
@@ -595,6 +588,6 @@ func newTabButton(c *myui.Context, act Actions) myui.Element {
 		Tooltip(locales.NewTab()).
 		OnClick(func() { act.NewTab("") })
 	return stripButton(c, base).Children(func() {
-		myui.Icon(c, icons.Add.SVG).Size(14, 14).TextColor(stripIcon(c, base))
+		myui.Icon(c, icons.Add.SVG).Size(14, 14).TextColor(c.Theme().Text)
 	})
 }
