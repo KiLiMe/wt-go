@@ -38,4 +38,9 @@
 | `Scripts/build.sh` | 同上（Linux / macOS）：出 `build/<os>-<arch>/wt-go`，平台按 `go env` |
 | `docs/` | `使用说明.md` / `配置参考.md`（`settings.json` 全字段）/ `键位.md`（默认键位与键位写法）/ `故障排查.md`（故障码）/ `Linux.md` / `代码导读.md` / `decisions.md`（ADR）/ `plan.md`（阶段计划） |
 | `mygo.json` | `go tool mygo build` 的包名、版本与打包信息 |
-| `Scripts/build.ps1` / `Scripts/build.sh` | 参数：`-Test`/`--test` 先跑 vet 与测试、`-Clean`/`--clean` 清掉 `build/`、`-Package`/`--package` 只出 `dist/` |
+| `Scripts/build.ps1` / `Scripts/build.sh` | 参数：`-Test`/`--test` 先跑 vet 与测试、`-Clean`/`--clean` 清掉 `build/`、`-Package`/`--package` 只出 `dist/`、`-Version`/`--expect <版本>` 断言 `mygo.json` 的版本就是这一串（发版对 tag 用） |
+
+## 版本
+
+- `mygo.json` 的 `version` 是唯一来源：`mygo build` 把它写进 exe 的版本信息，两个构建脚本打完再从 exe 属性 / `dist` 里读回来对账，对不上就报错。别在代码里再手写一份版本号。
+- 发版：改 `mygo.json` 的 `version` → 提交推上 `main` → `git tag -a v<版本> -m "wt-go <版本>"` 推上去。tag 要带 `-a`（annotated），CI 要求 tag 与 `mygo.json` 一致才发。

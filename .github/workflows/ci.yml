@@ -108,6 +108,20 @@ jobs:
       # on every push).
       - name: package
         run: go tool mygo build -platform "${{ matrix.platforms }}" -skip-dmg -skip-installer -o dist
+      # The version in the exe's properties comes from mygo.json alone. Read it
+      # back: a stray .syso in the package makes mygo skip its own resources, and
+      # the archive would then be labelled a version the binary does not claim.
+      - name: version in the exe
+        if: startsWith(matrix.os, 'windows')
+        shell: pwsh
+        run: |
+          $want = '${{ steps.version.outputs.version }}'
+          $got = (Get-Item 'dist/windows-amd64/wt-go.exe').VersionInfo.FileVersion
+          if ($got -ne $want) {
+            Write-Host "::error::the exe says '$got', mygo.json says '$want'"
+            exit 1
+          }
+          Write-Host "  [OK] exe v$got"
       # A release carries one portable archive per platform, both .zip: the
       # executable with the native library beside it, unpacked anywhere. No
       # installer, no .deb, no PKGBUILD: mygo build still writes those, they are

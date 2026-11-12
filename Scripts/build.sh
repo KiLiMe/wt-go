@@ -4,6 +4,12 @@
 #   ./Scripts/build.sh --test     -> go vet and go test before building
 #   ./Scripts/build.sh --clean    -> delete build/ first
 #   ./Scripts/build.sh --package  -> distribution only: go tool mygo build -o dist (no installer)
+#   ./Scripts/build.sh --expect 0.3.0
+#                                 -> assert mygo.json's version is that string (releases check the tag)
+#
+# The version has one source, mygo.json's version: mygo build writes it into the
+# binary, and --expect only says which string the file must hold, so a release
+# cannot be labelled one version and built from another.
 #
 # The icon, version info and native library are injected by mygo at package
 # time (go build cannot carry resources), so a local build matches the
@@ -19,6 +25,8 @@ usage() {
   ./Scripts/build.sh --test     编译前先跑 go vet 与 go test
   ./Scripts/build.sh --clean    先删掉 build 目录再编译
   ./Scripts/build.sh --package  只出分发包：go tool mygo build -o dist（不造安装器）
+  ./Scripts/build.sh --expect 0.3.0
+                                断言 mygo.json 里的版本就是这一串（发版时对 tag 用）
 
 平台取自 go env GOOS / GOARCH。
 EOF
@@ -27,20 +35,30 @@ EOF
 clean=0
 test=0
 package=0
-for arg in "$@"; do
-    case "$arg" in
+expect=''
+while [ "$#" -gt 0 ]; do
+    case "$1" in
         --clean) clean=1 ;;
         --test) test=1 ;;
         --package) package=1 ;;
+        --expect)
+            if [ "$#" -lt 2 ]; then
+                printf '  [ERR] --expect 后面要跟版本号（不带 v）。\n' >&2
+                exit 2
+            fi
+            expect=$2
+            shift
+            ;;
         -h | --help)
             usage
             exit 0
             ;;
         *)
-            printf '  [ERR] 不认识的参数：%s（用 --help 看用法）\n' "$arg" >&2
+            printf '  [ERR] 不认识的参数：%s（用 --help 看用法）\n' "$1" >&2
             exit 2
             ;;
     esac
+    shift
 done
 
 # The script sits in Scripts/; the repository is the directory above it, which
@@ -51,6 +69,23 @@ build_dir="$root/build"
 
 if ! command -v go >/dev/null 2>&1; then
     printf '  [ERR] 找不到 go，请先安装 Go 1.27+。\n' >&2
+    exit 1
+fi
+
+if [ ! -f "$root/mygo.json" ]; then
+    printf '  [ERR] 找不到 %s：版本、图标与产物名都在它里面。\n' "$root/mygo.json" >&2
+    exit 1
+fi
+# The version comes from mygo.json alone; --expect is only an assertion.
+# awk, not sed | head: under pipefail a writer killed by SIGPIPE would take the
+# script down with it.
+target=$(awk -F'"' '/"version"[[:space:]]*:/ { print $4; exit }' "$root/mygo.json")
+if ! printf '%s' "$target" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+    printf '  [ERR] mygo.json 的 version 要是不带 v 的三段数字（tag 去掉 v）：%s\n' "$target" >&2
+    exit 1
+fi
+if [ -n "$expect" ] && [ "$expect" != "$target" ]; then
+    printf '  [ERR] 版本对不上：--expect 是 %s，mygo.json 里是 %s。\n' "$expect" "$target" >&2
     exit 1
 fi
 
@@ -71,7 +106,9 @@ if [ "$test" -eq 1 ]; then
         printf '  [ERR] go vet 失败。\n' >&2
         exit 1
     }
-    go test ./internal/... || {
+    # ./... rather than ./internal/...: the locales coverage tests run in CI too,
+    # and a local build should not check less than a release does.
+    go test ./... || {
         printf '  [ERR] 测试失败。\n' >&2
         exit 1
     }
@@ -82,7 +119,7 @@ if [ "$package" -eq 1 ]; then
         printf '  [ERR] 打包失败。\n' >&2
         exit 1
     }
-    printf '  [OK] %s\n' "$root/dist"
+    printf '  [OK] %s v%s\n' "$root/dist" "$target"
     exit 0
 fi
 
@@ -118,4 +155,4 @@ go tool mygo build -platform "$platform" -skip-installer -skip-dmg || {
 }
 
 bytes=$(wc -c <"$exe" | tr -d ' ')
-printf '  [OK] %s (%d MB)\n' "$exe" "$((bytes / 1048576))"
+printf '  [OK] %s v%s (%d MB)\n' "$exe" "$target" "$((bytes / 1048576))"
