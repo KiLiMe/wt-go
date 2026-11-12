@@ -247,6 +247,44 @@ func TestTabAccent(t *testing.T) {
 	}
 }
 
+// TestTabDivider covers the line between two tabs that are both behind: one
+// DIP wide, sixteen high and centered in the strip, and none beside the tab in
+// front, which is the dark rounded one the line would cut.
+func TestTabDivider(t *testing.T) {
+	for _, active := range []int{0, 2} {
+		tt, _, _ := stripOf(t, 3, active, 900)
+		open, ok := tt.Find(locales.NewTab())
+		if !ok {
+			t.Fatal("the strip draws no button to open a tab")
+		}
+		img := tt.Image()
+		px := func(x, y int) color.RGBA { return img.RGBAAt(x, y) }
+		mid := int(TitleBarHeight) / 2
+		surface := px(890, 2)
+		var found []int
+		// The two lines beside the button that opens a tab stand 4 DIP off it,
+		// in the button's own room: this looks between the tabs.
+		for x := 1; x < int(open.X)-8; x++ {
+			if px(x, mid) == surface || px(x-1, mid) != surface || px(x+1, mid) != surface {
+				continue
+			}
+			// A mark of the strip is as high as a tab's, so the rows above and
+			// below the line are the surface again.
+			if px(x, 6) != surface || px(x, 23) != surface {
+				continue
+			}
+			if px(x, 7) == surface || px(x, 22) == surface {
+				continue
+			}
+			found = append(found, x)
+		}
+		if len(found) != 1 {
+			t.Errorf("with tab %d in front the strip draws %d lines between two tabs, want 1: %v",
+				active, len(found), found)
+		}
+	}
+}
+
 // windowActions is the window as the strip's buttons see it: it records what
 // each button asked for.
 type windowActions struct {

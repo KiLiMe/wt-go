@@ -299,8 +299,14 @@ func stepButton(c *myui.Context, st State, act Actions, dir int) myui.Element {
 // and the buttons that open a tab after the last of them.
 func tabs(c *myui.Context, st State, act Actions) {
 	var move *tabMove
-	myui.Row(c).Height(TitleBarHeight).Gap(4).Children(func() {
+	myui.Row(c).Height(TitleBarHeight).Children(func() {
 		for i := range st.Tabs {
+			// Windows Terminal draws a line between two tabs that are both
+			// behind, and none beside the tab in front: that tab is the dark
+			// rounded one, which is the line the others are given.
+			if i > 0 && i != st.Active && i-1 != st.Active {
+				stripDivider(c)
+			}
 			el := tab(c, st, act, i)
 			if d, ok := myui.Drop[tabDrag](el); ok && move == nil {
 				move = &tabMove{from: d.from, to: i}
@@ -318,14 +324,10 @@ func tabs(c *myui.Context, st State, act Actions) {
 // tabs rather than at the far end of a wide window, so that a tab is a press
 // away whatever the strip shows.
 func stripButtons(c *myui.Context, st State, act Actions) myui.Element {
-	t := c.Theme()
-	divider := func() {
-		myui.Box(c).Width(1).Height(16).Margin(0, 4).Background(t.Border)
-	}
 	return myui.Row(c).Height(TitleBarHeight).AlignItems(myui.Center).Gap(2).Children(func() {
-		divider()
+		stripDivider(c).Margin(0, 4)
 		newTabButton(c, act)
-		divider()
+		stripDivider(c).Margin(0, 4)
 		profilesMenu(c, st, act)
 	})
 }
@@ -405,7 +407,7 @@ func tab(c *myui.Context, st State, act Actions, i int) myui.Element {
 			text.Bold()
 		}
 		if active || el.Hovered() {
-			closeButton(c, act, i, active)
+			closeButton(c, act, i)
 		} else {
 			// The button keeps its room, so that a tab does not change width
 			// as the pointer comes over it.
@@ -482,7 +484,7 @@ func tabIcon(c *myui.Context, tb Tab, active bool) {
 // iconTile is the square a tab wears: the mark in it, on a face of the color
 // of the profile, dimmed when the tab is not in front, the way its name is.
 // Only the face is dimmed: a mark dimmed with its face stops reading at this
-// size, and the name beside it already says which tab is in front.
+// size, and the tab in front already carries the background behind it.
 func iconTile(c *myui.Context, ic *icons.Icon, face, mark myui.Color, active bool) {
 	const size float32 = 16
 	if !active {
@@ -494,13 +496,11 @@ func iconTile(c *myui.Context, ic *icons.Icon, face, mark myui.Color, active boo
 }
 
 // closeButton closes a tab. It takes the surface under the pointer, so that
-// it reads as the button it is rather than as a mark on the tab.
-func closeButton(c *myui.Context, act Actions, i int, active bool) myui.Element {
+// it reads as the button it is rather than as a mark on the tab, and it keeps
+// the text color: Windows Terminal's close button is as bright on the tab
+// behind as on the tab in front.
+func closeButton(c *myui.Context, act Actions, i int) myui.Element {
 	t := c.Theme()
-	color := t.TextMuted
-	if active {
-		color = t.Text
-	}
 	el := myui.Box(c).
 		Size(16, 16).
 		Radius(4).
@@ -511,10 +511,9 @@ func closeButton(c *myui.Context, act Actions, i int, active bool) myui.Element 
 		OnClick(func() { act.CloseTab(i) })
 	if el.Hovered() {
 		el = el.Background(t.SurfaceHover)
-		color = t.Text
 	}
 	return el.Children(func() {
-		myui.Icon(c, icons.Close.SVG).Size(14, 14).TextColor(color)
+		myui.Icon(c, icons.Close.SVG).Size(14, 14).TextColor(t.Text)
 	})
 }
 
@@ -550,6 +549,14 @@ func profilesMenu(c *myui.Context, st State, act Actions) myui.Element {
 	return stripButton(c, base).Children(func() {
 		myui.Icon(c, icons.Chevron.SVG).Size(14, 14).TextColor(c.Theme().Text)
 	})
+}
+
+// stripDivider is the line the strip draws between two tabs, and beside the
+// button that opens one: a DIP wide and as high as a tab's mark, centered in
+// the strip, out of the border color between two surfaces. Windows Terminal
+// draws the same line in both places.
+func stripDivider(c *myui.Context) myui.Element {
+	return myui.Box(c).Width(1).Height(16).Background(c.Theme().Border)
 }
 
 // stripButton is one of the buttons beside the tabs: a square in the room of a
