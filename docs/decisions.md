@@ -1501,14 +1501,11 @@ Kitty 分支与 ConPTY 判断都没动，上游 `main` 也一样（git issue #12
 X11 剪贴板管理器。
 
 **否决的方案**：① 给 pane 注入 `PI_CLIPBOARD_OSC52=1`——有效，但要为一个程序加一条 `env` 设置并长期
-维护（形态可参考 kero `internal/settings/config.go` 的 `env` 列表项）；② 改 pi 的 dist（`clipboard.js`
-加一行「桌面也发 OSC 52」）——bun 一升级就覆盖，而且改第三方不是 wt-go 的事；③ wt-go 自己当 X11
-`CLIPBOARD_MANAGER`（xgb + XFixes 监听所有者变更、缓存内容后接管，约 300 行）；④ 抄 sshyard 的 OSC 52
-闸门——它的入口是 OSC 52，而 pi 在桌面下一次都不发，抄过来是个永不触发的状态机。
+维护；② 改 pi 的 dist（`clipboard.js` 加一行「桌面也发 OSC 52」）——bun 一升级就覆盖，而且改第三方不是
+wt-go 的事；③ wt-go 自己当 X11 `CLIPBOARD_MANAGER`（xgb + XFixes 监听所有者变更、缓存内容后接管，
+约 300 行）。
 
 **代价**：无代码改动。用户机器上多一个 `xclip`；超过 OSC 52 上限（`MAX_OSC52_ENCODED_LENGTH`
 = 100 000 个 base64 字符，约 75 KB 原文）的复制仍没有兜底。
 
-**待办**：① 是否把 sshyard 那套闸门（`OSC52MaxBytes` 上限、每 pane 频率闸、写入通知加撤销）作为
-`clipboardWrite: allow` 的加固单独评估——与本条无关，它只挡恶意或吵闹的 OSC 52；② 是否把「`xsel`
-退出码不可信」报给 pi 上游。
+**待办**：是否把「`xsel` 退出码不可信」报给 pi 上游。
