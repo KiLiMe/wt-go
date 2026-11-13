@@ -59,6 +59,7 @@
 | ADR-52 | 标签先说自己启动的 shell，再说 shell 的标题 | 有效 |
 | ADR-53 | 起始目录不再分平台：没配就是家目录 | 有效 |
 | ADR-47 | 把 Ghostty 的四个行为做成设置：滚轮倍数、最小对比度、内边距颜色、剪贴板读写 | 有效 |
+| ADR-59 | 程序自己 fork 的剪贴板工具不归 wt-go 管，装 `xclip` 即可 | 有效 |
 
 ---
 
@@ -1468,3 +1469,46 @@ Kitty 分支与 ConPTY 判断都没动，上游 `main` 也一样（git issue #12
 **测试**：fork 里 `plugins/terminal/reply_split_test.go`（19 条拆成 19 份、单条不拆、写到一半的保持整块）与
 `reply_skip_test.go`（Windows 无 `Conn` 时 `OSC 4/10/11/12` 跳过、标题与 CSI 照发、有 `Conn` 一律不跳）；
 键位兜底在 `legacykey_test.go`（ADR-57）。
+
+## ADR-59 程序自己 fork 的剪贴板工具不归 wt-go 管，装 `xclip` 即可
+
+**背景**：X11（`kwin_x11`，非 Wayland、非 SSH）上，在 wt-go 的标签里跑 `pi`，选中复制后界面闪出
+`Copied!`，到别处粘贴却是空的或上一次的旧内容；`xsel --clipboard --output` 同刻读到的也是旧内容。
+加 `PI_CLIPBOARD_OSC52=1` 启动则复制与粘贴都正常。
+
+**查到的事实**：
+1. `xsel --clipboard --input` 是 double fork：父进程 `connect` 到 X 后 0.5 ms 就 `exit_group(0)`，
+   `XSetSelectionOwner` 与后来的 `SelectionRequest` 应答都在孙进程里，与调用者无父子关系；本机观察到
+   孙进程 31 s 后自行退出，也见过 0.6 s 内就没了。
+2. 用探针把 `xsel` 包一层（记 argv / 字节数 / sha256 / 写入前后内容）做两次真实复制：都是 exit 0，
+   一次 0.6 s 后回读为空，一次正常。退出码 0 与「能粘出新内容」没有因果关系。
+3. pi 的 `dist/utils/clipboard.js` `copyToClipboard`：Linux 桌面依次试 `xclip -selection clipboard`、
+   `xsel --clipboard --input`，只看 `runClipboardCommand` 的返回值（即 `code === 0`）设 `copied = true`；
+   OSC 52 兜底的条件是 `isRemoteSession(env) || (!copied && headless)`，`copied` 为真时桌面**不再发
+   OSC 52**。`isRemoteSession` 只认 `SSH_CONNECTION` / `SSH_CLIENT` / `MOSH_CONNECTION` /
+   `PI_CLIPBOARD_OSC52 === "1"`。
+4. 排除 wt-go：祖链 `wt-go → bash → …` 里连写 `xsel` 20 次、复刻 pi 的 spawn 选项（`stdio[0]=pipe`、
+   `stdout/stderr=ignore`、`cwd:/`、`detached`）20 次，均 0 失败；wt-go 空闲时不持有 `CLIPBOARD`。
+5. 本机 `CLIPBOARD_MANAGER` 所有者为 `None`（没有 parcellite / copyq / clipman），X11 的内容只活在
+   持有者内存里，持有者一死就静默丢失。
+6. **实测**：把 `xsel` 换成 `xclip`（pi 的候选表里 `xclip` 本就在前）之后问题消失，复制与粘贴都正常。
+
+**决定**：不碰 pi，不给 pane 里的程序注入环境变量，wt-go 也不为第三方命令行工具兜底；用户侧装 `xclip`
+即可。
+
+**理由**：`xsel` 的退出码语义决定了这条路无法验证，`xclip` 在同样场景下稳定。wt-go 完全不在
+`pi → 剪贴板工具 → X server` 这条链上——它既不持有也不转发那段内容，任何「拦一层」的做法都得自己去做
+X11 剪贴板管理器。
+
+**否决的方案**：① 给 pane 注入 `PI_CLIPBOARD_OSC52=1`——有效，但要为一个程序加一条 `env` 设置并长期
+维护（形态可参考 kero `internal/settings/config.go` 的 `env` 列表项）；② 改 pi 的 dist（`clipboard.js`
+加一行「桌面也发 OSC 52」）——bun 一升级就覆盖，而且改第三方不是 wt-go 的事；③ wt-go 自己当 X11
+`CLIPBOARD_MANAGER`（xgb + XFixes 监听所有者变更、缓存内容后接管，约 300 行）；④ 抄 sshyard 的 OSC 52
+闸门——它的入口是 OSC 52，而 pi 在桌面下一次都不发，抄过来是个永不触发的状态机。
+
+**代价**：无代码改动。用户机器上多一个 `xclip`；超过 OSC 52 上限（`MAX_OSC52_ENCODED_LENGTH`
+= 100 000 个 base64 字符，约 75 KB 原文）的复制仍没有兜底。
+
+**待办**：① 是否把 sshyard 那套闸门（`OSC52MaxBytes` 上限、每 pane 频率闸、写入通知加撤销）作为
+`clipboardWrite: allow` 的加固单独评估——与本条无关，它只挡恶意或吵闹的 OSC 52；② 是否把「`xsel`
+退出码不可信」报给 pi 上游。
