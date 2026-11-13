@@ -16,9 +16,21 @@ import (
 	"wtgo/internal/ui"
 )
 
-// NewTab opens a tab that runs a profile; "" runs the system's own shell.
+// NewTab opens a tab that runs a profile; "" runs the default profile, which
+// is what the strip's '+', the keybinding for a new tab and the button of a
+// window without tabs open.
 func (a *App) NewTab(profileID string) {
-	a.openTab(profile.Default(a.profiles, profileID), "")
+	a.openTab(a.tabProfile(profileID), "")
+}
+
+// tabProfile is the profile a tab runs: the one it names, and with none the
+// default profile. An id the machine does not have, or one since hidden, is the
+// system's own shell rather than another profile of the list.
+func (a *App) tabProfile(profileID string) profile.Profile {
+	if profileID == "" {
+		profileID = a.settings.DefaultProfile
+	}
+	return profile.Default(a.profiles, profileID)
 }
 
 // CloseTab closes the tab at i, and with the last tab the window, when the

@@ -1301,3 +1301,46 @@ OSC 0/2，标签就一直写着「跟随系统」，而设置页里同一个词�
 
 **测试**：`internal/sys/workdir_test.go` 的 `TestStartDir` 去掉 `runtime.GOOS` 分支：`""` 期望家目录
 （拿不到家目录时期望 `os.Chdir` 到的目录），`current` 仍是 chdir 后的目录，路径原样返回。
+
+## ADR-54 新建标签只认 `defaultProfile`，不另设一项
+
+**背景**：`settings.json` 写着 `"defaultProfile": "zsh"` 时，启动的首个标签是 zsh，但 `Ctrl+T` 开的标签
+跑 bash。根因是 `internal/app/tabs.go` 的 `NewTab("")` 把空串一路传到 `profile.Default`，空 id 得到零值
+profile 即「跟随系统」——`defaultProfile` 只被 `internal/app/app.go` 的 `openFirst()` 读过（ADR-44 之后
+这里是全仓库仅有的读取处）。文案本来也不是这么写的：`locales/zh-Hans.json` 的 `defaultProfileNote`
+早就说「新标签默认运行的配置文件」，代码没照它做。
+
+**曾考虑的方案**：在「默认配置文件」下面再加一项「新建标签」，可选「默认配置文件」或某个 profile，
+即 `settings.json` 多一个 `newTabProfile`，空值指向 `defaultProfile`。
+
+**决定**：不另设。`NewTab` 自己解析：
+
+```go
+func (a *App) NewTab(profileID string) {
+	a.openTab(a.tabProfile(profileID), "")
+}
+
+func (a *App) tabProfile(profileID string) profile.Profile {
+	if profileID == "" {
+		profileID = a.settings.DefaultProfile
+	}
+	return profile.Default(a.profiles, profileID)
+}
+```
+
+1. 首个标签与新建标签同一个答案，与 Windows Terminal 的「默认配置文件」一致（WT 的说明是「单击 `+`
+   图标或通过键入新的选项卡键绑定时打开的配置文件」）。
+2. 解析放在 `NewTab` 而不是 `act()` 里：传空串的入口有三个（`internal/app/tabs.go` 的 `act`、
+   `internal/ui/tabs.go` 的标签栏 `+`、`internal/ui/panes.go` 空窗格的「打开标签」），改一处即可三处一致。
+3. `defaultProfile` 之外不再增字段：`store`、`locales`、设置页的「启动」页都不动。
+4. 复制标签（`DuplicateTab`）与拆窗格仍按**当前标签**的 `ProfileID`，它们说的是「把眼前这个再来一份」。
+
+**理由**：多一个开关等于把同一件事问两遍——两份设置可以互相矛盾（首标签 zsh、新标签 bash），
+矛盾时用户还得自己推「为什么这一个是这个」。WT 只有一处默认，用户不需要学第二种心智模型。
+
+**代价**：想「首标签一个 profile、新标签另一个」就做不到了。真需要时再按 ADR-44 的办法加一项，
+而不是先加一个没人会用的下拉。
+
+**测试**：`internal/app/tabs_test.go` 的 `TestTabProfile`：`defaultProfile="pwsh7"` 且不指定 → `pwsh7`；
+指定 `zsh` → `zsh`（压过设置）；`defaultProfile=""` → 零值 profile（系统 shell）；id 不存在或已被隐藏
+→ 零值 profile，不换成列表里另一个（ADR-44）。

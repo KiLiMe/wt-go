@@ -9,6 +9,7 @@ import (
 	"wtgo/internal/i18n"
 	"wtgo/internal/layout"
 	"wtgo/internal/pane"
+	"wtgo/internal/profile"
 	"wtgo/internal/store"
 	"wtgo/internal/sys"
 )
@@ -182,6 +183,33 @@ func TestCloseOtherTabsDropsTheSettingsTab(t *testing.T) {
 	}
 	if a.dirty() {
 		t.Error("the settings tab opened dirty")
+	}
+}
+
+// TestTabProfile covers what a tab opened without a profile of its own runs:
+// the default profile, the way the click on the strip's '+' and the keybinding
+// for a new tab both ask for it, and the system's own shell when that names
+// nothing the machine has.
+func TestTabProfile(t *testing.T) {
+	profiles := []profile.Profile{
+		{ID: "pwsh7", Name: "PowerShell 7"},
+		{ID: "zsh", Name: "zsh"},
+		{ID: "gone", Name: "Gone", Hidden: true},
+	}
+	for _, tc := range []struct {
+		name, def, id, want string
+	}{
+		{"theDefaultProfile", "pwsh7", "", "pwsh7"},
+		{"theProfileItNames", "pwsh7", "zsh", "zsh"},
+		{"noDefaultProfile", "", "", ""},
+		{"anIdTheMachineLacks", "pwsh7", "nope", ""},
+		{"aProfileSinceHidden", "gone", "", ""},
+	} {
+		a := &App{profiles: profiles}
+		a.settings.DefaultProfile = tc.def
+		if got := a.tabProfile(tc.id); got.ID != tc.want {
+			t.Errorf("%s: tabProfile(%q) = %q, want %q", tc.name, tc.id, got.ID, tc.want)
+		}
 	}
 }
 
