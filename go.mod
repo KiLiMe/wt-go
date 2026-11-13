@@ -16,3 +16,7 @@ require (
 )
 
 tool github.com/egoist/mygo/cmd/mygo
+
+// Our fork of mygo: it writes a terminal's replies to programs one per write,
+// which pi and the like need to tell a reply from typing (ADR-58).
+replace github.com/egoist/mygo => github.com/KiLiMe/mygo v0.8.4-0.20261113061007-fcf66d899ce3

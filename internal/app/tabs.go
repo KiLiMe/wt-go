@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/egoist/mygo/plugins/terminal"
+	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/action"
 	"wtgo/internal/fault"
@@ -96,10 +97,15 @@ func closeTerminals(tab *pane.Tab) {
 // child that starts between the two lists.
 func (a *App) newTerminal(opts terminal.Options) (*terminal.Terminal, error) {
 	before, berr := sys.Subtree(sys.OwnPID())
-	term, err := terminal.New(opts)
+	// The keys a program that asks for the Kitty keyboard protocol never gets
+	// are written here instead: see legacyBytes.
+	var term *terminal.Terminal
+	opts.OnKey = func(mods myui.Modifiers, key myui.Key) bool { return legacyKey(term, mods, key) }
+	created, err := terminal.New(opts)
 	if err != nil {
 		return nil, err
 	}
+	term = created
 	if berr == nil {
 		// The plugin starts the program in a goroutine of its own, so the
 		// child is not there the moment New returns: wait for it off the UI

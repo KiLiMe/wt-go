@@ -1400,3 +1400,25 @@ ADR-44），但界面没说这件事：`▾` 菜单的 profile 项全被滤掉�
 **测试**：`internal/ui/tabs_test.go` 的 `TestMenuProfiles`（空列表得到唯一一项「跟随系统」、有 profile 时
 原样返回）；`internal/app/settings_test.go` 的 `TestKnownProfilesSkipsHidden`；`internal/ui/settings_test.go` 的
 `TestStartupPageShowsTheSystemForAProfileThatIsGone`（页面不画出 `gone`，也不为显示它改草稿）。
+## ADR-57 Ctrl+字母与 Shift+Tab 自己写字节，不交给 Kitty 编码器
+
+**背景**：在 wt-go 里跑 pi，Ctrl+C 清不掉输入框、Ctrl+U 删不掉行首、方向键与 Home 也不动；同一个 pi 在
+Windows Terminal 里一切正常。用 `OnKey` 探针记录到：这些键**都到达**了 mygo 终端视图（mods 正确），
+丢失发生在 `encodeKey` 之后。原因是程序（pi）先用 `CSI > 7 u` 打开了 Kitty 键盘协议，Ghostty 的编码器
+随即把 Ctrl+字母编成 `CSI 99;5 u` 这类 CSI-u，而 ConPTY 的输入解析不认 CSI-u，直接丢弃；纯文本键走文本
+分支，所以「打字正常」。mygo v0.9.0 只给 Ctrl+I/M/[ 补了 legacy 控制字节，Kitty 分支与 ConPTY 判断都没动，
+上游 `main` 也一样（git issue #1203 修的是 AltGr）。
+
+**决定**：Windows 上，在 `terminal.Options.OnKey`（`internal/app/termkeys.go` 的 `legacyKey`）里自己发字节
+并吃掉这个键：Ctrl+字母 → `0x01..0x1a`，Ctrl+Shift+字母同样按 Ctrl 算，Shift+Tab → `\x1b[Z`。
+
+**理由**：OnKey 是 `view.keyDown` 的第一站、排在编码器前面，是唯一能在不 fork mygo 的情况下绕开编码器的
+入口（kero 也用它做 macOS 的 Ghostty 快捷键）；只对 `runtime.GOOS == "windows"` 生效，Linux 上的终端不经过
+ConPTY，不需要这条路径。
+
+**代价与边界**：AltGr（Ctrl+Alt）与 Ctrl+Super 一律放行，方向键不动——它们该编成 `\x1b[A` 还是
+`\x1bOA` 取决于程序设的 DECCKM，而这个状态在 wt-go 手里没有（ADR-58 的 fork 才有位置读它）。
+
+**测试**：`internal/app/termkeys_test.go` 的 `TestLegacyBytes`（Ctrl+A/Z/C、Ctrl+Shift+A、Shift+Tab 各出
+什么字节；字母、裸 Tab、Ctrl+Alt、Ctrl+Super、Ctrl+↑、Ctrl+Enter 都不吃）。
+
