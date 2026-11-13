@@ -784,6 +784,96 @@ func (msgs Messages) PressKey() string {
 	return Catalog.Format(msgs.locale, "pressKey", nil)
 }
 
+// KeySearch says "Search actions or keys"
+// in the language the app shows.
+func KeySearch() string { return In(i18n.Locale()).KeySearch() }
+
+// KeySearch says "Search actions or keys"
+// in the language of msgs.
+func (msgs Messages) KeySearch() string {
+	return Catalog.Format(msgs.locale, "keySearch", nil)
+}
+
+// OnlyChanged says "Changed only ({n})"
+// in the language the app shows.
+func OnlyChanged(n int) string { return In(i18n.Locale()).OnlyChanged(n) }
+
+// OnlyChanged says "Changed only ({n})"
+// in the language of msgs.
+func (msgs Messages) OnlyChanged(n int) string {
+	return Catalog.Format(msgs.locale, "onlyChanged", map[string]any{"n": n})
+}
+
+// KeysConflict says "A key runs more than one action"
+// in the language the app shows.
+func KeysConflict() string { return In(i18n.Locale()).KeysConflict() }
+
+// KeysConflict says "A key runs more than one action"
+// in the language of msgs.
+func (msgs Messages) KeysConflict() string {
+	return Catalog.Format(msgs.locale, "keysConflict", nil)
+}
+
+// Changed says "Changed"
+// in the language the app shows.
+func Changed() string { return In(i18n.Locale()).Changed() }
+
+// Changed says "Changed"
+// in the language of msgs.
+func (msgs Messages) Changed() string {
+	return Catalog.Format(msgs.locale, "changed", nil)
+}
+
+// ResetKey says "Reset"
+// in the language the app shows.
+func ResetKey() string { return In(i18n.Locale()).ResetKey() }
+
+// ResetKey says "Reset"
+// in the language of msgs.
+func (msgs Messages) ResetKey() string {
+	return Catalog.Format(msgs.locale, "resetKey", nil)
+}
+
+// DefaultKeys says "Default: {keys}"
+// in the language the app shows.
+func DefaultKeys(keys string) string { return In(i18n.Locale()).DefaultKeys(keys) }
+
+// DefaultKeys says "Default: {keys}"
+// in the language of msgs.
+func (msgs Messages) DefaultKeys(keys string) string {
+	return Catalog.Format(msgs.locale, "defaultKeys", map[string]any{"keys": keys})
+}
+
+// ShowNumbered says "Show {n} more"
+// in the language the app shows.
+func ShowNumbered(n int) string { return In(i18n.Locale()).ShowNumbered(n) }
+
+// ShowNumbered says "Show {n} more"
+// in the language of msgs.
+func (msgs Messages) ShowNumbered(n int) string {
+	return Catalog.Format(msgs.locale, "showNumbered", map[string]any{"n": n})
+}
+
+// HideNumbered says "Collapse"
+// in the language the app shows.
+func HideNumbered() string { return In(i18n.Locale()).HideNumbered() }
+
+// HideNumbered says "Collapse"
+// in the language of msgs.
+func (msgs Messages) HideNumbered() string {
+	return Catalog.Format(msgs.locale, "hideNumbered", nil)
+}
+
+// NoActions says "No action matches"
+// in the language the app shows.
+func NoActions() string { return In(i18n.Locale()).NoActions() }
+
+// NoActions says "No action matches"
+// in the language of msgs.
+func (msgs Messages) NoActions() string {
+	return Catalog.Format(msgs.locale, "noActions", nil)
+}
+
 // Startup says "Startup"
 // in the language the app shows.
 func Startup() string { return In(i18n.Locale()).Startup() }

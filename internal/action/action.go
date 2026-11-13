@@ -146,7 +146,7 @@ func Title(id string) string {
 	if !ok {
 		return id
 	}
-	if n, ok := number(id); ok {
+	if n, ok := Number(id); ok {
 		return i18n.F(a.TitleKey, map[string]any{"n": n})
 	}
 	return i18n.T(a.TitleKey)
@@ -159,9 +159,10 @@ func Group(id string) string {
 	return a.GroupKey
 }
 
-// number is the number an action that ends in one names, counting from one, as
-// its title says it.
-func number(id string) (int, bool) {
+// Number is the number an action that ends in one names, counting from one,
+// as its title says it: what the settings page folds away past the first few,
+// and what makes two actions of a group read as the same kind.
+func Number(id string) (int, bool) {
 	if n, ok := GotoIndex(id); ok {
 		return n + 1, true
 	}

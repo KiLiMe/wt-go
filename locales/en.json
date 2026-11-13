@@ -95,6 +95,36 @@
   "selectProfile": "Select a profile.",
   "restoreDefaults": "Restore the defaults",
   "pressKey": "Press a key…",
+  "keySearch": "Search actions or keys",
+  "onlyChanged": "Changed only ({n})",
+  "@onlyChanged": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "keysConflict": "A key runs more than one action",
+  "changed": "Changed",
+  "resetKey": "Reset",
+  "defaultKeys": "Default: {keys}",
+  "@defaultKeys": {
+    "placeholders": {
+      "keys": {
+        "type": "String"
+      }
+    }
+  },
+  "showNumbered": "Show {n} more",
+  "@showNumbered": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "hideNumbered": "Collapse",
+  "noActions": "No action matches",
   "startup": "Startup",
   "startupNote": "What the window does when it opens.",
   "interaction": "Interaction",

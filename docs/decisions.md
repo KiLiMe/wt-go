@@ -1344,3 +1344,35 @@ func (a *App) tabProfile(profileID string) profile.Profile {
 **测试**：`internal/app/tabs_test.go` 的 `TestTabProfile`：`defaultProfile="pwsh7"` 且不指定 → `pwsh7`；
 指定 `zsh` → `zsh`（压过设置）；`defaultProfile=""` → 零值 profile（系统 shell）；id 不存在或已被隐藏
 → 零值 profile，不换成列表里另一个（ADR-44）。
+
+## ADR-55 「操作」页：一个动作一个键，改没改看得见
+
+**背景**：`settings.json` 的 `keybindings` 是**整张表**（写了就取代默认值，见 ADR-23 与
+`docs/代码导读.md`），默认键由 `store.Default()` 按 `action.All()` 物化写入，`tab.new` 因此默认有
+`ctrl+shift+t` 与 `ctrl+t` 两行。旧界面对此有两个毛病：`SetKeybinding` 只改该动作**第一条**匹配行，
+录了新键后旧键还留着跑（页面上看不见）；页面也没有「哪些改过」「回到默认」的区分，18 个编号动作
+（`tab.goto.1..9`、`profile.1..9`）把其他分组挤出屏幕。
+
+**决定**：
+
+1. **一个动作一个键**：`SetKeybinding` 把该动作的键全部换成新键（第一条原地改，其余删掉）。
+   理由：页面一个动作只画一格，留一个看不见的别名会让「已修改」「重置」「冲突」三个判断全部说谎，
+   也会让人录完新键后旧键继续悄悄生效。要「多个键跑同一个动作」，就写两个动作或手改文件，
+   界面不假装支持。
+2. **「已修改」＝ 文件绑的键集合 ≠ 目录默认键集合**（不比行号、不比顺序）；窗口不认识的 id
+   恒为已修改——它没有默认可回。
+3. **「重置」按动作恢复目录默认键**，放在该动作原来第一条键的位置，文件其余部分与顺序不动；
+   **「删除」是空集合**。两者不同不是冗余：文件整张取代默认值，删了就是真的不跑。
+4. **编号动作每组只露前三项**，其余折起来（`展开其余 n 项` / `收起`）；搜索中或「仅看已修改」时
+   全展开。理由：编号项是「第几个」，人一次只需要头几个，全列会把其他分组挤出屏幕。
+5. **冲突只标红、不自动解**：自动解要先选「谁赢」，猜错比红字更糟。顶栏同时给一句总结，
+   滚动到看不见的行也知道有冲突。
+
+**放弃的部分**：原型里的字体缩放、`ctrl+l` 清屏、`alt+enter` 全屏等键位是生成时编的，wt-go 没有
+这些动作；不为了对齐原型新增动作。界面照做，键位表只认 `internal/action`。
+
+**测试**：`internal/ui/keybindings_test.go` 的 `TestChangedActions`（默认键不算改、另一个键算改、
+未知动作算改）、`TestClashingKeys`、`TestListedRows`（折叠 3 后、展开全出、仅看已修改与搜索不过滤）；
+`internal/ui/settings_test.go` 的 `TestActionsPageToolbar`（点「仅看已修改」真的回调、折叠条按 6 项出现、
+全默认时不出现「已修改」）；`internal/app/settings_test.go` 的 `TestResetKeybinding`（恢复默认且不动邻居）、
+`TestSetKeybindingDropsTheOtherKeys`（`tab.new` 录 `f2` 后只剩 `f2`）。

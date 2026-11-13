@@ -128,8 +128,15 @@ type App struct {
 	// it deletes the settings; the tests replace it.
 	relaunch  func() error
 	configErr string
-	// filter is what the color schemes page searches for.
-	filter string
+	// filter is what the color schemes page searches for, and actionSearch
+	// what the actions page does.
+	filter       string
+	actionSearch string
+	// onlyChangedKeys is whether the actions page lists the actions the file
+	// binds on keys of its own alone, and numberedKeys whether it shows the
+	// numbered actions it folds away.
+	onlyChangedKeys bool
+	numberedKeys    bool
 	// showHidden is whether the profiles page lists the profiles it hides.
 	showHidden bool
 	// editing is the profile the profile page edits, and editingFrom what it

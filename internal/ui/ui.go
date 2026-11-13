@@ -71,6 +71,14 @@ type Actions interface {
 	SetKeybinding(action, key string)
 	// RemoveKeybinding drops the keybindings of the action with an id.
 	RemoveKeybinding(action string)
+	// ResetKeybinding gives the action with an id the keys the catalog
+	// starts it on.
+	ResetKeybinding(action string)
+	// ToggleChangedKeys lists the actions whose keys are not the catalog's,
+	// or every action again.
+	ToggleChangedKeys()
+	// ToggleNumberedKeys unfolds the numbered actions, or folds them.
+	ToggleNumberedKeys()
 	// ResetKeybindings goes back to the keybindings the window starts with.
 	ResetKeybindings()
 	// CopyScheme makes a color scheme of the settings from the one the
@@ -183,6 +191,15 @@ type Settings struct {
 	Recording string
 	// Filter is what the color schemes page searches for.
 	Filter *string
+	// ActionFilter is what the actions page searches for: an action's name,
+	// one of its keys, or its id.
+	ActionFilter *string
+	// OnlyChanged is whether the actions page lists only the actions whose
+	// keys are not the ones the catalog starts them on.
+	OnlyChanged bool
+	// KeysExpanded is whether the actions page lists the numbered actions
+	// past the third, which it folds away to keep the list short.
+	KeysExpanded bool
 	// Hidden is whether the profiles page lists the profiles it hides.
 	Hidden bool
 	// Profiles are the profiles the file holds, which the column lists.

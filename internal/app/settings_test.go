@@ -522,6 +522,60 @@ func TestSetKeybinding(t *testing.T) {
 	}
 }
 
+// TestResetKeybinding covers going back to the catalog's keys for one action:
+// the keys it starts on come back where the file had it, the key the file gave
+// it goes, and the actions around it stay where they were.
+func TestResetKeybinding(t *testing.T) {
+	settingsDir(t)
+	a, _ := settingsApp(t, store.Default())
+	a.SetKeybinding(action.TabNew, "f2")
+	a.SetKeybinding(action.TabClose, "f3")
+	a.ResetKeybinding(action.TabNew)
+
+	var keys []string
+	for _, kb := range a.settings.Keybindings {
+		if kb.Action == action.TabNew {
+			keys = append(keys, kb.Key)
+		}
+	}
+	want := store.DefaultKeybindings()
+	var wants []string
+	for _, kb := range want {
+		if kb.Action == action.TabNew {
+			wants = append(wants, kb.Key)
+		}
+	}
+	if len(keys) != len(wants) {
+		t.Fatalf("%q runs on %v, want its defaults %v", action.TabNew, keys, wants)
+	}
+	for i := range wants {
+		if keys[i] != wants[i] {
+			t.Fatalf("%q runs on %v, want its defaults %v", action.TabNew, keys, wants)
+		}
+	}
+	if got := keyOf(a.settings.Keybindings, action.TabClose); got != "f3" {
+		t.Errorf("key of %q = %q, want f3: resetting one action left another alone", action.TabClose, got)
+	}
+}
+
+// TestSetKeybindingDropsTheOtherKeys covers an action the defaults bind twice:
+// recording a key leaves it running on that key alone, so that the key it keep
+// invisibly does not still run it.
+func TestSetKeybindingDropsTheOtherKeys(t *testing.T) {
+	settingsDir(t)
+	a, _ := settingsApp(t, store.Default())
+	a.SetKeybinding(action.TabNew, "f2")
+	var keys []string
+	for _, kb := range a.settings.Keybindings {
+		if kb.Action == action.TabNew {
+			keys = append(keys, kb.Key)
+		}
+	}
+	if len(keys) != 1 || keys[0] != "f2" {
+		t.Fatalf("%q runs on %v, want f2 alone", action.TabNew, keys)
+	}
+}
+
 // TestSchemeBaseName covers the name a copy starts from: the marks earlier
 // copies left on it come off, and a name that only looks like one keeps its
 // own.

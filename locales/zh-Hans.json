@@ -95,6 +95,36 @@
   "selectProfile": "选择一个配置文件。",
   "restoreDefaults": "恢复默认",
   "pressKey": "按一个键…",
+  "keySearch": "搜索操作名或快捷键",
+  "onlyChanged": "仅看已修改（{n}）",
+  "@onlyChanged": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "keysConflict": "有键位绑给了不止一个操作",
+  "changed": "已修改",
+  "resetKey": "重置",
+  "defaultKeys": "默认：{keys}",
+  "@defaultKeys": {
+    "placeholders": {
+      "keys": {
+        "type": "String"
+      }
+    }
+  },
+  "showNumbered": "展开其余 {n} 项",
+  "@showNumbered": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "hideNumbered": "收起",
+  "noActions": "没有匹配的操作",
   "startup": "启动",
   "startupNote": "窗口打开时做什么。",
   "interaction": "交互",
