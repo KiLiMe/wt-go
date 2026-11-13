@@ -49,10 +49,14 @@ func SettingsTab(c *myui.Context, st Settings, act Actions) myui.Element {
 	})
 }
 
+// navWidth is how wide the column of pages is, and where the page's own room
+// starts.
+const navWidth = 220
+
 // nav is the column that lists the pages.
 func nav(c *myui.Context, st Settings, act Actions) myui.Element {
 	t := c.Theme()
-	return myui.Column(c).Width(220).Padding(12, 8, 12, 8).Gap(2).Background(t.Surface).Children(func() {
+	return myui.Column(c).Width(navWidth).Padding(12, 8, 12, 8).Gap(2).Background(t.Surface).Children(func() {
 		// The pages scroll, so that adding profiles never pushes the row that
 		// adds the next one out of reach.
 		myui.Scroll(c).Grow(1).MinHeight(0).Children(func() {
@@ -67,8 +71,8 @@ func nav(c *myui.Context, st Settings, act Actions) myui.Element {
 				} {
 					navItem(c, st.Page, it.page, it.label, act)
 				}
-				myui.Text(c, locales.Profiles()).FontSize(11).TextColor(t.TextMuted).Padding(12, 8, 4, 8)
 				navItem(c, st.Page, PageProfiles, locales.Defaults(), act)
+				myui.Text(c, locales.Profiles()).FontSize(11).TextColor(t.TextMuted).Padding(12, 8, 4, 8)
 				for _, p := range st.Profiles {
 					navItem(c, st.Page, ProfilePage(p.ID), p.Name, act)
 				}
@@ -76,7 +80,6 @@ func nav(c *myui.Context, st Settings, act Actions) myui.Element {
 		})
 		myui.Column(c).Gap(2).Padding(6, 0, 0, 0).Children(func() {
 			navAction(c, icons.Add.SVG, locales.AddProfile(), act.AddProfile)
-			navCheck(c, st.Hidden, locales.ShowHiddenProfiles(), act.ShowHiddenProfiles)
 		})
 	})
 }
@@ -107,13 +110,6 @@ func navAction(c *myui.Context, icon *myui.SVG, label string, onClick func()) {
 		myui.Icon(c, icon).Size(14, 14).TextColor(t.TextMuted)
 		myui.Text(c, label).FontSize(13).SingleLine()
 	})
-}
-
-// navCheck is a switch that holds in the column, under the pages.
-func navCheck(c *myui.Context, on bool, label string, toggle func()) {
-	if myui.Checkbox(c, &on, label).FontSize(12).Changed() {
-		toggle()
-	}
 }
 
 // footer is what saves the page: what the draft holds that the file does not,
@@ -398,6 +394,15 @@ func profilesPage(c *myui.Context, st Settings, act Actions) {
 				})
 			})
 		}
+		// The switch that lists the profiles a hidden one keeps out of the way
+		// sits under the list it filters, on the page that owns them rather
+		// than in the column of pages.
+		row(c, func() {
+			on := st.Hidden
+			if myui.Checkbox(c, &on, locales.ShowHiddenProfiles()).FontSize(12).Changed() {
+				act.ShowHiddenProfiles()
+			}
+		})
 	})
 }
 

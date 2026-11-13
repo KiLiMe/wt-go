@@ -51,11 +51,39 @@ func TestNavAddsProfiles(t *testing.T) {
 	if err := tt.Click("Profile 17"); err == nil {
 		t.Fatal("the last profile is in view, so the column did not scroll")
 	}
+	// The switch that lists the hidden profiles is on the page, under the list
+	// it filters, so a list this long puts it past the window until it scrolls.
+	if err := tt.Click(locales.ShowHiddenProfiles()); err == nil {
+		t.Fatal("the switch is in view, want it under the list on the page")
+	}
+	tt.Scroll(600, 400, 0, 4000)
 	if err := tt.Click(locales.ShowHiddenProfiles()); err != nil {
-		t.Fatalf("the checkbox scrolled away: %v", err)
+		t.Fatalf("the switch did not come into view: %v", err)
 	}
 	if act.hidden != 1 {
 		t.Fatalf("hidden = %d, want 1", act.hidden)
+	}
+}
+
+// TestNavPutsDefaultsAboveTheProfiles covers the order of the column: the page
+// that holds the defaults and the profiles comes before the heading that names
+// the list of profiles.
+func TestNavPutsDefaultsAboveTheProfiles(t *testing.T) {
+	tt, _ := settingsOf(t, []Profile{{ID: "a", Name: "PowerShell 7"}})
+	def, ok := tt.Find(locales.Defaults())
+	if !ok {
+		t.Fatal("the defaults page is missing from the column")
+	}
+	head, ok := tt.Find(locales.Profiles())
+	if !ok {
+		t.Fatal("the profiles heading is missing from the column")
+	}
+	// Both are in the column, not the heading of the page the settings draw.
+	if def.X >= navWidth || head.X >= navWidth {
+		t.Fatalf("defaults at %v or heading at %v is not in the column", def.X, head.X)
+	}
+	if def.Y >= head.Y {
+		t.Fatalf("the defaults page at %v is not above the heading at %v", def.Y, head.Y)
 	}
 }
 
