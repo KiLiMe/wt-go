@@ -34,8 +34,11 @@ func TestRemoveProfile(t *testing.T) {
 		t.Errorf("profiles = %+v, want it shown again", a.settings.Profiles)
 	}
 
-	a.ShowHiddenProfiles()
 	if !a.showHidden {
-		t.Error("showHidden = false, want the page to list hidden profiles")
+		t.Error("showHidden = false, want the page to list hidden profiles by default")
+	}
+	a.ShowHiddenProfiles()
+	if a.showHidden {
+		t.Error("showHidden = true, want the switch to hide them again")
 	}
 }

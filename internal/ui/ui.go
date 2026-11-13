@@ -99,8 +99,9 @@ type Actions interface {
 	// found on this machine: the next start adds it back, so hiding is all a
 	// person can do to a shell that is there.
 	RemoveProfile(id string)
-	// ShowHiddenProfiles lists the profiles the page hides, so that one can be
-	// brought back.
+	// ShowHiddenProfiles lists the profiles the profiles page hides, so that
+	// one can be brought back, or hides them again: it is a view of that page,
+	// so the column of pages lists the profiles in use either way.
 	ShowHiddenProfiles()
 	// ShowProfile brings the profile with an id back from hiding.
 	ShowProfile(id string)

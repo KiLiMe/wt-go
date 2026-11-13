@@ -53,15 +53,33 @@ func TestNavAddsProfiles(t *testing.T) {
 	if err := tt.Click("Profile 17"); err == nil {
 		t.Fatal("the last profile is in view, so the column did not scroll")
 	}
-	// The switch that lists the hidden profiles is on the page, under the list
-	// it filters, so a list this long puts it past the window until it scrolls.
-	if err := tt.Click(locales.ShowHiddenProfiles()); err == nil {
-		t.Fatal("the switch is in view, want it under the list on the page")
+	// The switch that lists the hidden profiles opens the page, above the list
+	// it filters, so a list this long never puts it under the rows it lists.
+	sw, ok := tt.AccessByRole(myui.RoleSwitch, locales.ShowHiddenProfiles())
+	if !ok {
+		t.Fatal("the switch that lists the hidden profiles is missing")
 	}
-	tt.Scroll(600, 400, 0, 4000)
-	if err := tt.Click(locales.ShowHiddenProfiles()); err != nil {
-		t.Fatalf("the switch did not come into view: %v", err)
+	first := float32(-1)
+	for _, a := range tt.AccessAll() {
+		if a.Name == "Profile 0" && a.Bounds.X >= navWidth {
+			first = a.Bounds.Y
+			break
+		}
 	}
+	if first < 0 {
+		t.Fatal("the page does not list the first profile")
+	}
+	if sw.Bounds.Y >= first {
+		t.Fatalf("the switch at %v is under the first profile at %v", sw.Bounds, first)
+	}
+	// The card it opens holds the list, so it is past the window until the
+	// page scrolls there, and then a click has to reach the switch itself: its
+	// name is on the label at the other end of the row.
+	tt.Scroll(600, 400, 0, 600)
+	if sw, ok = tt.AccessByRole(myui.RoleSwitch, locales.ShowHiddenProfiles()); !ok {
+		t.Fatal("the switch left the page while scrolling")
+	}
+	tt.ClickAt(sw.Bounds.X+sw.Bounds.W/2, sw.Bounds.Y+sw.Bounds.H/2)
 	if act.hidden != 1 {
 		t.Fatalf("hidden = %d, want 1", act.hidden)
 	}
@@ -152,5 +170,31 @@ func TestNavHoldsUnderTheList(t *testing.T) {
 	}
 	if add.Y <= last.Y+last.H {
 		t.Fatalf("add row at %v is not under the profile at %v", add.Y, last.Y)
+	}
+}
+
+// TestNavLeavesHiddenProfilesOut covers the column: it opens the pages of the
+// profiles in use, so a hidden one is listed on the page that brings it back
+// alone, whatever the switch above that list says.
+func TestNavLeavesHiddenProfilesOut(t *testing.T) {
+	tt, _ := settingsOf(t, []Profile{
+		{ID: "a", Name: "PowerShell 7"},
+		{ID: "b", Name: "Command Prompt", Hidden: true},
+	})
+	in, ok := tt.Find("PowerShell 7")
+	if !ok {
+		t.Fatal("the column leaves out a profile in use")
+	}
+	gone, ok := tt.Find("Command Prompt")
+	if !ok {
+		// The page lists it, greyed out: the column is what this test reads
+		// for it, so the one it found is the page's.
+		t.Fatal("the page does not list the hidden profile, so the switch lies")
+	}
+	if gone.X < navWidth {
+		t.Fatalf("the hidden profile at %v is in the column", gone)
+	}
+	if in.X >= navWidth {
+		t.Fatalf("the profile in use at %v is not in the column", in)
 	}
 }

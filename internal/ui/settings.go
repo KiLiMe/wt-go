@@ -78,6 +78,11 @@ func nav(c *myui.Context, st Settings, act Actions) myui.Element {
 				navItem(c, st.Page, PageProfiles, locales.Defaults(), act)
 				myui.Text(c, locales.Profiles()).FontSize(11).TextColor(t.TextMuted).Padding(12, 8, 4, 8)
 				for _, p := range st.Profiles {
+					// The column opens the pages of the profiles in use, so it leaves
+					// the hidden ones to the page that lists them to bring back.
+					if p.Hidden {
+						continue
+					}
 					navItem(c, st.Page, ProfilePage(p.ID), p.Name, act)
 				}
 			})
@@ -398,40 +403,48 @@ func profilesPage(c *myui.Context, st Settings, act Actions) {
 		})
 	})
 	section(c, locales.Profiles(), func() {
-		for _, p := range st.Profiles {
-			row(c, func() {
-				myui.Row(c).Height(32).AlignItems(myui.Center).Gap(8).Children(func() {
-					name := myui.Text(c, p.Name).Grow(1)
-					if p.Hidden {
-						name.TextColor(t.TextMuted)
-					}
-					if p.Discovered {
-						myui.Text(c, locales.BuiltIn()).FontSize(11).TextColor(t.TextMuted).
-							Background(t.Surface).Padding(0, 6).Radius(4)
-					}
-					myui.Button(c, locales.Duplicate()).OnClick(func() { act.DuplicateProfile(p.ID) })
-					switch {
-					case p.Hidden:
-						myui.Button(c, locales.Show()).OnClick(func() { act.ShowProfile(p.ID) })
-					case p.Discovered:
-						// The window finds this shell again on the next start, so
-						// the page offers to hide it rather than to remove it.
-						myui.Button(c, locales.Hide()).OnClick(func() { act.RemoveProfile(p.ID) })
-					default:
-						myui.Button(c, locales.Remove()).OnClick(func() { act.RemoveProfile(p.ID) })
-					}
-				})
-			})
-		}
-		// The switch that lists the profiles a hidden one keeps out of the way
-		// sits under the list it filters, on the page that owns them rather
-		// than in the column of pages.
-		row(c, func() {
+		// The switch that lists the profiles hiding keeps out of the way sits
+		// above the list it filters rather than under it: it reads as a setting
+		// of the page, and a list long enough to reach past the window never
+		// puts it out of view. It edits what the window remembers of the page,
+		// not the settings, so it does not go through the draft.
+		field(c, locales.ShowHiddenProfiles(), locales.ShowHiddenProfilesNote(), func() {
 			on := st.Hidden
-			if myui.Checkbox(c, &on, locales.ShowHiddenProfiles()).FontSize(12).Changed() {
+			if myui.Switch(c, &on).Label(locales.ShowHiddenProfiles()).Changed() {
 				act.ShowHiddenProfiles()
 			}
 		})
+		for _, p := range st.Profiles {
+			// A row of the list reads as a line of it: the name in front, quietly
+			// badged when the window found it, and the buttons that act on it at
+			// the small size the keybindings use, so that the names carry the
+			// page and the buttons do not.
+			myui.Row(c).Padding(6, 16).AlignItems(myui.Center).Gap(8).
+				BorderWidth(0, 0, 1, 0).BorderColor(cardLine(t)).Children(func() {
+				name := myui.Text(c, p.Name).FontSize(13).FontWeight(500).SingleLine().Shrink(1).MinWidth(0)
+				if p.Hidden {
+					name.TextColor(t.TextMuted).FontWeight(400)
+				}
+				if p.Discovered {
+					// The badge says the window found this shell, so it sits beside
+					// the name it describes, not with the buttons.
+					myui.Text(c, locales.BuiltIn()).FontSize(11).TextColor(t.TextMuted).
+						Background(t.Surface).Padding(0, 6).Radius(4).Shrink(0)
+				}
+				myui.Box(c).Grow(1)
+				myui.Button(c, locales.Duplicate()).FontSize(11).OnClick(func() { act.DuplicateProfile(p.ID) })
+				switch {
+				case p.Hidden:
+					myui.Button(c, locales.Show()).FontSize(11).OnClick(func() { act.ShowProfile(p.ID) })
+				case p.Discovered:
+					// The window finds this shell again on the next start, so
+					// the page offers to hide it rather than to remove it.
+					myui.Button(c, locales.Hide()).FontSize(11).OnClick(func() { act.RemoveProfile(p.ID) })
+				default:
+					myui.Button(c, locales.Remove()).FontSize(11).OnClick(func() { act.RemoveProfile(p.ID) })
+				}
+			})
+		}
 	})
 }
 

@@ -138,7 +138,9 @@ type App struct {
 	// numbered actions it folds away.
 	onlyChangedKeys bool
 	numberedKeys    bool
-	// showHidden is whether the profiles page lists the profiles it hides.
+	// showHidden is whether the profiles page lists the profiles it hides. It
+	// starts on: a profile a person hid is one they may want back, and a page
+	// that hides it again leaves no way to see it is there.
 	showHidden bool
 	// editing is the profile the profile page edits, and editingFrom what it
 	// held when the page opened. editingArgs is the arguments as the page types

@@ -549,7 +549,8 @@ func (a *App) RemoveProfile(id string) {
 	a.redraw()
 }
 
-// ShowHiddenProfiles lists the profiles the page hides, or hides them again.
+// ShowHiddenProfiles lists the profiles the profiles page hides, or hides
+// them again.
 func (a *App) ShowHiddenProfiles() {
 	a.showHidden = !a.showHidden
 	a.redraw()
