@@ -93,34 +93,38 @@ func searchText(filter *string) string {
 	return *filter
 }
 
-// keybindingRow is one row of the page: the key that runs the action, which a
-// click changes, the action it runs, and the two buttons that take that key
+// keybindingRow is one row of the page: the keys that run the action, which a
+// click changes, the action it runs, and the two buttons that take those keys
 // away or put the catalog's back. Both buttons keep their room while they have
 // nothing to do, so that a row never shifts under the pointer as keys change.
 func keybindingRow(c *myui.Context, st Settings, act Actions, e entry, all []store.Keybinding, isChanged bool, clashing map[string]int) {
 	t := c.Theme()
 	keys := keysOf(all, e.action)
-	key := ""
-	if len(keys) > 0 {
-		key = keys[0]
+	shown := strings.Join(keys, " · ")
+	color := t.Text
+	for _, key := range keys {
+		if clashing[key] > 1 {
+			color = t.Danger
+		}
 	}
-	shown := key
 	switch {
 	case st.Recording == e.action:
 		shown = locales.PressKey()
-	case key == "":
+	case len(keys) == 0:
 		shown = locales.None()
-	}
-	color := t.Text
-	if key != "" && clashing[key] > 1 {
-		color = t.Danger
 	}
 	myui.Row(c).Padding(8, 16).AlignItems(myui.Center).Gap(8).
 		BorderWidth(0, 0, 1, 0).BorderColor(cardLine(t)).Children(func() {
-		myui.Box(c).Width(160).Height(26).Padding(0, 8).Justify(myui.Center).Radius(4).
+		cell := myui.Box(c).Width(160).Height(26).Padding(0, 8).Justify(myui.Center).Radius(4).
 			Background(t.Surface).Cursor(myui.CursorPointer).
-			OnClick(func() { act.RecordKeybinding(e.action) }).Children(func() {
-			myui.Text(c, shown).FontSize(12).TextColor(color).SingleLine()
+			OnClick(func() { act.RecordKeybinding(e.action) })
+		if len(keys) > 1 {
+			// The cell is narrow enough that two keys may not both fit; the
+			// hint says what the ellipsis cut.
+			cell = cell.Tooltip(strings.Join(keys, ", "))
+		}
+		cell.Children(func() {
+			myui.Text(c, shown).FontSize(12).TextColor(color).SingleLine().Ellipsis("…")
 		})
 		myui.Text(c, action.Title(e.action)).Grow(1).FontSize(12).TextColor(t.TextMuted).SingleLine().Tooltip(e.action)
 		if isChanged {
@@ -144,11 +148,9 @@ type actionGroup struct {
 	rows  []entry
 }
 
-// entry is one row of the page: an action, and the keybinding the file holds
-// for it, -1 when it holds none.
+// entry is one row of the page: an action, whatever the file binds it on.
 type entry struct {
 	action string
-	row    int
 }
 
 // groupOrder is where the catalog puts each group, for the settings page to
@@ -168,12 +170,7 @@ var groupOrder = func() map[string]int {
 // not know last, under Other. The group it calls Other is the catalog's word,
 // which the page translates as it draws.
 func groups(all []store.Keybinding) []actionGroup {
-	bound := map[string]int{}
-	for i, kb := range all {
-		if _, ok := bound[kb.Action]; !ok {
-			bound[kb.Action] = i
-		}
-	}
+	listed := map[string]bool{}
 	rows := map[string][]entry{}
 	var titles []string
 	at := func(group string) {
@@ -183,14 +180,16 @@ func groups(all []store.Keybinding) []actionGroup {
 	}
 	for _, a := range action.All() {
 		at(a.GroupKey)
-		rows[a.GroupKey] = append(rows[a.GroupKey], entry{action: a.ID, row: take(bound, a.ID)})
+		listed[a.ID] = true
+		rows[a.GroupKey] = append(rows[a.GroupKey], entry{action: a.ID})
 	}
 	for _, kb := range all {
-		if action.Group(kb.Action) != "" {
+		if action.Group(kb.Action) != "" || listed[kb.Action] {
 			continue
 		}
 		at(action.GroupOther)
-		rows[action.GroupOther] = append(rows[action.GroupOther], entry{action: kb.Action, row: take(bound, kb.Action)})
+		listed[kb.Action] = true
+		rows[action.GroupOther] = append(rows[action.GroupOther], entry{action: kb.Action})
 	}
 	sort.SliceStable(titles, func(i, j int) bool { return rank(titles[i]) < rank(titles[j]) })
 	out := make([]actionGroup, 0, len(titles))
@@ -198,18 +197,6 @@ func groups(all []store.Keybinding) []actionGroup {
 		out = append(out, actionGroup{title: title, rows: rows[title]})
 	}
 	return out
-}
-
-// take is the row of an action the page has not listed yet, and -1 for the
-// next one: an action binds one key, so its later keybindings, if the file has
-// them, are left out.
-func take(bound map[string]int, id string) int {
-	i, ok := bound[id]
-	if !ok {
-		return -1
-	}
-	delete(bound, id)
-	return i
 }
 
 // rank is where the catalog puts a group, after the ones it knows.
@@ -317,12 +304,18 @@ func sameKeys(a, b []string) bool {
 }
 
 // clashingKeys are the keys of the file that run more than one action, and how
-// many they run.
+// many they run. A key the file binds once is not in the map: the page asks it
+// whether there is a clash at all, and a key that runs one action is none.
 func clashingKeys(all []store.Keybinding) map[string]int {
+	seen := map[string]int{}
 	out := map[string]int{}
 	for _, kb := range all {
-		if kb.Key != "" {
-			out[kb.Key]++
+		if kb.Key == "" {
+			continue
+		}
+		seen[kb.Key]++
+		if seen[kb.Key] > 1 {
+			out[kb.Key] = seen[kb.Key]
 		}
 	}
 	return out

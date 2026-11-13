@@ -20,13 +20,6 @@ func TestGroups(t *testing.T) {
 		{Key: "ctrl+shift+f", Action: action.Find},
 	}
 	got := groups(all)
-	bound := map[string]int{
-		action.PaneCloseOthers: 0,
-		"no.such.action":       1,
-		action.Settings:        2,
-		action.TabNew:          3,
-		action.Find:            4,
-	}
 	seen := map[string]bool{}
 	rows := 0
 	for _, g := range got {
@@ -36,13 +29,6 @@ func TestGroups(t *testing.T) {
 				t.Errorf("%q is listed twice", e.action)
 			}
 			seen[e.action] = true
-			want, ok := bound[e.action]
-			if !ok {
-				want = -1
-			}
-			if e.row != want {
-				t.Errorf("row of %q = %d, want %d", e.action, e.row, want)
-			}
 		}
 	}
 	if want := len(action.All()) + 1; rows != want {
@@ -90,7 +76,7 @@ func TestChangedActions(t *testing.T) {
 }
 
 // TestClashingKeys covers what the page says in red: a key the file binds to
-// more than one action, and a key it binds once.
+// more than one action, and a key it binds once, which is no clash.
 func TestClashingKeys(t *testing.T) {
 	clashing := clashingKeys([]store.Keybinding{
 		{Key: "ctrl+t", Action: action.TabNew},
@@ -100,8 +86,12 @@ func TestClashingKeys(t *testing.T) {
 	if got := clashing["ctrl+t"]; got != 2 {
 		t.Errorf("ctrl+t runs %d actions, want 2", got)
 	}
-	if got := clashing["ctrl+w"]; got != 1 {
-		t.Errorf("ctrl+w runs %d actions, want 1", got)
+	if got, ok := clashing["ctrl+w"]; ok {
+		t.Errorf("ctrl+w runs %d actions, want it left out of the clashes", got)
+	}
+	// The empty key is an action with no key, not a key two actions share.
+	if got := clashingKeys([]store.Keybinding{{Action: action.TabNew}, {Action: action.TabClose}}); len(got) != 0 {
+		t.Errorf("two actions with no key = %v, want no clash", got)
 	}
 }
 
@@ -110,12 +100,12 @@ func TestClashingKeys(t *testing.T) {
 // the page is asked for the changed ones alone or searches.
 func TestListedRows(t *testing.T) {
 	rows := []entry{
-		{action: action.TabGoto + "1", row: -1},
-		{action: action.TabGoto + "2", row: -1},
-		{action: action.TabGoto + "3", row: -1},
-		{action: action.TabGoto + "4", row: -1},
-		{action: action.TabGoto + "5", row: -1},
-		{action: action.Settings, row: -1},
+		{action: action.TabGoto + "1"},
+		{action: action.TabGoto + "2"},
+		{action: action.TabGoto + "3"},
+		{action: action.TabGoto + "4"},
+		{action: action.TabGoto + "5"},
+		{action: action.Settings},
 	}
 	changed := map[string]bool{action.TabGoto + "5": true}
 
