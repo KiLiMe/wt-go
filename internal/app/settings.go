@@ -112,10 +112,15 @@ func fileProfiles(s store.Settings, showHidden bool) []ui.Profile {
 	return out
 }
 
-// knownProfiles are the profiles the window runs, as the settings list them.
+// knownProfiles are the profiles the window runs, as the settings list them. A
+// hidden one is not one of them: a setting that names it runs the system shell,
+// so offering it would be a choice that does not hold.
 func knownProfiles(profiles []profile.Profile) []ui.Profile {
 	out := make([]ui.Profile, 0, len(profiles))
 	for _, p := range profiles {
+		if p.Hidden {
+			continue
+		}
 		out = append(out, ui.Profile{ID: p.ID, Name: p.Name, Color: p.Color, Discovered: p.Discovered})
 	}
 	return out

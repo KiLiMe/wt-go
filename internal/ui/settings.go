@@ -204,7 +204,19 @@ func startupPage(c *myui.Context, st Settings, act Actions) {
 			for _, p := range st.Known {
 				opts = append(opts, option{p.ID, p.Name})
 			}
-			choice(c, &s.DefaultProfile, opts)
+			// A profile the file names but no longer offers runs the system's
+			// shell anyway, so the select says following the system rather than
+			// a choice that is gone; only choosing writes it, so opening the
+			// page does not change the draft.
+			offered := s.DefaultProfile
+			if offered != "" && !offers(st.Known, offered) {
+				offered = ""
+			}
+			picked := offered
+			choice(c, &picked, opts)
+			if picked != offered {
+				s.DefaultProfile = picked
+			}
 		})
 		field(c, locales.Language(), "", func() {
 			langs := i18n.Languages()
@@ -222,6 +234,16 @@ func startupPage(c *myui.Context, st Settings, act Actions) {
 			myui.Switch(c, &s.CloseOnLastTab)
 		})
 	})
+}
+
+// offers reports whether a list of profiles holds an id.
+func offers(profiles []Profile, id string) bool {
+	for _, p := range profiles {
+		if p.ID == id {
+			return true
+		}
+	}
+	return false
 }
 
 // interactionPage is how the terminal answers the mouse and the clipboard.

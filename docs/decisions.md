@@ -1376,3 +1376,27 @@ func (a *App) tabProfile(profileID string) profile.Profile {
 `internal/ui/settings_test.go` 的 `TestActionsPageToolbar`（点「仅看已修改」真的回调、折叠条按 6 项出现、
 全默认时不出现「已修改」）；`internal/app/settings_test.go` 的 `TestResetKeybinding`（恢复默认且不动邻居）、
 `TestSetKeybindingDropsTheOtherKeys`（`tab.new` 录 `f2` 后只剩 `f2`）。
+
+## ADR-56 没有可用 profile 就是「跟随系统」，不在菜单里留空位
+
+**背景**：`settings.json` 的 `profiles` 条目全部被删掉或标成 `hidden` 之后，运行层其实已经回到系统
+shell（`profile.Default` 认不出 id 或认到 `Hidden` 就返回零值 `Profile`，`CommandLine()` 为 `nil`，见
+ADR-44），但界面没说这件事：`▾` 菜单的 profile 项全被滤掉，只剩「设置」「关于」，看上去像窗口坏了；
+设置页的「默认配置文件」下拉又把隐藏的 profile 照旧列出来，选了它却跑系统 shell。
+
+**决定**：
+
+1. **`▾` 菜单在可用 profile 为空时列一项「跟随系统」**（`ui/menuProfiles`），点了走
+   `App.NewSystemTab()`（`openTab(profile.Profile{}, "")`）。理由：那一项就是窗口此时会跑的东西，
+   菜单把它说出来比空着强；不为它新建 profile 条目，也不给空 id 编快捷键（它没有编号）。
+2. **隐藏的 profile 不进这两处列表**（`app.knownProfiles` 跳过 `Hidden`）。理由：列出来是一个不成立的
+   选项——选中也会回落系统 shell，「跟随系统」已经能表达同一件事。
+3. **`defaultProfile` 指向已不存在或已隐藏的 id 时，下拉显示为「跟随系统」**，且只在用户真的选了才写进草稿
+   （画一帧不改文件）。理由：保存时的死引用与「没写」在运行时是同一件事，界面上不该出现两个意思。
+
+**否决的方案**：菜单里画一个灰掉的「没有配置文件」条目——它不能点，等于把问题推回给人；给零值 profile
+新增一个 `System` 字段——零值已经是「跟随系统」，多一个字段要同步 profile 解析、序列化与合并三处。
+
+**测试**：`internal/ui/tabs_test.go` 的 `TestMenuProfiles`（空列表得到唯一一项「跟随系统」、有 profile 时
+原样返回）；`internal/app/settings_test.go` 的 `TestKnownProfilesSkipsHidden`；`internal/ui/settings_test.go` 的
+`TestStartupPageShowsTheSystemForAProfileThatIsGone`（页面不画出 `gone`，也不为显示它改草稿）。

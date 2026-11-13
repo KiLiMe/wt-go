@@ -10,6 +10,7 @@ import (
 
 	"wtgo/internal/action"
 	"wtgo/internal/pane"
+	"wtgo/internal/profile"
 	"wtgo/internal/store"
 	"wtgo/internal/sys"
 	"wtgo/internal/ui"
@@ -573,6 +574,16 @@ func TestSetKeybindingDropsTheOtherKeys(t *testing.T) {
 	}
 	if len(keys) != 1 || keys[0] != "f2" {
 		t.Fatalf("%q runs on %v, want f2 alone", action.TabNew, keys)
+	}
+}
+
+// TestKnownProfilesSkipsHidden covers the list the settings offer: a hidden
+// profile runs the system's shell, so the page does not offer it.
+func TestKnownProfilesSkipsHidden(t *testing.T) {
+	ps := []profile.Profile{{ID: "a", Name: "A"}, {ID: "b", Name: "B", Hidden: true}}
+	got := knownProfiles(ps)
+	if len(got) != 1 || got[0].ID != "a" {
+		t.Fatalf("knownProfiles = %+v, want A alone", got)
 	}
 }
 

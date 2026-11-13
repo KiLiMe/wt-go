@@ -23,6 +23,13 @@ func (a *App) NewTab(profileID string) {
 	a.openTab(a.tabProfile(profileID), "")
 }
 
+// NewSystemTab opens a tab that runs the shell of the machine: what the
+// settings call following the system, and what every tab runs when the file
+// offers no profile at all.
+func (a *App) NewSystemTab() {
+	a.openTab(profile.Profile{}, "")
+}
+
 // tabProfile is the profile a tab runs: the one it names, and with none the
 // default profile. An id the machine does not have, or one since hidden, is the
 // system's own shell rather than another profile of the list.

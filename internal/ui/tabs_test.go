@@ -35,6 +35,20 @@ func TestShortcut(t *testing.T) {
 	shortcut(it, State{}, action.Settings)
 }
 
+// TestStripProfiles covers what the strip's profile menu lists: the profiles of
+// the window, and with none the one that follows the system, so that a window
+// without a profile still opens a tab.
+func TestStripProfiles(t *testing.T) {
+	got := stripProfiles(State{})
+	if len(got) != 1 || got[0].ID != "" || got[0].Name != locales.SystemProfile() {
+		t.Fatalf("stripProfiles with no profile = %+v, want the one that follows the system", got)
+	}
+	ps := []Profile{{ID: "pwsh7", Name: "PowerShell 7"}}
+	if got := stripProfiles(State{Profiles: ps}); len(got) != 1 || got[0].ID != "pwsh7" {
+		t.Fatalf("stripProfiles = %+v, want the profiles of the window", got)
+	}
+}
+
 // TestNameWidth covers the room a tab's name takes: a short name keeps a
 // tab clickable, a long one stops growing.
 func TestNameWidth(t *testing.T) {

@@ -67,6 +67,27 @@ func TestNavAddsProfiles(t *testing.T) {
 	}
 }
 
+// TestStartupPageShowsTheSystemForAProfileThatIsGone covers the select of the
+// default profile: a file that names one the page does not offer runs the
+// system's shell, so the select says so rather than naming a profile that is
+// not there, and drawing the page leaves the draft as the file wrote it.
+func TestStartupPageShowsTheSystemForAProfileThatIsGone(t *testing.T) {
+	s := store.Default()
+	s.DefaultProfile = "gone"
+	act := &navActions{}
+	known := []Profile{{ID: "pwsh7", Name: "PowerShell 7"}}
+	tt := myui.NewTester(func(c *myui.Context) {
+		SettingsTab(c, Settings{Draft: &s, Page: PageStartup, Known: known}, act)
+	}, 900, 700)
+	tt.Frame()
+	if tt.HasText("gone") {
+		t.Fatal("the select names a profile the page does not offer")
+	}
+	if s.DefaultProfile != "gone" {
+		t.Fatalf("drawing the page changed the draft: DefaultProfile = %q", s.DefaultProfile)
+	}
+}
+
 // TestActionsPageToolbar covers what the toolbar of the actions page offers: a
 // click on the switch asks for the changed actions alone, the groups that fold
 // numbered actions away say how many they hold back, and an action the file

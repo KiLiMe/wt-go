@@ -16,6 +16,9 @@ import (
 type Actions interface {
 	// NewTab opens a tab that runs a profile; "" runs the default one.
 	NewTab(profileID string)
+	// NewSystemTab opens a tab that runs the shell of the machine, which is
+	// what a profile with no program of its own is (ADR-44).
+	NewSystemTab()
 	// CloseTab closes the tab at i.
 	CloseTab(i int)
 	// DuplicateTab opens a tab like the one at i.
