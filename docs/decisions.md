@@ -1362,9 +1362,10 @@ func (a *App) tabProfile(profileID string) profile.Profile {
 **决定**：
 
 1. **一个动作一个键**：`SetKeybinding` 把该动作的键全部换成新键（第一条原地改，其余删掉）。
-   理由：页面一个动作只画一格，留一个看不见的别名会让「已修改」「重置」「冲突」三个判断全部说谎，
-   也会让人录完新键后旧键继续悄悄生效。要「多个键跑同一个动作」，就写两个动作或手改文件，
-   界面不假装支持。
+   格子里列出该动作**当前的全部键**（`ctrl+shift+t · ctrl+t`，窄了打省略号、`Tooltip` 给全），
+   所以「页面上看不见的别名」已经不存在；仍然只留一个键，是因为录一次只收一个键，留下来的其余键
+   既不能单独删，也和按集合比较的「已修改 / 重置」对不上——等于两个按钮只管一半。要「多个键跑同一个
+   动作」，就写两个动作或手改文件，界面不假装支持。
 2. **「已修改」＝ 文件绑的键集合 ≠ 目录默认键集合**（不比行号、不比顺序）；窗口不认识的 id
    恒为已修改——它没有默认可回。
 3. **「重置」按动作恢复目录默认键**，放在该动作原来第一条键的位置，文件其余部分与顺序不动；
@@ -1378,9 +1379,12 @@ func (a *App) tabProfile(profileID string) profile.Profile {
 这些动作；不为了对齐原型新增动作。界面照做，键位表只认 `internal/action`。
 
 **测试**：`internal/ui/keybindings_test.go` 的 `TestChangedActions`（默认键不算改、另一个键算改、
-未知动作算改）、`TestClashingKeys`、`TestListedRows`（折叠 3 后、展开全出、仅看已修改与搜索不过滤）；
-`internal/ui/settings_test.go` 的 `TestActionsPageToolbar`（点「仅看已修改」真的回调、折叠条按 6 项出现、
-全默认时不出现「已修改」）；`internal/app/settings_test.go` 的 `TestResetKeybinding`（恢复默认且不动邻居）、
+未知动作算改）、`TestClashingKeys`（单次绑定的键不算冲突、空键不算冲突）、`TestListedRows`
+（折叠 3 后、展开全出、仅看已修改与搜索不过滤）；`internal/ui/settings_test.go` 的
+`TestActionsPageToolbar`（点「仅看已修改」真的回调、折叠条按 6 项出现、全默认时不出现「已修改」）、
+`TestActionsPageNamesOnlyRealClashes`（默认键位下顶栏不出现红字，人为重复一个键才出现）、
+`TestActionsPageShowsEveryKeyOfAnAction`（`tab.new` 的一格写着两个键）；
+`internal/app/settings_test.go` 的 `TestResetKeybinding`（恢复默认且不动邻居）、
 `TestSetKeybindingDropsTheOtherKeys`（`tab.new` 录 `f2` 后只剩 `f2`）。
 
 ## ADR-56 没有可用 profile 就是「跟随系统」，不在菜单里留空位
@@ -1534,3 +1538,58 @@ wt-go 的事；③ wt-go 自己当 X11 `CLIPBOARD_MANAGER`（xgb + XFixes 监听
 
 **否决的方案**：把右栏改成 `Surface`。那样标签条（也是 `Surface`）与标签体同色，活动标签和栏
 分不开，比原来更花。
+
+---
+
+## ADR-61 「显示隐藏的配置文件」是页上的一行开关，默认开着，左栏始终只列没隐藏的
+
+**背景**：「默认值」页的「配置文件」卡片末尾有一个「显示隐藏的配置文件」勾选框，默认没勾。两个问题：
+列表长的时候（这台机器上有十几个 shell）要滚到卡片底部才看得见它；而且勾选框本身就在这张列表里，
+默认关着等于把隐藏条目连「显示」按钮一起藏了起来——隐藏的条目正是「重新装回来点显示就回来」的那个
+入口（见 `docs/使用说明.md` 第 7.2 节）。另外左栏用的是同一份过滤列表，关掉开关时左栏也跟着少一行，
+也就是「默认值」页的一个视图开关改掉了导航的样子。
+
+**决定**：
+
+1. 勾选框改成卡片第一行的开关，用 `field`（左字右控件，跟「窗口置顶」一样），说明一行写在名字下。
+2. 默认开着：`App.showHidden` 在 `newApp` 里置 `true`。
+3. 左栏（`nav`）只列没隐藏的配置文件，跳过 `Hidden` 的；这个开关只管「默认值」页那张列表。
+
+**理由**：开关跟着它过滤的那张列表走，放在列表上方，列表再长也挤不掉它（它就在卡片开头）。默认开着是
+因为它守着「找回来」的入口：关掉时的代价是看不见隐藏条目、也就看不见「显示」按钮，而左栏已经替页面
+隐去了这些条目，一处边界足够。左栏与列表分家，是因为左栏是导航：一行左栏对应一个能打开的页面，把
+隐藏条目列进去，就是给用户一堆「本来就打算看不见」的页面。
+
+**否决的方案**：把开关放到左栏底部、跟「＋ 添加新配置文件」并排。左栏只有 220 DIP 宽，一句话的开关
+要么折行要么缩成图标，而它管的并不是左栏。
+
+## ADR-62 「跟随系统」改成「跟随设备」：设备显式解析
+
+**背景**：`defaultProfile` 为空时，`profile.Default` 返回零值 profile（没有程序、没有名字、没有颜色），
+把「跑什么 shell」交给终端自己找（Windows 上 `pwsh.exe` → `powershell.exe` → `%COMSPEC%` → `cmd.exe`，
+POSIX 用 `$SHELL`）。结果窗口对这件事一无所知：标签没有 profile 名与颜色，只能事后从标题或
+`runsOf` 猜一个程序名（截图里新标签只写 `pwsh`）；设置页也看不出接下来会开什么。另一边，wt-go
+自己的探测顺序是 `pwsh7` → `powershell` → `bash` → `cmd` → `nu` → `wsl:*`，跟终端的兜底顺序
+并不一致（机器上有 Git Bash、却没有 pwsh/powershell 时，两者跑的不是同一个）。
+
+**决定**：
+
+1. `profile.Device(found)` 就是设备：取探测到的第一个 shell 的程序与参数，名字与颜色取内置表；
+   `found` 为空才回到零值 profile（终端自己找）。
+2. `profile.Default(profiles, id, found)`：id 命中且未隐藏 → 那条；否则 → `Device(found)`。
+   启动的首个标签、`Ctrl+T`/`Ctrl+Shift+T`、`+`、空窗口的「打开标签」、复制标签、拆窗格都走它。
+3. 设备**不读** `settings.Profiles` 的任何字段：隐藏条目的名字、颜色、参数一律不借。
+4. 设置页下拉第一项叫「跟随设备（`PowerShell 7`）」，括号里是设备 shell 在内置表里的名字
+   （`ui.Settings.Device`）；标签名走同一张表，所以下拉、标签、profile 列表三处写的是同一个名字。
+5. 设备每次启动都探一次（`newApp` 里 `shells := found()` → `a.device`），哪怕 `settings.json`
+   已经在；写进文件的 `a.found` 仍只在第一份文件时赋值，两者分开：`profile.Resolve` 要用文件里
+   改过的命令行，而「这台机器是什么」与文件无关。
+
+**理由**：跟随设备是这台机器的事实，不是列表里的某个位置——「全部隐藏也照样开 pwsh」要靠解析做到，
+而不是靠「碰巧列表第一项还是它」。从设置里借字段会让它变成「跟随某一条设置」：隐藏的含义是
+「别在菜单里提供它」，不是「机器上没有它」，借了就等于让一个被隐藏的条目继续决定新标签的
+名字、颜色与命令行。明说程序名（而不是含糊的「系统」）也让下拉与标签对得上：用户问的正是
+「打开 pwsh 就显示 pwsh」。
+
+**否决的方案**：让 `Default` 退回「列表里第一条没隐藏的 profile」。那会把「默认」变成一个可以
+被隐藏操作改掉的列表位置，且读 `settings.json` 之前就已经知道设备是什么，没有理由绕这一圈。
