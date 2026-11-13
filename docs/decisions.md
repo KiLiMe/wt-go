@@ -1422,3 +1422,43 @@ ConPTY，不需要这条路径。
 **测试**：`internal/app/termkeys_test.go` 的 `TestLegacyBytes`（Ctrl+A/Z/C、Ctrl+Shift+A、Shift+Tab 各出
 什么字节；字母、裸 Tab、Ctrl+Alt、Ctrl+Super、Ctrl+↑、Ctrl+Enter 都不吃）。
 
+## ADR-58 fork mygo：一条回复一次写，ConPTY 载不动的颜色回复不发
+
+**背景**：pi 启动时问终端 18 个颜色（`OSC 10`、`OSC 11`、16 个 `OSC 4`）再问一次 DA1，并且**按读块整块
+匹配**（`pi-tui` 的 `/^\x1b\](?:(1[01])|4;(\d{1,3}));([^\x07\x1b]*)(?:\x07|\x1b\\)$/`、
+`/^\x1b\[\?[\d;]*c$/`）。在 wt-go 里，这一整批回复落进 pi 的输入框，屏幕上留下
+`b:7676/7676/7676d` 一类残片，而同一个 pi 在 Windows Terminal 里一切正常。
+
+**查到的事实**（本地 fork 的主机侧实验，`plugins/terminal` 的 `TestSkipReply` 与一次性探针）：
+1. mygo 把那批回复交给 `Effects.WritePTY` 时是一次写，`inputQueue` 原样一次 `w.Write` 进 pty；
+2. ConPTY 会解析**终端写进它输入端**的字节，只保留能翻成按键的东西：文本、控制字节、CSI；`OSC` 整段丢掉。
+   实测：`S1` 到了、其后的 `\x1b]4;1;rgb:…\x07` 与 `\x1b[?62;22c` 都没到，`abc\x1b]4;1;rgb:…\x07def`
+   只到 `abcdef`；`\x1b[A`、`\x03` 正常到；
+3. `PSEUDOCONSOLE_PASSTHROUGH_MODE`（0x8）试过，行为不变，ConPTY 仍自己答 DA1（`\x1b[?1;0c`）；
+4. 上游没修：`main` 到 `v0.9.1-0.20261113060250-614ea7a6af6e`，`plugins/terminal` 最近 12 个提交没有一条
+   碰回复或是 ConPTY 输入，tag 仍停在 `v0.9.0`。
+
+**决定**：fork `egoist/mygo` 到 `KiLiMe/mygo`，分支 `wtgo`，一处两个动作：
+1. `WritePTY` 的回调里用 `splitReplies` 把一次写里的多条回复拆开，逐条 `t.in.push`；
+2. 同一处用 `t.skipReply` 丢掉 ConPTY 载不动的颜色回复（`OSC 4/10/11/12`）——只在
+   `Options.Conn == nil && runtime.GOOS == "windows"`（即有 ConPTY）时生效，`Conn` 场景与其它平台照旧全答。
+
+`go.mod` 用 `replace github.com/egoist/mygo => github.com/KiLiMe/mygo v0.8.4-0.20261113061007-fcf66d899ce3`。
+
+**理由**：规范上这是 pi 的健壮性缺陷（读块边界从来不是协议保证），但 wt-go 侧没有别的落点：`Options`
+里没有「少答/分批答」的开关，想自己控 pty 就得用 `Options.Conn` 把 mygo 的 `internal/pty` 重做一遍
+（sshyard 就是自己写了 72KB 的 vt 与 ConPTY 层）。拆条让「能送达的地方」一条一条到；跳过让「送不到的地方」
+不再假装答过——pi 拿不到回复就用自己的默认配色，输入框也干净了（fork 里用真 pi 跑过：残片消失）。
+
+**否决的方案**：① 只拆条不跳过——ConPTY 仍会把整批丢进输入框（实测 orig 的 511 字节就是漏进来的）；
+② 不答 `OSC 4/10/11` 之外的也一并砍掉（DA1 仍要答，程序靠它认能力，ConPTY 自己也答）；
+③ 手改本地 `pi-tui/dist` —— bun 一升级就被覆盖，且不解决问题本身；④ 用 `Options.Conn` 自管 pty ——
+等于换掉 mygo 的终端。**待办**：把「ConPTY 丢 OSC、pi 读块匹配」写成 upstream issue 给 pi（与 mygo 无关）。
+
+**代价**：多一个要跟着上游走的依赖。升级流程＝从新 tag 起把 `wtgo` 分支 rebase 上去，改 pseudo-version；
+本地差异只有 `terminal.go` 的两处（约 60 行）加两个测试文件。ConPTY 的输入解析在 Windows 上无法绕开，
+所以「Windows 上程序问不到终端的配色」是这条路的固有代价，不是回归。
+
+**测试**：fork 里 `plugins/terminal/reply_split_test.go`（19 条拆成 19 份、单条不拆、写到一半的保持整块）与
+`reply_skip_test.go`（Windows 无 `Conn` 时 `OSC 4/10/11/12` 跳过、标题与 CSI 照发、有 `Conn` 一律不跳）；
+wt-go 里 `internal/app/termkeys_test.go` 管的是另一件事（ADR-57）。
