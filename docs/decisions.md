@@ -1400,27 +1400,30 @@ ADR-44），但界面没说这件事：`▾` 菜单的 profile 项全被滤掉�
 **测试**：`internal/ui/tabs_test.go` 的 `TestMenuProfiles`（空列表得到唯一一项「跟随系统」、有 profile 时
 原样返回）；`internal/app/settings_test.go` 的 `TestKnownProfilesSkipsHidden`；`internal/ui/settings_test.go` 的
 `TestStartupPageShowsTheSystemForAProfileThatIsGone`（页面不画出 `gone`，也不为显示它改草稿）。
-## ADR-57 Ctrl+字母与 Shift+Tab 自己写字节，不交给 Kitty 编码器
+## ADR-57 ConPTY 载不动的键位，在 mygo 的编码器里换成老式字节
 
 **背景**：在 wt-go 里跑 pi，Ctrl+C 清不掉输入框、Ctrl+U 删不掉行首、方向键与 Home 也不动；同一个 pi 在
 Windows Terminal 里一切正常。用 `OnKey` 探针记录到：这些键**都到达**了 mygo 终端视图（mods 正确），
 丢失发生在 `encodeKey` 之后。原因是程序（pi）先用 `CSI > 7 u` 打开了 Kitty 键盘协议，Ghostty 的编码器
-随即把 Ctrl+字母编成 `CSI 99;5 u` 这类 CSI-u，而 ConPTY 的输入解析不认 CSI-u，直接丢弃；纯文本键走文本
-分支，所以「打字正常」。mygo v0.9.0 只给 Ctrl+I/M/[ 补了 legacy 控制字节，Kitty 分支与 ConPTY 判断都没动，
-上游 `main` 也一样（git issue #1203 修的是 AltGr）。
+随即把 Ctrl+字母编成 `CSI 99;5 u`、方向键编成 `CSI 1;1:1 A` 这类 CSI-u，而 ConPTY 的输入解析不认 CSI-u，
+直接丢弃；纯文本键走文本分支，所以「打字正常」。mygo v0.9.0 只给 Ctrl+I/M/[ 补了 legacy 控制字节，
+Kitty 分支与 ConPTY 判断都没动，上游 `main` 也一样（git issue #1203 修的是 AltGr）。
 
-**决定**：Windows 上，在 `terminal.Options.OnKey`（`internal/app/termkeys.go` 的 `legacyKey`）里自己发字节
-并吃掉这个键：Ctrl+字母 → `0x01..0x1a`，Ctrl+Shift+字母同样按 Ctrl 算，Shift+Tab → `\x1b[Z`。
+**决定**：兜底放进 mygo 的 fork（`KiLiMe/mygo` 的 `wtgo` 分支，见 ADR-58）：`plugins/terminal/view.go` 的
+`legacyKey` 在 `(*Terminal).conpty()` 且程序开着 Kitty 协议时替掉编码器的结果——Ctrl+字母（含 Ctrl+Shift）→
+`0x01..0x1a`、Shift+Tab → `\x1b[Z`、方向键/Home/End/Insert/Delete/PageUp/PageDown → `\x1b[…`，
+程序设了 DECCKM 时方向键与 Home/End 改读 `\x1bO…`。wt-go 这边先前的 `OnKey` 桥（`internal/app/termkeys.go`）
+已删除。
 
-**理由**：OnKey 是 `view.keyDown` 的第一站、排在编码器前面，是唯一能在不 fork mygo 的情况下绕开编码器的
-入口（kero 也用它做 macOS 的 Ghostty 快捷键）；只对 `runtime.GOOS == "windows"` 生效，Linux 上的终端不经过
-ConPTY，不需要这条路径。
+**理由**：①`OnKey` 只是把同样的字节再写一遍，却要 wt-go 自己判平台、自己维护键表，且拿不到 DECCKM——
+方向键只能放着（旧写法就是这么留下的坑）；②fork 里就在编码器旁，`t.term.Mode(vt.ModeCursorKeys)` 可读、
+`conpty()` 判据已有，测试能直接写；③不改协议宣告，程序不必知道自己的协议被降级。
 
-**代价与边界**：AltGr（Ctrl+Alt）与 Ctrl+Super 一律放行，方向键不动——它们该编成 `\x1b[A` 还是
-`\x1bOA` 取决于程序设的 DECCKM，而这个状态在 wt-go 手里没有（ADR-58 的 fork 才有位置读它）。
+**代价与边界**：程序以为 Kitty 开着、收到的是老式字节，所以 Shift+方向键、Ctrl+方向键这类组合会退化成无修饰的
+形式（`legacyKey` 对它们返回 nil，交给编码器，仍会被 ConPTY 丢掉）；Alt 组合不动——编码器本来就发 `ESC` 前缀。
 
-**测试**：`internal/app/termkeys_test.go` 的 `TestLegacyBytes`（Ctrl+A/Z/C、Ctrl+Shift+A、Shift+Tab 各出
-什么字节；字母、裸 Tab、Ctrl+Alt、Ctrl+Super、Ctrl+↑、Ctrl+Enter 都不吃）。
+**测试**：fork 的 `TestLegacyKey`（12 组普通形式）、`TestLegacyKeyApplicationCursorKeys`（DECCKM 开后的
+`\x1bO…`）、`TestLegacyKeyLeavesTheRest`（文本、release、Alt、Ctrl+Alt、Ctrl+方向键、裸 Tab 都返回 nil）。
 
 ## ADR-58 fork mygo：一条回复一次写，ConPTY 载不动的颜色回复不发
 
@@ -1443,7 +1446,9 @@ ConPTY，不需要这条路径。
 2. 同一处用 `t.skipReply` 丢掉 ConPTY 载不动的颜色回复（`OSC 4/10/11/12`）——只在
    `Options.Conn == nil && runtime.GOOS == "windows"`（即有 ConPTY）时生效，`Conn` 场景与其它平台照旧全答。
 
-`go.mod` 用 `replace github.com/egoist/mygo => github.com/KiLiMe/mygo v0.8.4-0.20261113061007-fcf66d899ce3`。
+`go.mod` 用 `replace github.com/egoist/mygo => github.com/KiLiMe/mygo v0.9.1-0.20261113062854-43b180c1f204`
+（基线是 `v0.9.1-0.20261113060250-614ea7a6af6e`，比 `v0.8.3` 多 68 个提交；`wtgo` 分支 rebase 上去后是
+两个提交：本条的回复拆条/跳过，加 ADR-57 的键位兜底）。
 
 **理由**：规范上这是 pi 的健壮性缺陷（读块边界从来不是协议保证），但 wt-go 侧没有别的落点：`Options`
 里没有「少答/分批答」的开关，想自己控 pty 就得用 `Options.Conn` 把 mygo 的 `internal/pty` 重做一遍
@@ -1456,9 +1461,10 @@ ConPTY，不需要这条路径。
 等于换掉 mygo 的终端。**待办**：把「ConPTY 丢 OSC、pi 读块匹配」写成 upstream issue 给 pi（与 mygo 无关）。
 
 **代价**：多一个要跟着上游走的依赖。升级流程＝从新 tag 起把 `wtgo` 分支 rebase 上去，改 pseudo-version；
-本地差异只有 `terminal.go` 的两处（约 60 行）加两个测试文件。ConPTY 的输入解析在 Windows 上无法绕开，
-所以「Windows 上程序问不到终端的配色」是这条路的固有代价，不是回归。
+本地差异是 `terminal.go` 与 `view.go` 的三处（约 180 行）加四个测试文件。ConPTY 的输入解析在 Windows 上无法绕开，
+所以「Windows 上程序问不到终端的配色」是这条路的固有代价，不是回归。判据收在 `(*Terminal).conpty()` 一处
+（`Options.Conn == nil && runtime.GOOS == "windows"`），回复与键位两条路径共用。
 
 **测试**：fork 里 `plugins/terminal/reply_split_test.go`（19 条拆成 19 份、单条不拆、写到一半的保持整块）与
 `reply_skip_test.go`（Windows 无 `Conn` 时 `OSC 4/10/11/12` 跳过、标题与 CSI 照发、有 `Conn` 一律不跳）；
-wt-go 里 `internal/app/termkeys_test.go` 管的是另一件事（ADR-57）。
+键位兜底在 `legacykey_test.go`（ADR-57）。
