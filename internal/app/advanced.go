@@ -39,6 +39,7 @@ func (a *App) rediscover() {
 	f := found()
 	changed := adoptAgain(&a.settings, f)
 	a.found = f
+	a.device = profile.Device(f)
 	a.profiles = profile.Resolve(a.settings.Profiles, a.found)
 	if changed {
 		a.adoptWrite()

@@ -24,20 +24,20 @@ func (a *App) NewTab(profileID string) {
 }
 
 // NewSystemTab opens a tab that runs the shell of the machine: what the
-// settings call following the system, and what every tab runs when the file
+// settings call following the device, and what a window opens when the file
 // offers no profile at all.
 func (a *App) NewSystemTab() {
-	a.openTab(profile.Profile{}, "")
+	a.openTab(a.device, "")
 }
 
 // tabProfile is the profile a tab runs: the one it names, and with none the
 // default profile. An id the machine does not have, or one since hidden, is the
-// system's own shell rather than another profile of the list.
+// shell of the machine rather than another profile of the list.
 func (a *App) tabProfile(profileID string) profile.Profile {
 	if profileID == "" {
 		profileID = a.settings.DefaultProfile
 	}
-	return profile.Default(a.profiles, profileID)
+	return profile.Default(a.profiles, profileID, a.device)
 }
 
 // CloseTab closes the tab at i, and with the last tab the window, when the
@@ -350,7 +350,7 @@ func (a *App) DuplicateTab(i int) {
 	if tab.Focus == nil || !tab.Focus.Pane() {
 		return
 	}
-	p := profile.Default(a.profiles, tab.ProfileID)
+	p := profile.Default(a.profiles, tab.ProfileID, a.device)
 	a.openTab(p, tab.Focus.Term.Dir())
 }
 
@@ -569,7 +569,7 @@ func (a *App) splitPane(dir layout.Dir) {
 	if a.settings.MaxPanes > 0 && tab.Count() >= a.settings.MaxPanes {
 		return
 	}
-	p := profile.Default(a.profiles, tab.ProfileID)
+	p := profile.Default(a.profiles, tab.ProfileID, a.device)
 	term, err := a.newTerminal(a.termOptions(p, tab.Focus.Term.Dir()))
 	if err != nil {
 		log.Printf("wt-go: %s", fault.Line(fault.ChildFailed, startFailed(p, err)))

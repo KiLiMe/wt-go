@@ -70,6 +70,7 @@ func (a *App) settingsState() ui.Settings {
 		Profiles:     fileProfiles(a.settings, a.showHidden),
 		Hidden:       a.showHidden,
 		Known:        knownProfiles(a.profiles),
+		Device:       a.device.Name,
 		Schemes:      a.schemeList(),
 		FontFamilies: a.fonts.families,
 	}

@@ -610,14 +610,15 @@ func closeButton(c *myui.Context, act Actions, i int) myui.Element {
 }
 
 // stripProfiles are what the menu of the strip lists. With every profile
-// deleted or hidden it lists one entry, following the system, which is the
-// shell the window runs then anyway: a menu with nothing to open a tab on reads
-// as a window that cannot open one.
+// deleted or hidden it lists one entry, following the device, which is the
+// shell the window runs then anyway: a menu with nothing to open a tab on
+// reads as a window that cannot open one. That entry names the device the way
+// the settings page does, so the menu says which shell it opens.
 func stripProfiles(st State) []Profile {
 	if len(st.Profiles) > 0 {
 		return st.Profiles
 	}
-	return []Profile{{Name: locales.SystemProfile()}}
+	return []Profile{{Name: deviceLabel(st.Device)}}
 }
 
 // profilesMenu opens a tab that runs one of the profiles.
@@ -633,7 +634,7 @@ func profilesMenu(c *myui.Context, st State, act Actions) myui.Element {
 		for i, p := range stripProfiles(st) {
 			it := m.Item(p.Name)
 			if p.ID == "" {
-				// Following the system is no numbered profile of the file.
+				// Following the device is no numbered profile of the file.
 				if it.Chosen() {
 					act.NewSystemTab()
 				}

@@ -210,6 +210,9 @@ type Settings struct {
 	// Known are the profiles a setting may name, the file's and the ones
 	// the window found.
 	Known []Profile
+	// Device is the shell of this machine that following the device runs, by
+	// the name the table gives it, and "" when the machine has no shell.
+	Device string
 	// Profile is the profile page's copy of the profile it edits, nil on
 	// the other pages, and Args its arguments as the page types them, one
 	// on a line.
@@ -263,6 +266,9 @@ type State struct {
 	Active int
 	// Profiles are the ones the menu that opens tabs lists.
 	Profiles []Profile
+	// Device is the shell following the device runs, by the name the table
+	// gives it, and "" when the machine has no shell.
+	Device string
 	// Rename is the rename dialog, nil while it is closed.
 	Rename *Rename
 	// Settings is the settings tab, nil until it opens.

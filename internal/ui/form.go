@@ -6,6 +6,7 @@ import (
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/theme"
+	"wtgo/locales"
 )
 
 // option is one choice of a control: the value the settings hold, and what the
@@ -129,6 +130,16 @@ func intro(c *myui.Context, title, note string) {
 func row(c *myui.Context, control func()) {
 	myui.Row(c).Padding(10, 16).AlignItems(myui.Center).
 		BorderWidth(0, 0, 1, 0).BorderColor(cardLine(c.Theme())).Children(control)
+}
+
+// deviceLabel names the shell following the device, in the lists that offer
+// it: as the shell it runs while the machine has one to name, and as following
+// the device alone when it has none.
+func deviceLabel(device string) string {
+	if device == "" {
+		return locales.SystemProfile()
+	}
+	return locales.SystemProfileOf(device)
 }
 
 // choice is a control that picks one of a few values: the string settings

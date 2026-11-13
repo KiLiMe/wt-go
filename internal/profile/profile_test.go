@@ -38,21 +38,39 @@ func TestResolve(t *testing.T) {
 	}
 }
 
-// TestDefault covers picking the profile a new tab runs: the named one, or the
-// zero profile, which runs the system's own shell.
+// TestDefault covers picking the profile a new tab runs: the named one while
+// the window shows it, else the shell of the machine.
 func TestDefault(t *testing.T) {
 	profiles := []Profile{
 		{ID: "a", Hidden: true},
 		{ID: "b"},
 		{ID: "c"},
 	}
-	if p := Default(profiles, "c"); p.ID != "c" {
+	found := []Found{{ID: "b", Command: "/bin/b"}}
+	device := Device(found)
+	if p := Default(profiles, "c", device); p.ID != "c" {
 		t.Errorf("named = %+v", p)
 	}
+	// The device answers with what sys found, not with the profile of the
+	// settings that has the same id: that one may be hidden, or hold another
+	// command line.
 	for _, id := range []string{"", "a", "missing"} {
-		if p := Default(profiles, id); p.ID != "" || p.Command != "" || p.Name != "" {
-			t.Errorf("Default(%q) = %+v, want the zero profile", id, p)
+		if p := Default(profiles, id, device); p.ID != "b" || p.Command != "/bin/b" {
+			t.Errorf("Default(%q) = %+v, want the shell of the machine", id, p)
 		}
+	}
+}
+
+// TestDevice covers the shell of the machine as a profile: the first shell sys
+// found, named and colored from the table, and the zero profile when the
+// machine has none.
+func TestDevice(t *testing.T) {
+	if p := Device(nil); p.ID != "" || p.Command != "" || p.Name != "" {
+		t.Errorf("Device(nil) = %+v, want the zero profile", p)
+	}
+	got := Device([]Found{{ID: "cmd", Command: `C:\Windows\System32\cmd.exe`, Args: []string{"/k"}}})
+	if got.ID != "cmd" || got.Command == "" || got.Name == "" || got.Color == "" || !got.Discovered || len(got.Args) != 1 {
+		t.Errorf("cmd = %+v", got)
 	}
 }
 

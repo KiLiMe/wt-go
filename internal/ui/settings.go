@@ -205,12 +205,14 @@ func startupPage(c *myui.Context, st Settings, act Actions) {
 	section(c, "", func() {
 		field(c, locales.DefaultProfile(), locales.DefaultProfileNote(), func() {
 			opts := make([]option, 0, len(st.Known)+1)
-			opts = append(opts, option{"", locales.SystemProfile()})
+			// The choice a person reads names the shell it runs, the way the
+			// strip's menu names it.
+			opts = append(opts, option{"", deviceLabel(st.Device)})
 			for _, p := range st.Known {
 				opts = append(opts, option{p.ID, p.Name})
 			}
-			// A profile the file names but no longer offers runs the system's
-			// shell anyway, so the select says following the system rather than
+			// A profile the file names but no longer offers runs the shell of the
+			// machine anyway, so the select says following the device rather than
 			// a choice that is gone; only choosing writes it, so opening the
 			// page does not change the draft.
 			offered := s.DefaultProfile

@@ -126,26 +126,43 @@ func fromStore(p store.Profile) Profile {
 	}
 }
 
-// Default picks the profile a new tab runs when nothing names one: the one
-// with id when it is there and shown, else the first shown one.
-// Default is the profile a new tab runs: the one named id, or the zero profile
-// when id names none the window offers.
+// Default is the profile a new tab runs: the one with id while the window
+// shows it, else the device, which is the shell of this machine.
 //
-// The zero profile is what the settings call following the system: it holds no
-// program, so the terminal picks a shell itself (pwsh, then PowerShell, then
-// cmd on Windows; $SHELL elsewhere) and starts it as a login shell. Falling
-// back to the first profile in the list instead would make "the default" a
-// position in a list, which anyone can change by hiding a profile.
-func Default(profiles []Profile, id string) Profile {
-	if id == "" {
-		return Profile{}
-	}
-	for _, p := range profiles {
-		if p.ID == id && !p.Hidden {
-			return p
+// Falling back to the first profile in the list instead would make "the
+// default" a position in a list, which anyone can change by hiding a profile:
+// following the device is a fact about the machine, not about the order.
+func Default(profiles []Profile, id string, device Profile) Profile {
+	if id != "" {
+		for _, p := range profiles {
+			if p.ID == id && !p.Hidden {
+				return p
+			}
 		}
 	}
-	return Profile{}
+	return device
+}
+
+// Device is the shell of this machine that a new tab runs when the settings
+// name none: the first one sys found, as it was found.
+//
+// It takes nothing from the settings' profiles, not even their names: a profile
+// someone hid is one they chose not to offer, so its name, its color and its
+// command line are not the machine's shell either. A machine with no shell at
+// all leaves the zero profile, which has the terminal look for one itself.
+func Device(found []Found) Profile {
+	if len(found) == 0 {
+		return Profile{}
+	}
+	f := found[0]
+	return Profile{
+		ID:         f.ID,
+		Name:       Name(f.ID, f.Command),
+		Command:    f.Command,
+		Args:       f.Args,
+		Color:      Color(f.ID),
+		Discovered: true,
+	}
 }
 
 // CommandLine is the program and its arguments, as a terminal starts it;

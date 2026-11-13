@@ -11,7 +11,6 @@ import (
 	"wtgo/internal/pane"
 	"wtgo/internal/profile"
 	"wtgo/internal/store"
-	"wtgo/internal/sys"
 )
 
 // TestLabel covers what a tab is called.
@@ -44,31 +43,13 @@ func TestLabel(t *testing.T) {
 	}
 }
 
-// TestRunsOf covers the name of the shell a tab with no command starts.
-func TestRunsOf(t *testing.T) {
-	for _, tc := range []struct {
-		shells []sys.Shell
-		want   string
-	}{
-		{[]sys.Shell{{Command: `C:\Program Files\PowerShell\7\pwsh.exe`}}, "pwsh"},
-		{[]sys.Shell{{Command: `/bin/bash`}}, "bash"},
-		{[]sys.Shell{{Command: `C:\Program Files\Git\bin\bash.exe`}}, "bash"},
-		{[]sys.Shell{{Command: `/usr/bin/fish`}, {Command: `/bin/bash`}}, "fish"},
-		{nil, ""},
-	} {
-		if got := runsOf(tc.shells); got != tc.want {
-			t.Errorf("runsOf(%v) = %q, want %q", tc.shells, got, tc.want)
-		}
-	}
-}
-
 // TestTabNamesTheShellItRuns covers the tab itself: it says the shell before
 // that shell has a title, and the title once it has one.
 func TestTabNamesTheShellItRuns(t *testing.T) {
-	a := &App{runs: "bash"}
+	a := &App{}
 	a.settings.TitleFromActiveTerminal = true
 	tab := pane.New(nil)
-	tab.Runs = a.runs
+	tab.Runs = "bash"
 	if got := a.tabName(tab); got != "bash" {
 		t.Errorf("tabName() = %q, want bash", got)
 	}
@@ -188,7 +169,7 @@ func TestCloseOtherTabsDropsTheSettingsTab(t *testing.T) {
 
 // TestTabProfile covers what a tab opened without a profile of its own runs:
 // the default profile, the way the click on the strip's '+' and the keybinding
-// for a new tab both ask for it, and the system's own shell when that names
+// for a new tab both ask for it, and the shell of the machine when that names
 // nothing the machine has.
 func TestTabProfile(t *testing.T) {
 	profiles := []profile.Profile{
@@ -196,16 +177,17 @@ func TestTabProfile(t *testing.T) {
 		{ID: "zsh", Name: "zsh"},
 		{ID: "gone", Name: "Gone", Hidden: true},
 	}
+	found := []profile.Found{{ID: "pwsh7", Command: `C:\Program Files\PowerShell\7\pwsh.exe`}}
 	for _, tc := range []struct {
 		name, def, id, want string
 	}{
 		{"theDefaultProfile", "pwsh7", "", "pwsh7"},
 		{"theProfileItNames", "pwsh7", "zsh", "zsh"},
-		{"noDefaultProfile", "", "", ""},
-		{"anIdTheMachineLacks", "pwsh7", "nope", ""},
-		{"aProfileSinceHidden", "gone", "", ""},
+		{"noDefaultProfile", "", "", "pwsh7"},
+		{"anIdTheMachineLacks", "pwsh7", "nope", "pwsh7"},
+		{"aProfileSinceHidden", "gone", "", "pwsh7"},
 	} {
-		a := &App{profiles: profiles}
+		a := &App{profiles: profiles, device: profile.Device(found)}
 		a.settings.DefaultProfile = tc.def
 		if got := a.tabProfile(tc.id); got.ID != tc.want {
 			t.Errorf("%s: tabProfile(%q) = %q, want %q", tc.name, tc.id, got.ID, tc.want)

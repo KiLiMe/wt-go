@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"wtgo/internal/profile"
 	"wtgo/internal/sys"
 )
 
@@ -22,6 +23,29 @@ func TestStartDirectoryPrefersTheFlag(t *testing.T) {
 	a.startDir = ""
 	if got := a.startDirectory(); got != "home" {
 		t.Errorf("startDirectory() = %q, want the setting once the flag is gone", got)
+	}
+}
+
+// TestNewAppAlwaysKnowsTheDevice covers a file that is already there: the
+// shells come from it and are not probed again, but the device is a fact about
+// the machine, so the settings page still names the shell it runs.
+func TestNewAppAlwaysKnowsTheDevice(t *testing.T) {
+	settingsDir(t)
+	if first := newApp(""); len(first.found) == 0 {
+		t.Skip("no shell on this machine")
+	}
+	a := newApp("")
+	if len(a.found) != 0 {
+		t.Errorf("probed %d shells with a file in place", len(a.found))
+	}
+	if a.device.ID == "" || a.device.Command == "" {
+		t.Fatalf("device = %+v, want the shell of this machine", a.device)
+	}
+	if want := profile.Name(a.device.ID, a.device.Command); a.device.Name != want {
+		t.Errorf("device name = %q, want %q", a.device.Name, want)
+	}
+	if got := a.settingsState().Device; got != a.device.Name {
+		t.Errorf("settings page names the device %q, want %q", got, a.device.Name)
 	}
 }
 

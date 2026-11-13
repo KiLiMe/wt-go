@@ -43,10 +43,11 @@ type App struct {
 	// the setting with the same job, for this run only. A profile's own dir is
 	// still the more specific answer and still wins.
 	startDir string
-	// runs is what the strip calls a tab that runs no profile command: the
-	// name of the shell the machine starts, `bash` or `pwsh`, as the profile's
-	// own name answers for the tabs that have one.
-	runs       string
+	// device is the shell of this machine, as following the device runs it: the
+	// first shell the probe found, probed at every start whatever the file says.
+	// The dropdown names it, and the strip names a tab that runs no program after
+	// it.
+	device     profile.Profile
 	profiles   []profile.Profile
 	found      []profile.Found
 	panes      pane.Set
@@ -264,13 +265,18 @@ func locale(tag string) {
 // when it could not: the window opens with the defaults. startDir is where the
 // command line said new tabs start, "" when it said nothing.
 func newApp(startDir string) *App {
+	// The machine is probed once, before the file is read: the device is a
+	// fact about the machine, and the dropdown names it even when the file
+	// already says which profiles to offer.
+	shells := found()
 	a := &App{
-		settings:  store.Default(),
-		startDir:  startDir,
-		runs:      runsOf(sys.Discover()),
-		shells:    map[*terminal.Terminal]sys.ShellProc{},
-		watchStop: make(chan struct{}),
-		relaunch:  sys.Relaunch,
+		settings:   store.Default(),
+		startDir:   startDir,
+		device:     profile.Device(shells),
+		shells:     map[*terminal.Terminal]sys.ShellProc{},
+		showHidden: true,
+		watchStop:  make(chan struct{}),
+		relaunch:   sys.Relaunch,
 	}
 	settings, data, fresh, err := load()
 	if err == nil {
@@ -289,11 +295,11 @@ func newApp(startDir string) *App {
 	} else {
 		a.savedData = data
 	}
-	// The shells of the machine are probed when the window writes its first
-	// settings file. After that the file is the list, and a probe is what the
-	// advanced page asks for.
+	// The shells of the machine are written into the settings when the window
+	// writes its first settings file. After that the file is the list, and a
+	// probe is what the advanced page asks for.
 	if fresh && err == nil {
-		a.found = found()
+		a.found = shells
 		if adopt(&a.settings, a.found, exists) {
 			a.adoptWrite()
 		}
@@ -575,6 +581,7 @@ func (a *App) view(c *myui.Context) {
 	st := ui.State{
 		Active:     a.panes.Active,
 		Profiles:   a.menuProfiles(),
+		Device:     a.device.Name,
 		Rename:     a.renaming,
 		EqualTabs:  a.settings.TabWidth == "equal",
 		Shortcut:   a.shortcut,
@@ -688,10 +695,10 @@ func (a *App) tabName(tab *pane.Tab) string {
 // program set, unless that title is the path of the program, which is what a
 // shell sets when it has no title of its own; else the name of its profile;
 // else the name of the program itself, because a tab that runs no named
-// profile runs whatever shell the system has, and a tab with no name at all
+// profile runs whatever shell the machine has, and a tab with no name at all
 // cannot be told from the empty strip beside it; else the shell it started,
 // for the same reason while that shell has set no title yet. Only a machine
-// with no shell at all falls through to the word for following the system.
+// with no shell at all falls through to the word for following the device.
 func label(name, title, profileName, runs string) string {
 	switch {
 	case name != "":
@@ -738,18 +745,6 @@ func isProgramPath(s string) bool {
 		return true
 	}
 	return strings.HasSuffix(strings.ToLower(s), ".exe")
-}
-
-// runsOf is what the strip calls a tab whose profile names no command: the
-// shell the machine has, in Discover's order, which is the one a terminal
-// starts when it is given none -- $SHELL on a POSIX system, pwsh.exe on
-// Windows. It is a copy of the terminal's own choice, and only the strip's
-// first guess: a shell that sets a title speaks for itself from then on.
-func runsOf(shells []sys.Shell) string {
-	if len(shells) == 0 {
-		return ""
-	}
-	return programName(shells[0].Command)
 }
 
 // syncTitle gives the window the title of the tab in front, when it changed.
@@ -809,9 +804,9 @@ func (a *App) onClosed() {
 }
 
 // openFirst opens the tab the settings start with; with no profile named it
-// runs the system's own shell.
+// runs the shell of this machine.
 func (a *App) openFirst() {
-	a.openTab(profile.Default(a.profiles, a.settings.DefaultProfile), "")
+	a.openTab(profile.Default(a.profiles, a.settings.DefaultProfile, a.device), "")
 }
 
 // startDirectory is where a tab starts when neither it nor its profile names
@@ -853,7 +848,7 @@ func (a *App) openTab(p profile.Profile, dir string) {
 	// Only a profile that names no program leaves the shell to the terminal,
 	// and only then does the strip have to say which shell that was.
 	if len(p.CommandLine()) == 0 {
-		tab.Runs = a.runs
+		tab.Runs = programName(a.device.Command)
 	}
 	a.insertTab(tab)
 	a.revealTab()

@@ -86,12 +86,21 @@
   "blink": "Blink",
   "language": "Language",
   "systemLanguage": "System",
-  "systemProfile": "System",
+  "systemProfile": "Follow the device",
+  "systemProfileOf": "Follow the device ({device})",
+  "@systemProfileOf": {
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
   "builtIn": "built-in",
   "copySuffix": "copy",
   "newProfile": "New profile",
   "addProfile": "Add profile",
   "showHiddenProfiles": "Show hidden profiles",
+  "showHiddenProfilesNote": "List the profiles this page hides too, greyed out, each with a button that shows it again.",
   "selectProfile": "Select a profile.",
   "restoreDefaults": "Restore the defaults",
   "pressKey": "Press a key…",
@@ -148,7 +157,7 @@
   "saved": "Saved",
   "openSettingsFolder": "Open settings folder",
   "defaultProfile": "Default profile",
-  "defaultProfileNote": "The profile a new tab runs unless it picks one; with none picked the terminal starts the system's own shell.",
+  "defaultProfileNote": "The profile a new tab runs unless it picks one; with none picked a new tab runs this machine's own shell.",
   "startDirectory": "Start directory",
   "startDirectoryNote": "Where a new tab starts when its profile names no directory: current (where wt-go was started), home, or a path. Empty means home.",
   "closeOnLastTab": "Close on last tab",

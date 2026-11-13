@@ -694,14 +694,24 @@ func (msgs Messages) SystemLanguage() string {
 	return Catalog.Format(msgs.locale, "systemLanguage", nil)
 }
 
-// SystemProfile says "System"
+// SystemProfile says "Follow the device"
 // in the language the app shows.
 func SystemProfile() string { return In(i18n.Locale()).SystemProfile() }
 
-// SystemProfile says "System"
+// SystemProfile says "Follow the device"
 // in the language of msgs.
 func (msgs Messages) SystemProfile() string {
 	return Catalog.Format(msgs.locale, "systemProfile", nil)
+}
+
+// SystemProfileOf says "Follow the device ({device})"
+// in the language the app shows.
+func SystemProfileOf(device string) string { return In(i18n.Locale()).SystemProfileOf(device) }
+
+// SystemProfileOf says "Follow the device ({device})"
+// in the language of msgs.
+func (msgs Messages) SystemProfileOf(device string) string {
+	return Catalog.Format(msgs.locale, "systemProfileOf", map[string]any{"device": device})
 }
 
 // BuiltIn says "built-in"
@@ -752,6 +762,16 @@ func ShowHiddenProfiles() string { return In(i18n.Locale()).ShowHiddenProfiles()
 // in the language of msgs.
 func (msgs Messages) ShowHiddenProfiles() string {
 	return Catalog.Format(msgs.locale, "showHiddenProfiles", nil)
+}
+
+// ShowHiddenProfilesNote says "List the profiles this page hides too, greyed out, each with a button that shows it again."
+// in the language the app shows.
+func ShowHiddenProfilesNote() string { return In(i18n.Locale()).ShowHiddenProfilesNote() }
+
+// ShowHiddenProfilesNote says "List the profiles this page hides too, greyed out, each with a button that shows it again."
+// in the language of msgs.
+func (msgs Messages) ShowHiddenProfilesNote() string {
+	return Catalog.Format(msgs.locale, "showHiddenProfilesNote", nil)
 }
 
 // SelectProfile says "Select a profile."
@@ -1104,11 +1124,11 @@ func (msgs Messages) DefaultProfile() string {
 	return Catalog.Format(msgs.locale, "defaultProfile", nil)
 }
 
-// DefaultProfileNote says "The profile a new tab runs unless it picks one; with none picked the terminal starts the system's own shell."
+// DefaultProfileNote says "The profile a new tab runs unless it picks one; with none picked a new tab runs this machine's own shell."
 // in the language the app shows.
 func DefaultProfileNote() string { return In(i18n.Locale()).DefaultProfileNote() }
 
-// DefaultProfileNote says "The profile a new tab runs unless it picks one; with none picked the terminal starts the system's own shell."
+// DefaultProfileNote says "The profile a new tab runs unless it picks one; with none picked a new tab runs this machine's own shell."
 // in the language of msgs.
 func (msgs Messages) DefaultProfileNote() string {
 	return Catalog.Format(msgs.locale, "defaultProfileNote", nil)
