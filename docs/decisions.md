@@ -64,6 +64,7 @@
 | ADR-57 | ConPTY 载不动的键位，在 mygo 的编码器里换成老式字节 | 有效 |
 | ADR-58 | fork mygo：一条回复一次写，ConPTY 载不动的颜色回复不发 | 有效 |
 | ADR-59 | 程序自己 fork 的剪贴板工具不归 wt-go 管，装 `xclip` 即可 | 有效 |
+| ADR-60 | 设置页整页一个底色，左栏与底栏不铺 `Surface` | 有效 |
 
 ---
 
@@ -1513,3 +1514,23 @@ wt-go 的事；③ wt-go 自己当 X11 `CLIPBOARD_MANAGER`（xgb + XFixes 监听
 = 100 000 个 base64 字符，约 75 KB 原文）的复制仍没有兜底。
 
 **待办**：是否把「`xsel` 退出码不可信」报给 pi 上游。
+
+---
+
+## ADR-60 设置页整页一个底色，左栏与底栏不铺 `Surface`
+
+**背景**：设置页左栏铺的是 `Theme.Surface`（Campbell 下 `#252525`），右栏是窗口底色
+`Theme.Background`（`#0c0c0c`），一块灰挨着一块近黑，中间一条硬边；底栏同样是 `Surface`，
+于是窗口里上下各浮着一条灰带，看上去像两个窗口拼在一起。
+
+**决定**：设置页只用一个底色（`Theme.Background`）：左栏（`nav`）与底栏（`footer`）都去掉
+`Background(t.Surface)`，改用 1 DIP 的 `cardLine` 发丝线分开——左栏右缘、底栏上缘。
+选中与悬停仍然是 `SurfaceHover` 的药丸，跟着指针走的反馈不变。
+
+**理由**：当前标签在标签条里就是用 `Theme.Background` 画的（`internal/ui/tabs.go` 里活动标签那对
+圆角上沿，让标签和下面的窗格连成一片），标签体再铺 `Surface` 会和标签条撞色。反过来把两半统一到
+底色：卡片（`cardFace`，背景向文字混 7%）仍是唯一「抬起来」的面，层次反而更清楚；`Surface` 回到
+它在 ADR-43 里的角色——按钮与输入框的脸。
+
+**否决的方案**：把右栏改成 `Surface`。那样标签条（也是 `Surface`）与标签体同色，活动标签和栏
+分不开，比原来更花。

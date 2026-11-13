@@ -56,7 +56,11 @@ const navWidth = 220
 // nav is the column that lists the pages.
 func nav(c *myui.Context, st Settings, act Actions) myui.Element {
 	t := c.Theme()
-	return myui.Column(c).Width(navWidth).Padding(12, 8, 12, 8).Gap(2).Background(t.Surface).Children(func() {
+	// The column is the page's own color, not a surface of its own: a band of
+	// Surface beside the page read as a second window, and the tab in front
+	// already carries the background down from the strip.
+	return myui.Column(c).Width(navWidth).Padding(12, 8, 12, 8).Gap(2).
+		BorderWidth(0, 1, 0, 0).BorderColor(cardLine(t)).Children(func() {
 		// The pages scroll, so that adding profiles never pushes the row that
 		// adds the next one out of reach.
 		myui.Scroll(c).Grow(1).MinHeight(0).Children(func() {
@@ -116,7 +120,8 @@ func navAction(c *myui.Context, icon *myui.SVG, label string, onClick func()) {
 // and the buttons that write it or drop it.
 func footer(c *myui.Context, st Settings, act Actions) myui.Element {
 	t := c.Theme()
-	return myui.Row(c).Height(48).Padding(0, 16).AlignItems(myui.Center).Gap(8).Background(t.Surface).Children(func() {
+	return myui.Row(c).Height(48).Padding(0, 16).AlignItems(myui.Center).Gap(8).
+		BorderWidth(1, 0, 0, 0).BorderColor(cardLine(t)).Children(func() {
 		note := st.Note
 		if note == "" && st.Dirty {
 			note = locales.UnsavedChanges()
