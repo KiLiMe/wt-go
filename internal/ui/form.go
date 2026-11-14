@@ -43,16 +43,16 @@ func fieldRow(c *myui.Context, title, description string, control func(), block 
 			}
 		})
 	}
-	line := myui.Column(c).BorderWidth(0, 0, 1, 0).BorderColor(cardLine(t))
+	cell := myui.Column(c)
 	if block {
-		line.Gap(10).Padding(14, 16).Children(func() {
+		cell.Gap(10).Padding(14, 16).Children(func() {
 			words()
 			myui.Row(c).Children(control)
 		})
 	} else {
 		// The words take the room the control leaves, so that the controls of a
 		// page line up on the right edge however wide they are.
-		line.Padding(14, 16).Children(func() {
+		cell.Padding(14, 16).Children(func() {
 			myui.Row(c).Gap(24).AlignItems(myui.Center).Children(func() {
 				myui.Column(c).Grow(1).MinWidth(0).Children(words)
 				myui.Row(c).Shrink(0).Justify(myui.End).AlignItems(myui.Center).Children(control)
@@ -61,7 +61,7 @@ func fieldRow(c *myui.Context, title, description string, control func(), block 
 	}
 	// A row of words and a control is one group to a reader, as mygo names
 	// the field of a form: the label names the group.
-	line.Role(myui.RoleGroup).Label(title)
+	cell.Role(myui.RoleGroup).Label(title)
 }
 
 // controlWidth is as wide as the control of a field grows: past it the words
@@ -87,11 +87,12 @@ func dangerSection(c *myui.Context, title string, fields func()) {
 // worth more at the top than wherever the scroll leaves it. The band paints
 // the page's own background, since a sticky element draws above its siblings
 // and what rolls behind it would otherwise show through the gap between its
-// heading and its card.
+// heading and its card. No line under the band: the card closes itself, and a
+// border on the band draws a second edge in the room below it.
 func pinnedSection(c *myui.Context, title string, fields func()) {
 	t := c.Theme()
 	myui.Column(c).Sticky().Top(0).Background(t.Background).
-		Padding(10, 0, 12, 0).BorderWidth(0, 0, 1, 0).BorderColor(cardLine(t)).Children(func() {
+		Padding(10, 0, 12, 0).Children(func() {
 		section(c, title, fields)
 	})
 }
@@ -111,10 +112,19 @@ func cardSection(c *myui.Context, title string, danger bool, fields func()) {
 	})
 }
 
+// cardRadius is what a card's corners are rounded by, the ones a page draws
+// and the two the profiles page builds of its own.
+const cardRadius float32 = 10
+
 // card is a surface between the window's background and its controls', which
-// what it holds is drawn on.
+// what it holds is drawn on. It draws the lines between its rows itself, in
+// the room the gap gives them and inside its border, so that no row ends in a
+// line of its own: the last would show as a second edge a pixel under the
+// card's bottom, square where its corner is round, and every one reached
+// across the whole card, past the corners.
 func card(c *myui.Context, face, line myui.Color, body func()) {
-	myui.Column(c).Background(face).BorderWidth(1).BorderColor(line).Radius(10).Children(body)
+	myui.Column(c).Background(face).BorderWidth(1).BorderColor(line).Radius(cardRadius).
+		Gap(1).Dividers(1, line).Children(body)
 }
 
 // cardFace is the surface of a card: a shade of the text above the window's
@@ -144,8 +154,7 @@ func intro(c *myui.Context, title, note string) {
 // row is a line of a card that no label names, such as a button under the
 // fields.
 func row(c *myui.Context, control func()) {
-	myui.Row(c).Padding(10, 16).AlignItems(myui.Center).
-		BorderWidth(0, 0, 1, 0).BorderColor(cardLine(c.Theme())).Children(control)
+	myui.Row(c).Padding(10, 16).AlignItems(myui.Center).Children(control)
 }
 
 // deviceLabel names the shell following the device, in the lists that offer

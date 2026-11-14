@@ -112,8 +112,7 @@ func keybindingRow(c *myui.Context, st Settings, act Actions, e entry, ks *PageK
 	case len(keys) == 0:
 		shown = locales.None()
 	}
-	myui.Row(c).Padding(8, 16).AlignItems(myui.Center).Gap(8).
-		BorderWidth(0, 0, 1, 0).BorderColor(cardLine(t)).Children(func() {
+	myui.Row(c).Padding(8, 16).AlignItems(myui.Center).Gap(8).Children(func() {
 		cell := myui.Box(c).Width(160).Height(26).Padding(0, 8).Justify(myui.Center).Radius(4).
 			Background(t.Surface).Cursor(myui.CursorPointer).
 			OnClick(func() { act.RecordKeybinding(e.action) })

@@ -650,7 +650,7 @@ func profilesPage(c *myui.Context, st Settings, act Actions) {
 				return
 			}
 			myui.Column(c).Background(cardFace(t)).BorderWidth(1).BorderColor(cardLine(t)).
-				Radius(10).Padding(16).Children(func() {
+				Radius(cardRadius).Padding(16).Children(func() {
 				myui.Text(c, locales.SelectProfile()).FontSize(12).TextColor(t.TextMuted)
 			})
 		})
@@ -700,7 +700,7 @@ func profileList(c *myui.Context, st Settings, act Actions) {
 	// beside it, and a list taller than they are grows the page instead of
 	// being cropped by a card too short to hold it.
 	myui.Column(c).Grow(1).MinHeight(0).Background(cardFace(t)).
-		BorderWidth(1).BorderColor(cardLine(t)).Radius(10).Children(func() {
+		BorderWidth(1).BorderColor(cardLine(t)).Radius(cardRadius).Children(func() {
 		myui.Column(c).Padding(8).Gap(8).Children(func() {
 			myui.Button(c, locales.AddProfile()).Grow(1).OnClick(act.AddProfile)
 			if st.ProfileFilter != nil {
