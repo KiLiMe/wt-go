@@ -1864,11 +1864,21 @@ func (msgs Messages) Font() string {
 	return Catalog.Format(msgs.locale, "font", nil)
 }
 
-// FontNote says "The monospaced families this machine has, as the terminal measures them."
+// FontGeneric says "monospace (the system's)"
+// in the language the app shows.
+func FontGeneric() string { return In(i18n.Locale()).FontGeneric() }
+
+// FontGeneric says "monospace (the system's)"
+// in the language of msgs.
+func (msgs Messages) FontGeneric() string {
+	return Catalog.Format(msgs.locale, "fontGeneric", nil)
+}
+
+// FontNote says "The monospaced families this machine has, as the terminal measures them. The first choice is the generic name every s…"
 // in the language the app shows.
 func FontNote() string { return In(i18n.Locale()).FontNote() }
 
-// FontNote says "The monospaced families this machine has, as the terminal measures them."
+// FontNote says "The monospaced families this machine has, as the terminal measures them. The first choice is the generic name every s…"
 // in the language of msgs.
 func (msgs Messages) FontNote() string {
 	return Catalog.Format(msgs.locale, "fontNote", nil)

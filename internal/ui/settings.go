@@ -622,10 +622,11 @@ func appearancePage(c *myui.Context, st Settings, act Actions) {
 
 // fontOptions are the font setting's choices: the generic family every system
 // resolves to a monospace font, then the families installed, each called by
-// its own name.
+// its own name. The generic one is named as the alias it is, so that nobody
+// reads it as a family this machine has and goes looking for it.
 func fontOptions(families []string) []option {
 	out := make([]option, 0, len(families)+1)
-	out = append(out, option{"monospace", "monospace"})
+	out = append(out, option{"monospace", locales.FontGeneric()})
 	for _, f := range families {
 		out = append(out, option{f, f})
 	}

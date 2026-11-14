@@ -837,3 +837,22 @@ func TestProfileIcon(t *testing.T) {
 		}
 	}
 }
+
+// TestFontOptionsNameTheGeneric covers the first choice of the font setting:
+// it stands for the generic family, and is named as the alias it is rather
+// than as a family this machine is supposed to have.
+func TestFontOptionsNameTheGeneric(t *testing.T) {
+	opts := fontOptions([]string{"Cascadia Mono", "Consolas"})
+	if len(opts) != 3 {
+		t.Fatalf("the font setting offers %d choices, want 3", len(opts))
+	}
+	if opts[0].Value != "monospace" {
+		t.Fatalf("the first choice stands for %q, want \"monospace\"", opts[0].Value)
+	}
+	if opts[0].Label == "monospace" {
+		t.Fatalf("the generic family is named as a family: %q", opts[0].Label)
+	}
+	if want := (option{"Cascadia Mono", "Cascadia Mono"}); opts[1] != want {
+		t.Fatalf("the second choice is %+v, want %+v", opts[1], want)
+	}
+}
