@@ -14,6 +14,7 @@ import (
 	"wtgo/internal/profile"
 	"wtgo/internal/store"
 	"wtgo/internal/sys"
+	"wtgo/internal/theme"
 	"wtgo/internal/ui"
 	"wtgo/locales"
 )
@@ -1340,6 +1341,42 @@ func keyOf(all []store.Keybinding, action string) string {
 	return ""
 }
 
+// The colors a scheme is shown by are the scheme's own, and a scheme the
+// settings write is looked up again every time: the page keeps the colors of
+// the hundreds that do not change, and must not keep the ones that do.
+func TestSchemeSwatches(t *testing.T) {
+	s := store.Default()
+	s.Schemes = []store.Scheme{{Name: "Paper", Background: "#123456", Foreground: "#abcdef"}}
+	a := &App{settings: s}
+	colors := func(list []ui.Scheme, name string) (string, string) {
+		for _, sc := range list {
+			if sc.Name == name {
+				return theme.Hex(sc.Bg), theme.Hex(sc.Fg)
+			}
+		}
+		t.Fatalf("the list holds no scheme called %q", name)
+		return "", ""
+	}
+
+	list := a.uiSchemes(s)
+	if bg, fg := colors(list, "Paper"); bg != "#123456" || fg != "#abcdef" {
+		t.Errorf("Paper = %s, %s, want the colors the settings write", bg, fg)
+	}
+	campbell, _ := colors(list, "Campbell")
+
+	s.Schemes[0].Background = "#654321"
+	list = a.uiSchemes(s)
+	if bg, _ := colors(list, "Paper"); bg != "#654321" {
+		t.Errorf("Paper = %s, want the color the settings now write: the page kept a scheme it should not", bg)
+	}
+	if bg, _ := colors(list, "Campbell"); bg != campbell {
+		t.Errorf("Campbell = %s, want the color it had %s: a scheme nothing writes does not change", bg, campbell)
+	}
+	if bg, _ := colors(list, "Paper"); bg == "#123456" {
+		t.Error("Paper kept its old color")
+	}
+}
+
 // The page asks for the schemes once per settings revision: building them
 // sorts 617 names, which a frame should not do twice.
 func TestSchemeListIsBuiltOnce(t *testing.T) {
@@ -1354,13 +1391,16 @@ func TestSchemeListIsBuiltOnce(t *testing.T) {
 }
 
 // The schemes the settings page offers come from the theme package, which
-// sorts the 617 names it is built with; once per frame is a cost the page
-// should not pay, so this pins what one call buys.
+// sorts the 617 names it is built with and reads a theme for each of their
+// colors; once per frame is a cost the page should not pay, so this pins what
+// one call buys with the swatches the process already holds.
 func BenchmarkUISchemes(b *testing.B) {
 	s := store.Default()
+	a := &App{settings: s}
+	a.uiSchemes(s) // the colors of the schemes that do not change are kept
 	b.ReportAllocs()
 	for b.Loop() {
-		uiSchemes(s)
+		a.uiSchemes(s)
 	}
 }
 

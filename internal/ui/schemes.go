@@ -14,13 +14,15 @@ import (
 )
 
 // schemePicker is the color schemes of the appearance page: the scheme in
-// force, the button that copies it as one of the settings' own, the search box,
-// and the list to pick from or remove. It is the page the settings had of its
-// own, drawn as a card of the page that previews what the schemes look like.
+// force with the button that copies it as one of the settings' own, and the
+// search box and the list to pick from or remove. The list is the only place a
+// scheme is picked: a control above it that picked too would offer the same
+// hundreds of names a second time, without the search that makes them
+// findable, and take the room of a row to say what this one says.
 func schemePicker(c *myui.Context, s *store.Settings, st Settings, act Actions) {
 	// A page drawn without a window to keep its cache for it keeps none: it
-	// derives the options and the rows again for each frame, as it did before
-	// there was a cache, rather than share one with the frame before it.
+	// derives the rows again for each frame, as it did before there was a
+	// cache, rather than share one with the frame before it.
 	var cache *SchemesCache
 	if st.SchemesCache != nil {
 		cache = st.SchemesCache
@@ -28,23 +30,30 @@ func schemePicker(c *myui.Context, s *store.Settings, st Settings, act Actions) 
 	t := c.Theme()
 	card(c, cardFace(t), cardLine(t), func() {
 		field(c, locales.Scheme(), locales.ColorSchemeNote(), func() {
-			choice(c, &s.ColorScheme, schemeOptionsFrom(cache, st.Schemes))
-		})
-		row(c, func() {
-			myui.Row(c).Children(func() {
+			myui.Row(c).AlignItems(myui.Center).Gap(10).Children(func() {
+				bg, fg := swatchOf(st.Schemes, s.ColorScheme, t)
+				schemeSwatch(c, bg, fg, 16)
+				myui.Text(c, schemeNamed(*s)).FontSize(13).SingleLine().MaxWidth(220)
 				myui.Button(c, locales.SchemeCopy()).OnClick(act.CopyScheme)
 			})
 		})
 		myui.Column(c).Padding(10, 16).Gap(6).Children(func() {
+			names := searchSchemes(cache, st.Schemes, filter(st))
 			// A text input edits the string it is handed, so that string has to
 			// outlive the frame. Handing it a fresh one every frame would throw
 			// away what the user typed on the next frame: with no field to hold
 			// the words (nil Filter, e.g. a test that draws the page alone),
 			// the search box is left out rather than given nowhere to write.
 			if st.Filter != nil {
-				myui.TextInput(c, st.Filter).Placeholder(locales.SchemeSearch())
+				box := myui.TextInput(c, st.Filter).Placeholder(locales.SchemeSearch())
+				// The keys reach the list through the box: a row is a click, and
+				// a person who has typed a name has already found the scheme the
+				// search puts first.
+				if len(names) > 0 {
+					first := names[0].Name
+					box.OnSubmit(func() { act.PickScheme(first) })
+				}
 			}
-			names := searchSchemes(cache, st.Schemes, filter(st))
 			if len(names) == 0 {
 				myui.Text(c, locales.SchemeNone()).FontSize(11).TextColor(t.TextMuted)
 			}
@@ -57,6 +66,37 @@ func schemePicker(c *myui.Context, s *store.Settings, st Settings, act Actions) 
 	})
 }
 
+// schemeNamed is the scheme in force as the page names it: its own name, or the
+// setting's, for a file that names none.
+func schemeNamed(s store.Settings) string {
+	if s.ColorScheme == "" {
+		return locales.Scheme()
+	}
+	return s.ColorScheme
+}
+
+// swatchOf is the colors the page shows the scheme called name by: the ones the
+// list carries, and the window's own muted pair for a name the list has none of.
+func swatchOf(schemes []Scheme, name string, t *myui.Theme) (bg, fg myui.Color) {
+	for _, sc := range schemes {
+		if sc.Name == name {
+			return sc.Bg, sc.Fg
+		}
+	}
+	return t.Surface, t.TextMuted
+}
+
+// schemeSwatch is a scheme as a chip: its background, and a bar of the color its
+// text would be in. The names alone tell a person nothing about the colors they
+// pick, and a list of hundreds of them is where that is worth a glance.
+func schemeSwatch(c *myui.Context, bg, fg myui.Color, size float32) {
+	myui.Box(c).Width(size).Height(size * 0.75).Radius(4).Background(bg).
+		BorderWidth(1).BorderColor(fg.Alpha(0.4)).
+		AlignItems(myui.Center).Justify(myui.Center).Children(func() {
+		myui.Box(c).Width(size * 0.5).Height(2).Radius(1).Background(fg)
+	})
+}
+
 // filter is what the schemes are searched for.
 func filter(st Settings) string {
 	if st.Filter == nil {
@@ -65,28 +105,27 @@ func filter(st Settings) string {
 	return *st.Filter
 }
 
-// schemeOptions are the schemes a control picks from.
-func schemeOptions(schemes []Scheme) []option {
-	out := make([]option, 0, len(schemes))
-	for _, sc := range schemes {
-		out = append(out, option{sc.Name, sc.Name})
-	}
-	return out
-}
-
-// schemeRow is one scheme in the list: its name, chosen by a click, and for a
-// scheme the settings write the button that removes it -- shown while the row
-// is in front, in room the row keeps either way, so that the names do not jump
-// as the pointer moves.
+// schemeRow is one scheme in the list: its colors and its name, chosen by a
+// click, and for a scheme the settings write the button that removes it --
+// shown while the row is in front, in room the row keeps either way, so that
+// the names do not jump as the pointer moves.
 func schemeRow(c *myui.Context, sc Scheme, current string, act Actions) {
-	el := myui.Row(c).Height(28).Padding(0, 4, 0, 8).AlignItems(myui.Center).Gap(4).Radius(6).
+	t := c.Theme()
+	el := myui.Row(c).Height(28).Padding(0, 4, 0, 8).AlignItems(myui.Center).Gap(8).Radius(6).
 		Cursor(myui.CursorPointer).OnClick(func() { act.PickScheme(sc.Name) })
-	if current == sc.Name {
-		el.Background(c.Theme().SurfaceHover)
+	chosen := current == sc.Name
+	if chosen {
+		el.Background(t.SurfaceHover)
 	}
-	shown := sc.Custom && (el.Hovered() || current == sc.Name)
+	shown := sc.Custom && (el.Hovered() || chosen)
 	el.Children(func() {
-		myui.Text(c, sc.Name).Grow(1).Shrink(1).SingleLine()
+		schemeSwatch(c, sc.Bg, sc.Fg, 14)
+		name := myui.Text(c, sc.Name).Grow(1).Shrink(1).SingleLine()
+		if chosen {
+			// The scheme in force is heavier than the ones around it, so that a
+			// list scrolled away and back still says what a save would keep.
+			name.FontWeight(600)
+		}
 		if !sc.Custom {
 			return
 		}
@@ -127,12 +166,12 @@ func search(schemes []Scheme, words string) []Scheme {
 // schemeRows is how many rows the color schemes page shows at once.
 const schemeRows = 60
 
-// SchemesCache is what the options and the rows of the color schemes page were
-// found from: the list of schemes, kept by pointer, and the list the options
-// were never built from. The page is drawn again on frames it did not build
-// anew, as the pointer moves over it and the field is typed in, and the list is
-// the same until the settings change it -- a list of hundreds is copied and
-// searched in full every frame otherwise.
+// SchemesCache is what the rows of the color schemes page were found from: the
+// list of schemes, kept by pointer, and the rows last searched out of it. The
+// page is drawn again on frames it did not build anew, as the pointer moves over
+// it and the field is typed in, and the list is the same until the settings
+// change it -- a list of hundreds is copied and searched in full every frame
+// otherwise.
 //
 // The list is the one the window builds, and the window builds a new one as the
 // settings change, so the pointer is what tells the list apart. The page keeps
@@ -143,12 +182,11 @@ type SchemesCache struct {
 	// _ keeps `==` from comparing two caches equal, which would say the
 	// settings page holds the one and not the other.
 	_ [0]func()
-	// All is the list the options and the rows were found from, nil before
-	// either was, and Options the options it was found as.
-	All     []Scheme
-	Key     string
-	Rows    []Scheme
-	Options []option
+	// All is the list the rows were found from, nil before they were, and Key
+	// the words they were searched for.
+	All  []Scheme
+	Key  string
+	Rows []Scheme
 }
 
 // search is search, with the answer of the last call kept while the list of
@@ -170,26 +208,11 @@ func searchSchemes(cache *SchemesCache, all []Scheme, words string) []Scheme {
 	return cache.Rows
 }
 
-// schemeOptionsFrom are the schemes a control picks from, built once for the
-// list, since the page draws the control on every frame it is in front.
-func schemeOptionsFrom(schemes *SchemesCache, all []Scheme) []option {
-	if schemes == nil {
-		return schemeOptions(all)
-	}
-	schemes.Lock()
-	defer schemes.Unlock()
-	if schemes.Options != nil && sameSchemes(schemes.All, all) {
-		return schemes.Options
-	}
-	schemes.Options, schemes.All = schemeOptions(all), all
-	return schemes.Options
-}
-
 // reset empties the cache.
 func (s *SchemesCache) reset() {
 	s.Lock()
 	defer s.Unlock()
-	s.All, s.Key, s.Rows, s.Options = nil, "", nil, nil
+	s.All, s.Key, s.Rows = nil, "", nil
 }
 
 // sameSchemes reports whether two lists name the same schemes, in the same

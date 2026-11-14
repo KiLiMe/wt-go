@@ -5,8 +5,10 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/egoist/mygo/plugins/terminal"
+	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/pane"
 	"wtgo/internal/profile"
@@ -84,14 +86,15 @@ func (a *App) settingsState() ui.Settings {
 // settings the window applied and kept until they change.
 func (a *App) schemeList() []ui.Scheme {
 	if a.schemes == nil {
-		a.schemes = uiSchemes(a.settings)
+		a.schemes = a.uiSchemes(a.settings)
 	}
 	return a.schemes
 }
 
 // uiSchemes are the color schemes the color schemes page lists, each saying
-// whether the settings write it: the page offers to remove those alone.
-func uiSchemes(s store.Settings) []ui.Scheme {
+// whether the settings write it -- the page offers to remove those alone -- and
+// the colors of a terminal it paints, which the page shows as a chip.
+func (a *App) uiSchemes(s store.Settings) []ui.Scheme {
 	custom := make(map[string]bool, len(s.Schemes))
 	for _, sc := range s.Schemes {
 		custom[strings.ToLower(sc.Name)] = true
@@ -99,9 +102,63 @@ func uiSchemes(s store.Settings) []ui.Scheme {
 	names := theme.Schemes(s)
 	out := make([]ui.Scheme, 0, len(names))
 	for _, name := range names {
-		out = append(out, ui.Scheme{Name: name, Custom: custom[strings.ToLower(name)]})
+		own := custom[strings.ToLower(name)]
+		sc := ui.Scheme{Name: name, Custom: own}
+		if kept, ok := a.swatches.get(name, own); ok {
+			sc = kept
+		} else {
+			sc.Bg, sc.Fg = schemeColors(s, name)
+			a.swatches.put(sc)
+		}
+		out = append(out, sc)
 	}
 	return out
+}
+
+// schemeColors is the background and the text a terminal paints with the scheme
+// called name, and no colors at all for a name that is no scheme.
+func schemeColors(s store.Settings, name string) (myui.Color, myui.Color) {
+	if th, ok := theme.Scheme(s, name); ok {
+		return th.Background, th.Foreground
+	}
+	return myui.Color{}, myui.Color{}
+}
+
+// schemeSwatches are the colors of the schemes the settings do not write, kept
+// from one build of the page's list to the next. A scheme this program carries
+// and one of Ghostty's are the same while it runs, and looking one up reads the
+// user's theme directory and parses its colors: hundreds of them are a good
+// part of a frame, and the settings page asks for them again every time the
+// settings are applied. A scheme the settings write is looked up every time,
+// since its colors are the settings'.
+type schemeSwatches struct {
+	sync.Mutex
+	byName map[string]ui.Scheme
+}
+
+// get is the colors kept for name, unless the settings write the scheme: those
+// are never kept, being the settings' to change.
+func (c *schemeSwatches) get(name string, own bool) (ui.Scheme, bool) {
+	if own {
+		return ui.Scheme{}, false
+	}
+	c.Lock()
+	defer c.Unlock()
+	sc, ok := c.byName[name]
+	return sc, ok
+}
+
+// put keeps sc, and leaves a scheme the settings write alone.
+func (c *schemeSwatches) put(sc ui.Scheme) {
+	if sc.Custom {
+		return
+	}
+	c.Lock()
+	defer c.Unlock()
+	if c.byName == nil {
+		c.byName = make(map[string]ui.Scheme)
+	}
+	c.byName[sc.Name] = sc
 }
 
 // fileProfiles are the profiles the file holds, as the settings list them: the

@@ -2104,3 +2104,41 @@ PowerShell 7 还是 Windows PowerShell」还得读名字。那些颜色本身也
 有色与无色）与 `TestProfileIcon`（点形状写进 `marks`、点「跟命令走」写 `""`、每个形状都画得出）；
 `internal/app/settings_test.go` 的 `TestProfileIcon`（页面改的是副本、保存才写文件、清空字符框保留形状、
 两个 emoji 只存一个）。
+
+## ADR-77 配色方案只有一个入口：列表自己就是选择器，行首带色板
+
+**背景**：「外观与排版」页的「配色方案」卡片里，同一项设置（`colorScheme`）有两个入口：右上角一个
+下拉（`choice`，600+ 项：12 套内置加 Ghostty 的 617 套），下面一个带搜索框的列表（最多 60 行，
+自己写的方案行尾带 `×`）。下拉不可搜索，翻 617 项基本没法用，也不显示颜色；列表能搜能删，但每行
+只有名字，看不出这套方案长什么样；两者之间还夹着一个独占整行的「复制为自定义配色」按钮。合计约
+170 DIP 的高度，换来的是重复的选择加一个按钮。
+
+**决定**：
+
+1. 删掉下拉（`choice`、`schemeOptions`、`schemeOptionsFrom`、`SchemesCache.Options`）。列表是唯一的
+   选择处：点一行就选中（只改草稿），搜索框边打边筛。
+2. 卡片首行从「标签 + 下拉」改成「`方案` + 色板 + 当前方案名 + 复制按钮」：色板与名字是只读的，
+   原来那行 `field` 的分隔线与说明文案不变，省下的是独立按钮那一行。
+3. 每行左侧加一个色板（16/14 DIP 的方块填方案底色，中间一道底色字的杠），当前行底色更亮、名字
+   加粗。`ui.Scheme` 因此多带 `Bg`、`Fg`（`myui.Color`），由 `internal/app` 的 `uiSchemes` 从
+   `theme.Scheme` 算好；`internal/ui` 不认识 Ghostty，只画。
+4. 键盘路径：列表行只有 `OnClick`，下拉曾是唯一能用键盘选方案的地方。删掉下拉后由搜索框补上：
+   回车把筛出来的第一条选成当前方案（`OnSubmit`）。完整的上下键在列表里移动没做——行是普通
+   `Row`，要按焦点链走一轮，收益不抵这次改动的面。
+
+**理由**：一项设置一个入口。能搜的列表已经覆盖了下拉能做的事（选一套方案），而下拉做不到的事
+（搜、删、看颜色）只有列表能做。
+
+**代价**：
+
+- 每套方案的颜色要算一次 `theme.Scheme`，624 次约 11 ms——而 `apply()` 每次改设置都会重建这个
+  列表（`a.schemes = nil`），页面上拖一下滑块就是每帧 11 ms。所以内置与 Ghostty 的颜色在
+  `internal/app` 的 `schemeSwatches` 里按名字缓存（它们在一个进程里不变），设置里自己写的方案每次
+  重算（它的颜色是设置的一部分）。热路径因此回到 3.5 ms 一次，仍是 `theme.Schemes` 排序的那部分。
+- 用户放在 `%LOCALAPPDATA%\ghostty\themes` 里的主题文件在进程运行中被改，页面不会自己看见。
+- `locales` 没加新 key：首行用的是已有的 `scheme`、`colorSchemeNote`、`schemeCopy`。
+
+**测试**：`internal/ui/schemes_test.go` 的 `TestSchemePicksOnlyFromTheList`（页面上没有
+`RolePopUpButton`，即没有第二个选择器）、`TestSchemeSearchEnterPicks`（打字不选、回车选第一条、草稿
+不被写穿）、`TestSwatchOf`（列表没带的方案回退到窗口的 `Surface`/`TextMuted`）；
+`internal/app/settings_test.go` 的 `TestSchemeSwatches`（自定义方案的颜色跟着设置变、内置的不变）。

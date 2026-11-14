@@ -102,6 +102,9 @@ type App struct {
 	// and a sort of several hundred of them, which are not worth a frame. nil
 	// says the settings changed since it was built.
 	schemes []ui.Scheme
+	// swatches are the colors the page shows those schemes by, the ones the
+	// settings do not write kept from one build of the list to the next.
+	swatches schemeSwatches
 	// settingsShown is the settings tab as the frame being drawn shows it: the
 	// frame and the page both need it, and building it twice costs a directory
 	// read and a sort of the color scheme names.

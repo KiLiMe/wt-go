@@ -183,11 +183,14 @@ type Profile struct {
 	Hidden bool
 }
 
-// Scheme is a color scheme the color schemes page lists: its name, and whether
-// the settings write it, which is what lets the page remove it.
+// Scheme is a color scheme the color schemes page lists: its name, whether the
+// settings write it, which is what lets the page remove it, and the colors it
+// paints a terminal with, which the page shows as a chip beside the name.
 type Scheme struct {
 	Name   string
 	Custom bool
+	Bg     myui.Color
+	Fg     myui.Color
 }
 
 // Rename is the dialog that renames a tab.

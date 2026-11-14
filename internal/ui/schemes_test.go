@@ -139,6 +139,68 @@ func TestSchemeSearchKeepsWhatIsTyped(t *testing.T) {
 	}
 }
 
+// TestSchemePicksOnlyFromTheList covers what the page offers to pick a scheme
+// with: the list alone. A control above it that picked too offered the same
+// hundreds of names a second time, without the search that makes them findable.
+func TestSchemePicksOnlyFromTheList(t *testing.T) {
+	s := store.Default()
+	s.ColorScheme = "Campbell"
+	filter := ""
+	tt, _ := schemesOfFilter(t, &s, []Scheme{{Name: "Paper"}, {Name: "Campbell"}}, &filter)
+	if _, ok := tt.AccessByRole(myui.RolePopUpButton, ""); ok {
+		t.Errorf("the page offers a second way to pick a scheme: %q", tt.Texts())
+	}
+	if !tt.HasText("Paper") {
+		t.Errorf("the list is not there to pick from: %q", tt.Texts())
+	}
+}
+
+// TestSchemeSearchEnterPicks covers the keys that reach the list: a person who
+// has typed a name has found the scheme the search puts first, and Enter takes
+// it, so that picking a scheme is not a thing the pointer alone does.
+func TestSchemeSearchEnterPicks(t *testing.T) {
+	s := store.Default()
+	s.ColorScheme = "Campbell"
+	filter := ""
+	tt, act := schemesOfFilter(t, &s, []Scheme{{Name: "Paper"}, {Name: "Campbell"}}, &filter)
+
+	box, ok := tt.AccessByRole(myui.RoleTextField, "")
+	if !ok {
+		t.Fatalf("the page shows no search box: %q", tt.Texts())
+	}
+	x, y := box.Bounds.X+box.Bounds.W/2, box.Bounds.Y+box.Bounds.H/2
+	tt.Press(x, y)
+	tt.Release(x, y)
+	tt.Frame()
+	tt.Type("Pap")
+	tt.Frame()
+	if got := len(act.picked); got != 0 {
+		t.Fatalf("picked %v while typing, want none", act.picked)
+	}
+
+	tt.Key(0, myui.KeyEnter)
+	if want := []string{"Paper"}; !slices.Equal(act.picked, want) {
+		t.Errorf("Enter picked %v, want %v", act.picked, want)
+	}
+	if s.ColorScheme != "Campbell" {
+		t.Errorf("scheme = %q, want the draft left as it was: %q", s.ColorScheme, "Campbell")
+	}
+}
+
+// TestSwatchOf covers the colors the page shows a scheme by: the ones the list
+// carries, and the window's own muted pair for a name the list has none of.
+func TestSwatchOf(t *testing.T) {
+	bg, fg := myui.RGB(1, 2, 3), myui.RGB(4, 5, 6)
+	schemes := []Scheme{{Name: "Paper", Bg: bg, Fg: fg}}
+	if gotBg, gotFg := swatchOf(schemes, "Paper", myui.DarkTheme()); gotBg != bg || gotFg != fg {
+		t.Errorf("swatchOf(Paper) = %v, %v, want the scheme's own %v, %v", gotBg, gotFg, bg, fg)
+	}
+	th := myui.DarkTheme()
+	if gotBg, gotFg := swatchOf(schemes, "None", th); gotBg != th.Surface || gotFg != th.TextMuted {
+		t.Errorf("swatchOf(None) = %v, %v, want the window's muted pair", gotBg, gotFg)
+	}
+}
+
 // countTexts is how many of the texts are s.
 func countTexts(texts []string, s string) int {
 	n := 0
