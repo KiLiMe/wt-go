@@ -53,8 +53,9 @@ func (a Activity) String() string {
 //
 // A shell that ended, and one whose id the system handed to another program,
 // have nothing under them, so they are Idle. Neither is a process that ended
-// and waits to be reaped, or the console the pty runs behind: they run nothing,
-// so they leave a shell at its prompt Idle.
+// and waits to be reaped, the console the pty runs behind, or the shell started
+// again under its own name: they run nothing, so they leave a shell at its
+// prompt Idle.
 func (s ShellProc) Activity(all []Proc) Activity {
 	if s.Pid <= 0 {
 		return Unknown
@@ -76,6 +77,11 @@ func (s ShellProc) Activity(all []Proc) Activity {
 // keep a tab from closing quietly, each once, in the order the tree lists them.
 // It is what the window tells the user when it asks, so that the question says
 // which program it means.
+//
+// A process under the shell that has the name of the shell is the shell itself,
+// started again: that is how the shims a package manager puts on PATH launch
+// the program, and closing the tab ends nothing the user would miss by not
+// being told about it.
 func (s ShellProc) Programs(all []Proc) []string {
 	if s.Pid <= 0 {
 		return nil
@@ -87,7 +93,7 @@ func (s ShellProc) Programs(all []Proc) []string {
 		if !ok {
 			continue
 		}
-		if p.State == 'Z' || ptyHost(p.Name) {
+		if p.State == 'Z' || ptyHost(p.Name) || s.runsItself(p.Name) {
 			continue
 		}
 		name := programName(p.Name)
@@ -98,6 +104,12 @@ func (s ShellProc) Programs(all []Proc) []string {
 		out = append(out, name)
 	}
 	return out
+}
+
+// runsItself reports whether a process is the shell started again, which a
+// launcher under the name of what it launches leaves in the tree.
+func (s ShellProc) runsItself(name string) bool {
+	return s.Name != "" && sameProgram(name, s.Name)
 }
 
 // findProc is the process with an id, when the list holds it.

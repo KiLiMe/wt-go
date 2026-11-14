@@ -139,6 +139,17 @@ func TestActivity(t *testing.T) {
 	if got := idle.Activity(host); got != Idle {
 		t.Errorf("a shell with a pty host under it = %v, want idle", got)
 	}
+	// Neither is the shell started again under its own name, which is what the
+	// shim a package manager puts on PATH leaves under the shell.
+	shimmed := append(pwsh, Proc{Pid: 400, Parent: 300, Name: "pwsh.exe"})
+	if got := idle.Activity(shimmed); got != Idle {
+		t.Errorf("a shell started again under it = %v, want idle", got)
+	}
+	// What such a shell runs is still a program of the tab.
+	under := append(shimmed, Proc{Pid: 500, Parent: 400, Name: "pi.exe"})
+	if got := idle.Activity(under); got != Busy {
+		t.Errorf("a shell started again that runs a program = %v, want busy", got)
+	}
 	// A shell that ended, and one whose id went to another program, run
 	// nothing.
 	gone := ShellProc{Pid: 900, Name: "pwsh.exe"}
@@ -205,5 +216,11 @@ func TestPrograms(t *testing.T) {
 	}
 	if got := (ShellProc{Pid: 300, Name: "pwsh.exe"}).Programs(all[:2]); len(got) != 0 {
 		t.Errorf("a shell at its prompt names %v, want none", got)
+	}
+	// The shell started again under its own name is not named, and what it runs
+	// is: a tab whose shell is a shim still says what the program under it does.
+	again := append(all[:2], Proc{Pid: 800, Parent: 300, Name: "pwsh.exe"}, Proc{Pid: 900, Parent: 800, Name: "pi.exe"})
+	if got := (ShellProc{Pid: 300, Name: "pwsh.exe"}).Programs(again); len(got) != 1 || got[0] != "pi" {
+		t.Errorf("a shell started again that runs pi names %v, want [pi]", got)
 	}
 }
