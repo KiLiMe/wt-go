@@ -110,12 +110,9 @@ type Actions interface {
 	// found on this machine: the next start adds it back, so hiding is all a
 	// person can do to a shell that is there.
 	RemoveProfile(id string)
-	// ShowHiddenProfiles lists the profiles the profiles page hides, so that
-	// one can be brought back, or hides them again: it is a view of that page,
-	// so the column of pages lists the profiles in use either way.
-	ShowHiddenProfiles()
-	// ShowProfile brings the profile with an id back from hiding.
-	ShowProfile(id string)
+	// HideProfile hides the profile with an id, through the draft the page
+	// edits: the list goes on listing it, marked, and saving writes it.
+	HideProfile(id string)
 	// DuplicateProfile copies the profile with an id, and shows its page.
 	DuplicateProfile(id string)
 	// Run does the action with an id, as the palette picked it.
@@ -226,9 +223,9 @@ type Settings struct {
 	// KeysExpanded is whether the actions page lists the numbered actions
 	// past the third, which it folds away to keep the list short.
 	KeysExpanded bool
-	// Hidden is whether the profiles page lists the profiles it hides.
-	Hidden bool
-	// Profiles are the profiles the file holds, which the column lists.
+	// Profiles are the profiles the file holds, which the column lists, the
+	// hidden ones too: a list that leaves them out leaves out the only place
+	// they come back from.
 	Profiles []Profile
 	// ProfileFilter is what the profiles page searches its list of profiles
 	// for. A page drawn without it leaves the box out rather than give it

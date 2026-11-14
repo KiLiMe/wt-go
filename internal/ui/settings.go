@@ -635,9 +635,9 @@ func fontOptions(families []string) []option {
 // right. How the window and the terminals look is the appearance page's.
 func profilesPage(c *myui.Context, st Settings, act Actions) {
 	t := c.Theme()
-	// The row fills what the page's scroll gives it and scrolls the list on
-	// its own: a page of twenty profiles would put the one in front under the
-	// foot of the window if the list grew with them.
+	// The list takes the height of the fields beside it and scrolls with the
+	// page when it is longer than they are: a page of twenty profiles grows
+	// rather than crops, which is what a height of the card's own did.
 	myui.Row(c).Grow(1).MinHeight(0).AlignItems(myui.Stretch).Gap(24).Children(func() {
 		myui.Column(c).Width(profileListWidth).Shrink(0).Children(func() {
 			profileList(c, st, act)
@@ -689,28 +689,21 @@ func listedProfiles(st Settings) []Profile {
 }
 
 // profileList is the left column of the page: what adds a profile, the words
-// the list is searched for, the switch that lists the hidden ones, and the
-// profiles themselves, in a scroll of their own.
+// the list is searched for, and the profiles themselves, under a scroll of
+// their own. Hidden ones stay in the list, marked: the page edits hiding in the
+// fields beside it, so the list has to keep the way back to what it hid.
 func profileList(c *myui.Context, st Settings, act Actions) {
 	t := c.Theme()
-	myui.Column(c).Width(profileListWidth).Height(100).Background(cardFace(t)).
+	// Grow, not a height of its own: the card takes the height of the fields
+	// beside it, and a list taller than they are grows the page instead of
+	// being cropped by a card too short to hold it.
+	myui.Column(c).Grow(1).MinHeight(0).Background(cardFace(t)).
 		BorderWidth(1).BorderColor(cardLine(t)).Radius(10).Children(func() {
 		myui.Column(c).Padding(8).Gap(8).Children(func() {
 			myui.Button(c, locales.AddProfile()).Grow(1).OnClick(act.AddProfile)
 			if st.ProfileFilter != nil {
 				myui.TextInput(c, st.ProfileFilter).Placeholder(locales.ProfileSearch())
 			}
-			// The switch lists the profiles the settings hide, which the list
-			// would otherwise leave out: it edits what the window remembers of
-			// the page, not the settings, so it does not go through a draft.
-			myui.Row(c).AlignItems(myui.Center).Gap(8).Children(func() {
-				on := st.Hidden
-				myui.Switch(c, &on).Label(locales.ShowHiddenProfiles())
-				if on != st.Hidden {
-					act.ShowHiddenProfiles()
-				}
-				myui.Text(c, locales.ShowHiddenProfiles()).FontSize(12).TextColor(t.TextMuted).SingleLine().Shrink(1)
-			})
 		})
 		myui.Scroll(c).Grow(1).MinHeight(0).Children(func() {
 			myui.Column(c).Padding(0, 0, 6, 0).Children(func() {
@@ -751,6 +744,12 @@ func profileRow(c *myui.Context, st Settings, act Actions, p Profile) {
 			// The badge says the window found this shell, so it sits beside the
 			// name it describes.
 			myui.Text(c, locales.BuiltIn()).FontSize(10).TextColor(t.TextMuted).
+				Background(t.Surface).Padding(0, 5).Radius(4).Shrink(0)
+		}
+		if p.Hidden {
+			// The list keeps a hidden profile, so it has to say so: the row is
+			// otherwise a profile the new tab menu would not offer.
+			myui.Text(c, locales.HiddenProfile()).FontSize(10).TextColor(t.TextMuted).
 				Background(t.Surface).Padding(0, 5).Radius(4).Shrink(0)
 		}
 	})
@@ -805,6 +804,12 @@ func profilePage(c *myui.Context, st Settings, act Actions, id string) {
 	t := c.Theme()
 	myui.Row(c).Padding(12, 16).Gap(8).BorderWidth(1, 0, 0, 0).BorderColor(cardLine(t)).Children(func() {
 		myui.Button(c, locales.Duplicate()).OnClick(func() { act.DuplicateProfile(p.ID) })
-		myui.Button(c, locales.Remove()).OnClick(func() { act.RemoveProfile(p.ID) })
+		// Hiding is the whole of what a removal can do to a shell the window
+		// finds again on the next start, so that profile is offered the hiding
+		// alone rather than a delete that would not hold.
+		myui.Button(c, locales.Hidden()).OnClick(func() { act.HideProfile(p.ID) })
+		if !p.Discovered {
+			myui.Button(c, locales.Remove()).OnClick(func() { act.RemoveProfile(p.ID) })
+		}
 	})
 }

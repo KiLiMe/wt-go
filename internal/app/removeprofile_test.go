@@ -29,16 +29,40 @@ func TestRemoveProfile(t *testing.T) {
 		t.Fatalf("profiles = %+v, want the written one gone", a.settings.Profiles)
 	}
 
-	a.ShowProfile("cmd")
-	if a.settings.Profiles[0].Hidden {
-		t.Errorf("profiles = %+v, want it shown again", a.settings.Profiles)
+	a.HideProfile("cmd")
+	if !a.settings.Profiles[0].Hidden {
+		t.Errorf("profiles = %+v, want it hidden", a.settings.Profiles)
 	}
+	if len(a.settings.Profiles) != 1 {
+		t.Errorf("profiles = %+v, want the hidden profile kept in the list", a.settings.Profiles)
+	}
+}
 
-	if !a.showHidden {
-		t.Error("showHidden = false, want the page to list hidden profiles by default")
+// TestHideProfile covers the button that hides the profile in front: it writes
+// the draft the page edits, so the list marks the profile and the file takes
+// the hiding on save, and the profile stays in front rather than the page
+// moving to another one.
+func TestHideProfile(t *testing.T) {
+	settingsDir(t)
+	a := newApp("")
+	a.settings.Profiles = []store.Profile{
+		{ID: "mine", Name: "我的", Command: "cmd.exe"},
+		{ID: "other", Name: "别的", Command: "cmd.exe"},
 	}
-	a.ShowHiddenProfiles()
-	if a.showHidden {
-		t.Error("showHidden = true, want the switch to hide them again")
+	a.profiles = profile.Resolve(a.settings.Profiles, a.found)
+	a.editProfile("mine")
+
+	a.HideProfile("mine")
+	if !a.settings.Profiles[0].Hidden {
+		t.Errorf("profiles = %+v, want the one in front hidden", a.settings.Profiles)
+	}
+	if !a.editing.Hidden {
+		t.Error("the page's copy is not hidden, so its switch would read on after hiding")
+	}
+	if !a.dirty() {
+		t.Error("the draft is not dirty, so the hiding could not be saved")
+	}
+	if a.editing == nil || a.editing.ID != "mine" {
+		t.Errorf("the page left the profile it hid: %+v", a.editing)
 	}
 }

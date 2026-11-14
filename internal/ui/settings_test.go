@@ -16,14 +16,14 @@ import (
 type navActions struct {
 	Actions
 	added    int
-	hidden   int
+	hidden   []string
 	toggled  int
 	page     string
 	defaults []string
 }
 
 func (a *navActions) AddProfile()                    { a.added++ }
-func (a *navActions) ShowHiddenProfiles()            { a.hidden++ }
+func (a *navActions) HideProfile(id string)          { a.hidden = append(a.hidden, id) }
 func (a *navActions) ToggleChangedKeys()             { a.toggled++ }
 func (a *navActions) SelectSettingsPage(page string) { a.page = page }
 func (a *navActions) SetDefaultProfile(id string)    { a.defaults = append(a.defaults, id) }
@@ -58,36 +58,27 @@ func TestNavAddsProfiles(t *testing.T) {
 	if err := tt.Click("Profile 17"); err == nil {
 		t.Fatal("the last profile is in view, so the column did not scroll")
 	}
-	// The switch that lists the hidden profiles opens the page, above the list
-	// it filters, so a list this long never puts it under the rows it lists.
-	sw, ok := tt.AccessByRole(myui.RoleSwitch, locales.ShowHiddenProfiles())
+	// The head of the card holds what adds a profile above the list it opens,
+	// so a list this long never puts it under the rows it lists.
+	head, ok := tt.Find(locales.AddProfile())
 	if !ok {
-		t.Fatal("the switch that lists the hidden profiles is missing")
+		t.Fatal("the page has no button that adds a profile")
 	}
-	first := float32(-1)
-	for _, a := range tt.AccessAll() {
-		if a.Name == "Profile 0" && a.Bounds.X >= navWidth {
-			first = a.Bounds.Y
-			break
-		}
-	}
-	if first < 0 {
-		t.Fatal("the page does not list the first profile")
-	}
-	if sw.Bounds.Y >= first {
-		t.Fatalf("the switch at %v is under the first profile at %v", sw.Bounds, first)
-	}
-	// The card it opens holds the list, so it is past the window until the
-	// page scrolls there, and then a click has to reach the switch itself: its
-	// name is on the label at the other end of the row.
 	tt.Scroll(600, 400, 0, 600)
-	if sw, ok = tt.AccessByRole(myui.RoleSwitch, locales.ShowHiddenProfiles()); !ok {
-		t.Fatal("the switch left the page while scrolling")
+	after, ok := tt.Find(locales.AddProfile())
+	if !ok {
+		t.Fatal("the button that adds a profile left the page while scrolling")
 	}
-	tt.ClickAt(sw.Bounds.X+sw.Bounds.W/2, sw.Bounds.Y+sw.Bounds.H/2)
-	if act.hidden != 1 {
-		t.Fatalf("hidden = %d, want 1", act.hidden)
+	if first, ok := tt.Find("Profile 0"); ok && after.Y >= first.Y {
+		t.Fatalf("the button at %v is under the row at %v", after, first)
 	}
+	if err := tt.Click(locales.AddProfile()); err != nil {
+		t.Fatalf("the button that adds a profile cannot be clicked: %v", err)
+	}
+	if act.added != 2 {
+		t.Fatalf("added = %d, want 2", act.added)
+	}
+	_ = head
 }
 
 // TestStartupPageShowsTheSystemForAProfileThatIsGone covers the select of the
@@ -389,6 +380,37 @@ func TestProfilesPageAddsAndOpens(t *testing.T) {
 	}
 }
 
+// TestProfilesListShowsEveryProfile covers the card the list is drawn in: the
+// fields beside it are taller, so the card takes their height, and every row it
+// lists is on screen and takes a click. A card with a height of its own, as a
+// 100 DIP one, cropped the rows below what fit and left the list of four
+// profiles looking empty.
+func TestProfilesListShowsEveryProfile(t *testing.T) {
+	profiles := []Profile{
+		{ID: "pwsh7", Name: "PowerShell 7", Discovered: true},
+		{ID: "powershell", Name: "Windows PowerShell", Discovered: true},
+		{ID: "bash", Name: "Bash", Discovered: true},
+		{ID: "cmd", Name: "Command Prompt", Discovered: true},
+	}
+	s := store.Default()
+	p := store.Profile{ID: "pwsh7", Name: "PowerShell 7", Command: `C:\Program Files\PowerShell\7\pwsh.exe`}
+	args := ""
+	act := &navActions{}
+	tt := myui.NewTester(func(c *myui.Context) {
+		SettingsTab(c, Settings{Draft: &s, Page: ProfilePage(p.ID), Profile: &p, Args: &args, Profiles: profiles}, act)
+	}, 1280, 700)
+	tt.Frame()
+	for _, profile := range profiles {
+		act.page = ""
+		if err := tt.Click(profile.Name); err != nil {
+			t.Fatalf("%s is not on screen in the list: %v", profile.Name, err)
+		}
+		if act.page != ProfilePage(profile.ID) {
+			t.Fatalf("a click on %s opened %q, want %q", profile.Name, act.page, ProfilePage(profile.ID))
+		}
+	}
+}
+
 // settingsSearched draws the settings tab with a box that searches the
 // settings, over an empty draft of the profiles page: the column is what the
 // search changes, so the page beside it is the one that has nothing to say.
@@ -610,53 +632,83 @@ func contains(all []string, name string) bool {
 	return false
 }
 
-// TestProfileListLeavesHiddenProfilesOut covers the list: it holds the
-// profiles the settings offer and leaves out the ones they hide, until the
-// switch above it lists them too, greyed out, so that one comes back from here.
-func TestProfileListLeavesHiddenProfilesOut(t *testing.T) {
-	// A list long enough to scroll, so that the switch stands where it holds:
-	// above the rows it filters rather than scrolled away under them.
+// TestProfileListKeepsHiddenProfiles covers the list: it holds every profile
+// the file has, the hidden ones too and marked as such, since the page edits
+// hiding in the fields beside it and the list is where hiding is undone.
+func TestProfileListKeepsHiddenProfiles(t *testing.T) {
 	var profiles []Profile
 	for i := 0; i < 22; i++ {
 		profiles = append(profiles, Profile{ID: fmt.Sprintf("p%d", i), Name: fmt.Sprintf("Profile %d", i)})
 	}
-	listed := profiles
+	profiles = append(profiles, Profile{ID: "gone", Name: "Gone", Hidden: true})
 	s := store.Default()
-	// The window keeps the switch and hands the page the profiles it lists: the
-	// test stands in for it, adding the hidden one once the switch is on.
 	act := &navActions{}
-	redraw := func() *myui.Tester {
-		t.Helper()
-		tt := myui.NewTester(func(c *myui.Context) {
-			SettingsTab(c, Settings{Draft: &s, Page: PageProfiles, Profiles: listed}, act)
-		}, 900, 2000)
-		tt.Frame()
-		return tt
+	tt := myui.NewTester(func(c *myui.Context) {
+		SettingsTab(c, Settings{Draft: &s, Page: PageProfiles, Profiles: profiles}, act)
+	}, 900, 2000)
+	tt.Frame()
+	if _, ok := tt.Find("Gone"); !ok {
+		t.Fatalf("the list leaves out the hidden profile: %q", tt.Texts())
 	}
-	tt := redraw()
-	if _, ok := tt.Find("gone"); ok {
-		t.Fatalf("the list shows a hidden profile while the switch says it hides them: %q", tt.Texts())
+	marked := 0
+	for _, a := range tt.AccessAll() {
+		if a.Name == locales.HiddenProfile() {
+			marked++
+		}
 	}
-	sw, ok := tt.AccessByRole(myui.RoleSwitch, locales.ShowHiddenProfiles())
-	if !ok {
-		t.Fatal("the list has no switch to show the hidden profiles")
+	if marked != 1 {
+		t.Fatalf("the list marks %d rows as hidden, want the one it hides", marked)
 	}
-	if sw.Bounds.X < navWidth {
-		t.Fatalf("the switch at %v is in the column of pages", sw.Bounds)
+	// A marked row still takes a click: that is how it comes back.
+	if err := tt.Click("Gone"); err != nil {
+		t.Fatalf("the hidden profile cannot be opened: %v", err)
 	}
-	if first, ok := tt.Find("Profile 0"); !ok {
-		t.Fatal("the list does not show its first row")
-	} else if first.Y <= sw.Bounds.Y {
-		t.Fatalf("the switch at %v is under the row at %v", sw.Bounds, first)
+	if act.page != ProfilePage("gone") {
+		t.Fatalf("page = %q, want %q", act.page, ProfilePage("gone"))
 	}
-	tt.ClickAt(sw.Bounds.X+sw.Bounds.W/2, sw.Bounds.Y+sw.Bounds.H/2)
-	if act.hidden != 1 {
-		t.Fatalf("hidden = %d, want 1", act.hidden)
-	}
-	listed = append(append([]Profile(nil), profiles...), Profile{ID: "gone", Name: "gone", Hidden: true})
-	tt = redraw()
-	if _, ok := tt.Find("gone"); !ok {
-		t.Fatalf("the list does not show a hidden profile the switch asked for: %q", tt.Texts())
+}
+
+// TestProfilePageHidesTheProfileItEdits covers what hides a profile: the
+// button under the fields asks for it, and a profile a person wrote keeps the
+// delete beside it, which a shell the window finds again cannot take.
+func TestProfilePageHidesTheProfileItEdits(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		discovered bool
+		remove     bool
+	}{
+		{"a profile the window found", true, false},
+		{"a profile a person wrote", false, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := store.Default()
+			p := store.Profile{ID: "p", Name: "P", Command: "pwsh.exe", Discovered: tc.discovered}
+			args := ""
+			act := &navActions{}
+			tt := myui.NewTester(func(c *myui.Context) {
+				SettingsTab(c, Settings{Draft: &s, Page: ProfilePage("p"), Profile: &p, Args: &args}, act)
+			}, 900, 1000)
+			tt.Frame()
+			// The fields name this setting too, so the button is the one asked
+			// for by its role rather than by a word two controls share.
+			hide, ok := tt.AccessByRole(myui.RoleButton, locales.Hidden())
+			if !ok {
+				t.Fatalf("the page does not offer to hide the profile: %q", tt.Texts())
+			}
+			tt.ClickAt(hide.Bounds.X+hide.Bounds.W/2, hide.Bounds.Y+hide.Bounds.H/2)
+			if len(act.hidden) != 1 || act.hidden[0] != "p" {
+				t.Fatalf("hidden = %v, want the profile in front", act.hidden)
+			}
+			removable := false
+			for _, a := range tt.AccessAll() {
+				if a.Role == myui.RoleButton && a.Name == locales.Remove() {
+					removable = true
+				}
+			}
+			if removable != tc.remove {
+				t.Fatalf("the page offers delete = %v, want %v", removable, tc.remove)
+			}
+		})
 	}
 }
 

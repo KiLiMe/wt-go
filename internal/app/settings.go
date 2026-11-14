@@ -55,28 +55,27 @@ func (a *App) settingsState() ui.Settings {
 		a.ensureFontFamilies(a.settings.Font.Size)
 	}
 	return ui.Settings{
-		Page:         a.settingsPage,
-		KeysCache:    &a.keysDerived,
-		SchemesCache: &a.schemesDerived,
-		Draft:        &a.settings,
-		Dirty:        a.dirty(),
-		Note:         a.settingsNote(),
-		Recording:    a.recording,
-		Validation:   a.validation,
-		Filter:       &a.filter,
-		ActionFilter: &a.actionSearch,
-		OnlyChanged:  a.onlyChangedKeys,
-		KeysExpanded: a.numberedKeys,
-		Profile:      a.editing,
-		Args:         &a.editingArgs,
-		Profiles:      fileProfiles(a.settings, a.showHidden),
+		Page:          a.settingsPage,
+		KeysCache:     &a.keysDerived,
+		SchemesCache:  &a.schemesDerived,
+		Draft:         &a.settings,
+		Dirty:         a.dirty(),
+		Note:          a.settingsNote(),
+		Recording:     a.recording,
+		Validation:    a.validation,
+		Filter:        &a.filter,
+		ActionFilter:  &a.actionSearch,
+		OnlyChanged:   a.onlyChangedKeys,
+		KeysExpanded:  a.numberedKeys,
+		Profile:       a.editing,
+		Args:          &a.editingArgs,
+		Profiles:      fileProfiles(a.settings),
 		ProfileFilter: &a.profileSearch,
 		Search:        &a.settingsSearch,
-		Hidden:        a.showHidden,
-		Known:        knownProfiles(a.profiles),
-		Device:       a.device.Name,
-		Schemes:      a.schemeList(),
-		FontFamilies: a.fonts.families,
+		Known:         knownProfiles(a.profiles),
+		Device:        a.device.Name,
+		Schemes:       a.schemeList(),
+		FontFamilies:  a.fonts.families,
 	}
 }
 
@@ -105,13 +104,10 @@ func uiSchemes(s store.Settings) []ui.Scheme {
 }
 
 // fileProfiles are the profiles the file holds, as the settings list them: the
-// hidden ones too while the page shows them.
-func fileProfiles(s store.Settings, showHidden bool) []ui.Profile {
+// hidden ones too, since the page edits hiding and is where it is undone.
+func fileProfiles(s store.Settings) []ui.Profile {
 	out := make([]ui.Profile, 0, len(s.Profiles))
 	for _, p := range s.Profiles {
-		if p.Hidden && !showHidden {
-			continue
-		}
 		out = append(out, ui.Profile{ID: p.ID, Name: p.Name, Color: p.Color, Discovered: p.Discovered, Hidden: p.Hidden})
 	}
 	return out
@@ -156,7 +152,7 @@ func (a *App) SelectSettingsPage(page string) {
 // openFirstProfile opens the first profile the page lists, which is what the
 // profiles page shows when it opens with none in front.
 func (a *App) openFirstProfile() {
-	for _, p := range fileProfiles(a.settings, a.showHidden) {
+	for _, p := range fileProfiles(a.settings) {
 		a.editProfile(p.ID)
 		if a.editing != nil {
 			a.settingsPage = ui.ProfilePage(p.ID)
@@ -651,21 +647,18 @@ func (a *App) nextProfile(gone string) {
 	}
 }
 
-// ShowHiddenProfiles lists the profiles the profiles page hides, or hides
-// them again.
-func (a *App) ShowHiddenProfiles() {
-	a.showHidden = !a.showHidden
-	a.redraw()
-}
-
-// ShowProfile brings the profile with an id back from hiding.
-func (a *App) ShowProfile(id string) {
+// HideProfile hides the profile with an id, through the draft the page edits:
+// the list goes on listing it, marked, and saving writes it to the file.
+func (a *App) HideProfile(id string) {
 	p, ok := profileByID(a.settings, id)
-	if !ok {
+	if !ok || p.Hidden {
 		return
 	}
-	p.Hidden = false
+	p.Hidden = true
 	a.upsertProfile(p)
+	if a.editing != nil && a.editing.ID == id {
+		a.editing.Hidden = true
+	}
 	a.redraw()
 }
 

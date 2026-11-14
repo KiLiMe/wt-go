@@ -158,10 +158,6 @@ type App struct {
 	// numbered actions it folds away.
 	onlyChangedKeys bool
 	numberedKeys    bool
-	// showHidden is whether the profiles page lists the profiles it hides. It
-	// starts on: a profile a person hid is one they may want back, and a page
-	// that hides it again leaves no way to see it is there.
-	showHidden bool
 	// editing is the profile the profile page edits, and editingFrom what it
 	// held when the page opened. editingArgs is the arguments as the page types
 	// them, one on a line, so that an empty line stays while it is typed.
@@ -293,13 +289,12 @@ func newApp(startDir string) *App {
 	// already says which profiles to offer.
 	shells := found()
 	a := &App{
-		settings:   store.Default(),
-		startDir:   startDir,
-		device:     profile.Device(shells),
-		shells:     map[*terminal.Terminal]sys.ShellProc{},
-		showHidden: true,
-		watchStop:  make(chan struct{}),
-		relaunch:   sys.Relaunch,
+		settings:  store.Default(),
+		startDir:  startDir,
+		device:    profile.Device(shells),
+		shells:    map[*terminal.Terminal]sys.ShellProc{},
+		watchStop: make(chan struct{}),
+		relaunch:  sys.Relaunch,
 	}
 	settings, data, fresh, err := load()
 	if err == nil {

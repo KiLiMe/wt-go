@@ -754,24 +754,14 @@ func (msgs Messages) AddProfile() string {
 	return Catalog.Format(msgs.locale, "addProfile", nil)
 }
 
-// ShowHiddenProfiles says "Show hidden profiles"
+// HiddenProfile says "Hidden"
 // in the language the app shows.
-func ShowHiddenProfiles() string { return In(i18n.Locale()).ShowHiddenProfiles() }
+func HiddenProfile() string { return In(i18n.Locale()).HiddenProfile() }
 
-// ShowHiddenProfiles says "Show hidden profiles"
+// HiddenProfile says "Hidden"
 // in the language of msgs.
-func (msgs Messages) ShowHiddenProfiles() string {
-	return Catalog.Format(msgs.locale, "showHiddenProfiles", nil)
-}
-
-// ShowHiddenProfilesNote says "List the profiles this page hides too, greyed out."
-// in the language the app shows.
-func ShowHiddenProfilesNote() string { return In(i18n.Locale()).ShowHiddenProfilesNote() }
-
-// ShowHiddenProfilesNote says "List the profiles this page hides too, greyed out."
-// in the language of msgs.
-func (msgs Messages) ShowHiddenProfilesNote() string {
-	return Catalog.Format(msgs.locale, "showHiddenProfilesNote", nil)
+func (msgs Messages) HiddenProfile() string {
+	return Catalog.Format(msgs.locale, "hiddenProfile", nil)
 }
 
 // SelectProfile says "Select a profile."
