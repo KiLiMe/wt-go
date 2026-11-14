@@ -35,7 +35,7 @@ func UIThemes() []string { return uiThemes }
 // colors of the scheme called name, with the surfaces, borders and muted text
 // a window needs derived from them. The appearance the settings name ("system",
 // "light", "dark") is none, and so is a name no scheme has: those windows
-// draw with Chrome.
+// draw with Native.
 func UITheme(s store.Settings, name string) (*myui.Theme, bool) {
 	switch strings.ToLower(name) {
 	case "", "system", "light", "dark":
@@ -48,12 +48,15 @@ func UITheme(s store.Settings, name string) (*myui.Theme, bool) {
 	return window(th), true
 }
 
-// Chrome is the theme of the window when the settings name no theme of their
-// own: the colors of the terminal the window shows. The strip then takes the
-// terminal's background up into the tab in front, so that the tab and the
-// pane below it read as one surface rather than two shades of gray.
-func Chrome(s store.Settings) *myui.Theme {
-	return window(Terminal(s))
+// Native is the theme of a window that names no theme of its own: the one mygo
+// draws for an appearance, light or dark. Its colors are the desktop's own, so
+// that the window reads as one of the system's windows next to the system's
+// menus and dialogs, rather than as a shade of the terminal it holds.
+func Native(dark bool) *myui.Theme {
+	if dark {
+		return myui.DarkTheme()
+	}
+	return myui.LightTheme()
 }
 
 // window is the theme of a window drawn in a scheme's colors: the scheme's

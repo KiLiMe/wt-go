@@ -234,6 +234,58 @@ func TestTabFillsStrip(t *testing.T) {
 	}
 }
 
+// TestTabTakesThePanesFace covers the tab in front: it takes the color the
+// window says the pane below it paints, not a shade of the window's theme, so
+// that a light window holding a dark terminal joins the two rather than seaming
+// between them. The name on it reads in the pane's text color.
+func TestTabTakesThePanesFace(t *testing.T) {
+	pane := Face{Background: myui.RGB(0x0c, 0x0c, 0x0c), Foreground: myui.RGB(0xcc, 0xcc, 0xcc)}
+	st := State{Tabs: []Tab{{Name: "PowerShell 7"}, {Name: "cmd"}}, Active: 1, Pane: pane}
+	at := &myui.ScrollState{}
+	tt := myui.NewTester(func(c *myui.Context) { strip(c, st, &scrollActions{at: at}) }, 900, TitleBarHeight*2)
+	img := tt.Image()
+	rgba := func(c myui.Color) color.RGBA { return color.RGBA{R: c.R, G: c.G, B: c.B, A: 0xff} }
+	px := func(x, y int) color.RGBA { return img.RGBAAt(x, y) }
+	surface := px(int(stripGutter)-1, 2)
+	if surface == rgba(pane.Background) {
+		t.Fatalf("the strip draws the pane's background at its far end: the test proves nothing")
+	}
+	// The top of a tab is above the text in it, and the tab in front is the
+	// one whose name the second tab carries.
+	name, ok := tt.Find("cmd")
+	if !ok {
+		t.Fatalf("the strip draws no name for the tab in front: %q", tt.Texts())
+	}
+	if got := px(int(name.X)+2, 2); got != rgba(pane.Background) {
+		t.Errorf("the tab in front draws %v, want the pane's %v", got, pane.Background)
+	}
+	first, ok := tt.Find("PowerShell 7")
+	if !ok {
+		t.Fatalf("the strip draws no name for the tab behind: %q", tt.Texts())
+	}
+	if got := px(int(first.X)+2, 2); got != surface {
+		t.Errorf("the tab behind draws %v, want the surface %v", got, surface)
+	}
+}
+
+// TestTabOfAPageTakesThemesOwn covers the tab in front when it draws a page of
+// its own, the settings: it has no pane of a terminal's below it, so it takes
+// the theme's own background rather than the pane's.
+func TestTabOfAPageTakesThemesOwn(t *testing.T) {
+	pane := Face{Background: myui.RGB(0x0c, 0x0c, 0x0c), Foreground: myui.RGB(0xcc, 0xcc, 0xcc)}
+	page := func(c *myui.Context) myui.Element { return myui.Box(c) }
+	st := State{Tabs: []Tab{{Name: "Settings", Page: page}}, Active: 0, Pane: pane}
+	at := &myui.ScrollState{}
+	tt := myui.NewTester(func(c *myui.Context) { strip(c, st, &scrollActions{at: at}) }, 900, TitleBarHeight*2)
+	name, ok := tt.Find("Settings")
+	if !ok {
+		t.Fatalf("the strip draws no name for the tab in front: %q", tt.Texts())
+	}
+	if got := tt.Image().RGBAAt(int(name.X)+2, 2); got == (color.RGBA{R: 0x0c, G: 0x0c, B: 0x0c, A: 0xff}) {
+		t.Errorf("the tab of a page draws the pane's background %v, want the theme's own", got)
+	}
+}
+
 // TestTabWidths covers the room a tab takes: as wide as its name asks for
 // while the strip has room, narrower as more tabs come, and never narrower than
 // the parts of a tab need -- past that the strip scrolls instead of squeezing a

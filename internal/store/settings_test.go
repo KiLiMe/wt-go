@@ -2,6 +2,9 @@ package store
 
 import (
 	"encoding/json"
+	"reflect"
+	"slices"
+	"strings"
 	"testing"
 )
 
@@ -26,7 +29,7 @@ func TestDefault(t *testing.T) {
 	if s.Padding.X != 12 || s.Padding.Y != 8 {
 		t.Errorf("padding = %+v", s.Padding)
 	}
-	if !s.CloseOnLastTab || s.MaxPanes != 4 || s.ScrollbackMB != 10 {
+	if !s.CloseOnLastTab || !s.ConfirmCloseWindow || s.MaxPanes != 4 || s.ScrollbackMB != 10 {
 		t.Errorf("behavior = %+v", s)
 	}
 	if len(s.Keybindings) == 0 {
@@ -105,6 +108,196 @@ func TestMarshalRoundTrip(t *testing.T) {
 	}
 	if s.Font != Default().Font || len(s.Keybindings) != len(Default().Keybindings) {
 		t.Errorf("round trip changed the settings: %+v", s)
+	}
+}
+
+// TestKnownKeysAreTheFields covers the two lists of keys: one missing from
+// knownKeys is kept in Extra and written after its field, which would give a
+// file a key twice.
+func TestKnownKeysAreTheFields(t *testing.T) {
+	typ := reflect.TypeOf(Settings{})
+	var want []string
+	for i := range typ.NumField() {
+		f := typ.Field(i)
+		// Extra is the keys no field names, which is not one of them.
+		if f.Name == "Extra" {
+			continue
+		}
+		want = append(want, strings.Split(f.Tag.Get("json"), ",")[0])
+	}
+	slices.Sort(want)
+	got := make([]string, 0, len(knownKeys))
+	for k := range knownKeys {
+		got = append(got, k)
+	}
+	slices.Sort(got)
+	if !slices.Equal(got, want) {
+		t.Errorf("knownKeys = %v, want the fields %v", got, want)
+	}
+}
+
+// TestParseFallsBackUnknownNames covers a name no setting takes: it is read as
+// the default, as docs/配置参考.md promises, rather than refused the way a
+// range is. The file is not rejected, so the settings around a typo still apply.
+func TestParseFallsBackUnknownNames(t *testing.T) {
+	tests := []struct {
+		name string
+		file string
+		get  func(Settings) string
+		want string
+	}{
+		{"theme", `{"theme":"darkk"}`, func(s Settings) string { return s.Theme }, Default().Theme},
+		{"cursor shape", `{"cursorShape":"filledBox"}`, func(s Settings) string { return s.CursorShape }, Default().CursorShape},
+		{"padding color", `{"paddingColor":"window"}`, func(s Settings) string { return s.PaddingColor }, Default().PaddingColor},
+		{"right click", `{"rightClick":"ignore"}`, func(s Settings) string { return s.RightClick }, Default().RightClick},
+		{"clipboard read", `{"clipboardRead":"maybe"}`, func(s Settings) string { return s.ClipboardRead }, Default().ClipboardRead},
+		{"clipboard write", `{"clipboardWrite":"ask"}`, func(s Settings) string { return s.ClipboardWrite }, Default().ClipboardWrite},
+		{"new tab position", `{"newTabPosition":"middle"}`, func(s Settings) string { return s.NewTabPosition }, Default().NewTabPosition},
+		{"tab width", `{"tabWidth":"titleLength"}`, func(s Settings) string { return s.TabWidth }, Default().TabWidth},
+		{"start on", `{"startOn":"restore"}`, func(s Settings) string { return s.StartOn }, Default().StartOn},
+		{"confirm close", `{"confirmClose":"maybe"}`, func(s Settings) string { return string(s.ConfirmClose) }, string(Default().ConfirmClose)},
+		{"language", `{"language":"not a tag"}`, func(s Settings) string { return s.Language }, ""},
+		{"empty theme", `{"theme":""}`, func(s Settings) string { return s.Theme }, Default().Theme},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			s, err := Parse([]byte(tc.file))
+			if err != nil {
+				t.Fatalf("refused a name to fall back on: %v", err)
+			}
+			if got := tc.get(s); got != tc.want {
+				t.Errorf("%s = %q, want the default %q", tc.name, got, tc.want)
+			}
+			// The fall back leaves a set of settings that validates and reads the
+			// same again, so that writing them and starting from them is a loop.
+			data, err := Marshal(s)
+			if err != nil {
+				t.Fatal(err)
+			}
+			again, err := Parse(data)
+			if err != nil {
+				t.Fatalf("re-reading the settings it wrote: %v", err)
+			}
+			if !Equal(s, again) {
+				t.Errorf("re-reading changed them: %+v, %+v", s, again)
+			}
+		})
+	}
+}
+
+// TestParseKeepsKnownNames covers the names a file may write, which the fall
+// back leaves alone: a theme named by a scheme, a language with no catalog yet,
+// and a directory, which is a path rather than a word of a list.
+func TestParseKeepsKnownNames(t *testing.T) {
+	s, err := Parse([]byte(`{"theme":"light","language":"fr-FR","startDirectory":"D:/src"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Theme != "light" || s.Language != "fr-FR" || s.StartDirectory != "D:/src" {
+		t.Errorf("theme, language, startDirectory = %q, %q, %q", s.Theme, s.Language, s.StartDirectory)
+	}
+	// A scheme of the file's own is a theme a person may name, so a file that
+	// names one is kept as it is.
+	s, err = Parse([]byte(`{"theme":"Paper","schemes":[{"name":"Paper","background":"#fafafa"}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Theme != "Paper" {
+		t.Errorf("theme = %q, want the scheme the file holds", s.Theme)
+	}
+	// A theme left out of the file, like one no scheme has any more, is the
+	// default rather than "" — which internal/theme would read as "nobody
+	// says," and the settings page would show as nothing.
+	s, err = Parse([]byte(`{"font":{"size":14}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Theme != Default().Theme {
+		t.Errorf("an unnamed theme = %q, want the default %q", s.Theme, Default().Theme)
+	}
+}
+
+// TestParseKeepsUnknownKeys covers a file a person or a later version extended:
+// the keys no field names are kept through a change and a save, where a window
+// that read them as nothing would drop them the first time someone turned a
+// switch in the settings page.
+func TestParseKeepsUnknownKeys(t *testing.T) {
+	file := `{
+  "theme": "light",
+  "unknownField": 7,
+  "font": {"size": 14, "hinting": "full"},
+  "profiles": [{"id": "x", "name": "X", "notes": [1, 2]}]
+}`
+	s, err := Parse([]byte(file))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(s.Extra) != 1 {
+		t.Fatalf("Extra = %v, want the one top-level key no field names", s.Extra)
+	}
+
+	s.Font.Size = 16
+	b, err := Marshal(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out map[string]json.RawMessage
+	if err := json.Unmarshal(b, &out); err != nil {
+		t.Fatalf("%v\n%s", err, b)
+	}
+	if got := string(out["unknownField"]); got != "7" {
+		t.Errorf("unknownField = %s, want it kept as 7", got)
+	}
+	if got := string(out["theme"]); got != `"light"` {
+		t.Errorf("theme = %s, want the light the file said", got)
+	}
+	if !strings.Contains(string(b), `"size": 16`) {
+		t.Errorf("font.size was not written:\n%s", b)
+	}
+
+	// The keys of the objects a field does name are that field's business, so a
+	// key inside font is lost with the rest of the font the window rewrote. The
+	// file is still settings after a save, and the key it kept is read again.
+	again, err := Parse(b)
+	if err != nil {
+		t.Fatalf("re-reading the file it wrote: %v\n%s", err, b)
+	}
+	if again.Font.Size != 16 || string(again.Extra["unknownField"]) != "7" {
+		t.Errorf("re-reading = %+v", again)
+	}
+}
+
+// TestMarshalKnownKeysWin covers a setting the window changed: the key the file
+// wrote second is written as the field holds it now, not as it was read.
+func TestMarshalKnownKeysWin(t *testing.T) {
+	s := Default()
+	s.Extra = map[string]json.RawMessage{"theme": json.RawMessage(`"light"`)}
+	b, err := Marshal(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out map[string]json.RawMessage
+	if err := json.Unmarshal(b, &out); err != nil {
+		t.Fatal(err)
+	}
+	if got := string(out["theme"]); got != `"dark"` {
+		t.Errorf("theme = %s, want the field's dark", got)
+	}
+}
+
+// TestEqualIgnoresUnknownKeys covers what the window compares to know whether it
+// has unsaved work: a file whose only difference from the window's copy is a key
+// neither of them understands holds nothing to save.
+func TestEqualIgnoresUnknownKeys(t *testing.T) {
+	a := Default()
+	b := a.Clone()
+	b.Extra = map[string]json.RawMessage{"unknownField": json.RawMessage(`1`)}
+	if !Equal(a, b) {
+		t.Error("a key no field names makes the settings different")
+	}
+	b.Theme = "light"
+	if Equal(a, b) {
+		t.Error("a setting the window shows makes no difference")
 	}
 }
 

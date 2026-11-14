@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"sync"
+
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/action"
@@ -449,6 +451,14 @@ func tab(c *myui.Context, st State, act Actions, i int, share float32) myui.Elem
 		nameWeight = nameBold
 	}
 	name := measuredName(c, tb.Name, nameWeight)
+	// The tab in front carries the pane's colors up into the strip; a tab that
+	// draws a page of its own, the settings, has no pane of the terminal's, and
+	// neither has a window that draws no pane below the strip. Those take the
+	// theme's own colors.
+	face := st.Pane
+	if face == (Face{}) || (active && tb.Page != nil) {
+		face = Face{Background: t.Background, Foreground: t.Text}
+	}
 	// A tab is as wide as the share of the strip it has, but not wider than
 	// its name asks for -- unless the settings make every tab alike -- and not
 	// narrower than the room its parts take: past that the strip scrolls
@@ -464,12 +474,12 @@ func tab(c *myui.Context, st State, act Actions, i int, share float32) myui.Elem
 	// that scrolls, not the name and the close button that go.
 	el = el.Shrink(0)
 	if active {
-		// The tab in front carries the terminal's background up into the
-		// strip, rounded at the top the way Windows Terminal does: the tab
-		// joins the pane below it, and the surface around it is what tells the
-		// two apart. It is the strip's whole height, so the round meets the
-		// window's edge.
-		el = el.Background(t.Background).Radius(8, 8, 0, 0)
+		// The tab in front carries the pane's background up into the strip,
+		// rounded at the top the way Windows Terminal does: the tab joins the
+		// pane below it, and the strip is what tells the two apart. The color
+		// is the pane's own, not a shade the theme derives: a window whose
+		// theme is not the terminal's would otherwise seam at that edge.
+		el = el.Background(face.Background).Radius(8, 8, 0, 0)
 	} else if el.Hovered() {
 		el = el.Background(t.SurfaceHover)
 	}
@@ -487,7 +497,7 @@ func tab(c *myui.Context, st State, act Actions, i int, share float32) myui.Elem
 		tabIcon(c, tb, active)
 		nameColor := t.TextMuted
 		if active {
-			nameColor = t.Text
+			nameColor = face.Foreground
 		}
 		// The name is a label, not text to select: pressing it starts a drag
 		// of the tab, the way pressing the rest of the tab does. It carries
@@ -507,7 +517,7 @@ func tab(c *myui.Context, st State, act Actions, i int, share float32) myui.Elem
 			text.Bold()
 		}
 		if active || el.Hovered() {
-			closeButton(c, act, i)
+			closeButton(c, act, i, active, face)
 		} else {
 			// The button keeps its room, so that a tab does not change width
 			// as the pointer comes over it.
@@ -517,13 +527,65 @@ func tab(c *myui.Context, st State, act Actions, i int, share float32) myui.Elem
 	return el
 }
 
+// nameMeasures is bounded so that a window that has opened many tabs over a
+// day does not keep a measurement for each of them: a name is stable, so the
+// cache is dropped whole rather than aged out one at a time.
+const nameMeasures = 256
+
+// nameMeasure is a key of the tab-name cache: what the width of a name
+// depends on, since the same name is a different width in another font.
+type nameMeasure struct {
+	name, font string
+	size       float32
+	weight     int
+}
+
+// nameMeasureCache keeps the widths of tab names. A window draws its strip
+// on frames it did not build anew, as the pointer moves over it, so a name
+// measured every frame costs a layout each frame; the names of the tabs
+// change far less often. The mutex is for the window that draws on another
+// goroutine than the one that reads the settings: the window is the only
+// writer of its names either way.
+var nameMeasureCache = struct {
+	sync.Mutex
+	widths map[nameMeasure]float32
+}{widths: map[nameMeasure]float32{}}
+
+// forTest, called for its side effects, empties the caches this package keeps
+// across frames, so that a test draws what a window draws and sees nothing of
+// the frame before it. Those caches are kept by the frame a window builds it
+// view from, and a test builds its own views, so a cache that did not empty
+// would answer a test with the answer of another one.
+var forTest = func() {}
+
+// resetCaches empties every cache the package keeps across frames.
+func resetCaches() {
+	nameMeasureCache.Lock()
+	clear(nameMeasureCache.widths)
+	nameMeasureCache.Unlock()
+}
+
 // measuredName is how wide a tab draws its name: as wide as the name takes
 // in the theme's font, within the room a tab may take. Weight is the weight
 // the name is drawn in, so that a bold name is measured bold: a regular
 // width would ellipsize it in the tab it is widest in.
 func measuredName(c *myui.Context, name string, weight int) float32 {
 	t := c.Theme()
-	w, _ := c.MeasureText(0, myui.Span{Text: name, Font: t.Font, Size: t.FontSize, Weight: weight})
+	key := nameMeasure{name: name, font: t.Font, size: t.FontSize, weight: weight}
+	nameMeasureCache.Lock()
+	w, ok := nameMeasureCache.widths[key]
+	nameMeasureCache.Unlock()
+	if !ok {
+		w, _ = c.MeasureText(0, myui.Span{Text: name, Font: t.Font, Size: t.FontSize, Weight: weight})
+		nameMeasureCache.Lock()
+		// A full cache is dropped rather than aged: 256 names is nothing to
+		// measure again, and an eviction order would cost more than that.
+		if len(nameMeasureCache.widths) >= nameMeasures {
+			clear(nameMeasureCache.widths)
+		}
+		nameMeasureCache.widths[key] = w
+		nameMeasureCache.Unlock()
+	}
 	return nameWidth(w)
 }
 
@@ -589,10 +651,11 @@ func iconTile(c *myui.Context, ic *icons.Icon, face, mark myui.Color, active boo
 
 // closeButton closes a tab. It takes the surface under the pointer, so that
 // it reads as the button it is rather than as a mark on the tab, and it keeps
-// the text color: Windows Terminal's close button is as bright on the tab
-// behind as on the tab in front.
-func closeButton(c *myui.Context, act Actions, i int) myui.Element {
+// the text color of the tab it sits on: Windows Terminal's close button is as
+// bright on the tab behind as on the tab in front.
+func closeButton(c *myui.Context, act Actions, i int, active bool, face Face) myui.Element {
 	t := c.Theme()
+	text := t.Text
 	el := myui.Box(c).
 		Size(16, 16).
 		Radius(4).
@@ -601,11 +664,19 @@ func closeButton(c *myui.Context, act Actions, i int) myui.Element {
 		Cursor(myui.CursorPointer).
 		Tooltip(locales.CloseTab()).
 		OnClick(func() { act.CloseTab(i) })
-	if el.Hovered() {
+	if active {
+		// The button sits on the pane's background, which the theme knows
+		// nothing about, so its hover takes that background rather than the
+		// theme's surface.
+		text = face.Foreground
+		if el.Hovered() {
+			el = el.Background(face.Foreground.Alpha(0.16))
+		}
+	} else if el.Hovered() {
 		el = el.Background(t.SurfaceHover)
 	}
 	return el.Children(func() {
-		myui.Icon(c, icons.Close.SVG).Size(14, 14).TextColor(t.Text)
+		myui.Icon(c, icons.Close.SVG).Size(14, 14).TextColor(text)
 	})
 }
 

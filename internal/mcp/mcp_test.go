@@ -3,9 +3,16 @@ package mcp
 import (
 	"bytes"
 	"encoding/json"
+	"math"
 	"strings"
 	"testing"
 )
+
+// nan and inf are the JSON numbers json.Unmarshal cannot produce: a client
+// that sends 1e999 gets +Inf, so the values reach ArgInt all the same.
+func nan() float64 { return math.NaN() }
+
+func inf(sign int) float64 { return math.Inf(sign) }
 
 // serve answers the requests, each a JSON line, with the responses.
 func serve(t *testing.T, s *Server, requests ...string) []map[string]any {
@@ -151,5 +158,87 @@ func TestNoStream(t *testing.T) {
 	s := &Server{}
 	if err := s.Serve(); err != ErrNoStream {
 		t.Errorf("Serve() = %v, want ErrNoStream", err)
+	}
+}
+
+// A line that is not JSON is a parse error with no id, and the lines after it
+// are still read: one bad message must not cost the client the session.
+func TestParseError(t *testing.T) {
+	got := serve(t, testServer(),
+		`{oops`,
+		`{"jsonrpc":"2.0","id":2,"method":"ping"}`,
+	)
+	if len(got) != 2 {
+		t.Fatalf("got %d replies, want two", len(got))
+	}
+	errObj := got[0]["error"].(map[string]any)
+	if code := int(errObj["code"].(float64)); code != CodeParse {
+		t.Errorf("code = %d, want %d", code, CodeParse)
+	}
+	if got[0]["id"] != nil {
+		t.Errorf("reply = %v, want no id on a parse error", got[0])
+	}
+	if got[1]["id"].(float64) != 2 || got[1]["error"] != nil {
+		t.Errorf("reply = %v, want the pong after the bad line", got[1])
+	}
+}
+
+// The spec names the version in every request; another spelling is an
+// invalid request rather than an unknown method.
+func TestInvalidJSONRPC(t *testing.T) {
+	got := serve(t, testServer(),
+		`{"jsonrpc":"1.0","id":1,"method":"ping"}`,
+		`{"id":2,"method":"ping"}`,
+	)
+	for i := range got {
+		if got[i]["error"] == nil {
+			t.Fatalf("reply = %v, want an error", got[i])
+		}
+		if code := int(got[i]["error"].(map[string]any)["code"].(float64)); code != CodeInvalid {
+			t.Errorf("code = %d, want %d", code, CodeInvalid)
+		}
+		if got[i]["id"] == nil {
+			t.Errorf("reply = %v, want the id echoed", got[i])
+		}
+	}
+}
+
+// A message longer than maxLine is refused and ends the session: the rest of
+// the line is not a message boundary, so the stream cannot be picked up again.
+func TestOversizedMessage(t *testing.T) {
+	big := `{"jsonrpc":"2.0","id":1,"method":"ping","x":"` + strings.Repeat("a", maxLine) + `"}`
+	var out bytes.Buffer
+	s := testServer()
+	s.In = strings.NewReader(big + "\n")
+	s.Out = &out
+	if err := s.Serve(); err == nil {
+		t.Error("Serve() = nil, want the read error")
+	}
+}
+
+func TestArgInt(t *testing.T) {
+	args := func(v any) map[string]any { return map[string]any{"n": v} }
+	cases := []struct {
+		name string
+		args map[string]any
+		want int
+	}{
+		{"missing", map[string]any{}, 7},
+		{"wrong type", args("3"), 7},
+		{"inside", args(5.0), 5},
+		{"below min", args(-3.0), 1},
+		{"above max", args(1e300), 10},
+		{"negative overflow", args(-1e300), 1},
+		// int64 wraps these to a number inside the range if they are cast
+		// before the clamp.
+		{"just past int64", args(9.3e18), 10},
+		{"nan", args(nan()), 7},
+		{"+inf", args(inf(1)), 7},
+		{"-inf", args(inf(-1)), 7},
+	}
+	for _, c := range cases {
+		if got := ArgInt(c.args, "n", 7, 1, 10); got != c.want {
+			t.Errorf("%s: ArgInt() = %d, want %d", c.name, got, c.want)
+		}
 	}
 }

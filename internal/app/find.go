@@ -6,7 +6,9 @@ import (
 	"wtgo/internal/ui"
 )
 
-// OpenFind asks the terminal in front for text.
+// OpenFind asks the terminal in front for text. Whatever other overlay was
+// open goes: the bar takes the keys the pane would have taken, which an
+// overlay that already holds them would not leave to it.
 func (a *App) OpenFind() {
 	if a.find != nil {
 		return
@@ -14,7 +16,7 @@ func (a *App) OpenFind() {
 	if a.focusedTerm() == nil {
 		return
 	}
-	a.find = &ui.Find{}
+	a.openOverlay(overlayFind)
 	a.redraw()
 }
 
@@ -44,8 +46,7 @@ func (a *App) EndFind() {
 	if a.find == nil {
 		return
 	}
-	a.find = nil
-	a.endSearch()
+	a.closeOverlay(overlayFind)
 	a.redraw()
 }
 
@@ -78,7 +79,9 @@ func (a *App) findState() *ui.Find {
 	term := a.focusedTerm()
 	if term == nil {
 		// The tab in front is not a terminal, as the settings: the bar
-		// has nothing to search, and the search it started goes.
+		// has nothing to search, and the search it started goes. It is the
+		// bar that goes even when another overlay opened over it: a bar
+		// with nothing to search is not one to come back to.
 		a.find = nil
 		a.endSearch()
 		return nil

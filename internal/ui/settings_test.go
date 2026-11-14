@@ -15,14 +15,16 @@ import (
 // profiles it asks to add, and the keybinding changes it is asked for.
 type navActions struct {
 	Actions
-	added   int
-	hidden  int
-	toggled int
+	added    int
+	hidden   int
+	toggled  int
+	defaults []string
 }
 
-func (a *navActions) AddProfile()         { a.added++ }
-func (a *navActions) ShowHiddenProfiles() { a.hidden++ }
-func (a *navActions) ToggleChangedKeys()  { a.toggled++ }
+func (a *navActions) AddProfile()                 { a.added++ }
+func (a *navActions) ShowHiddenProfiles()         { a.hidden++ }
+func (a *navActions) ToggleChangedKeys()          { a.toggled++ }
+func (a *navActions) SetDefaultProfile(id string) { a.defaults = append(a.defaults, id) }
 
 // settingsOf draws the settings tab over a list of profiles.
 func settingsOf(t *testing.T, profiles []Profile) (*myui.Tester, *navActions) {
@@ -105,6 +107,81 @@ func TestStartupPageShowsTheSystemForAProfileThatIsGone(t *testing.T) {
 	if s.DefaultProfile != "gone" {
 		t.Fatalf("drawing the page changed the draft: DefaultProfile = %q", s.DefaultProfile)
 	}
+	if len(act.defaults) != 0 {
+		t.Fatalf("drawing the page asked for %v, want nothing", act.defaults)
+	}
+	// A choice asks the window for it rather than writing the draft, which
+	// the window is the one to do. The select opens on a press of its
+	// trigger, which shows the option in force, the device, and a press on
+	// another option closes the popup and names it. The press goes on the
+	// option itself: a press on the row already in force changes nothing, so
+	// the select does not report it.
+	trigger, ok := tt.Find(locales.SystemProfile())
+	if !ok {
+		t.Fatal("the select for the default profile is missing")
+	}
+	x, y := trigger.X+trigger.W/2, trigger.Y+trigger.H/2
+	tt.ClickAt(x, y)
+	if n := countTexts(tt.Texts(), locales.SystemProfile()); n != 2 {
+		t.Fatalf("the select opened %d choices for the device, want 2", n)
+	}
+	option, ok := tt.Find(known[0].Name)
+	if !ok {
+		t.Fatalf("the popup does not offer %q", known[0].Name)
+	}
+	// The window is told the profile's id, not the name the select shows.
+	tt.ClickAt(option.X+option.W/2, option.Y+option.H/2)
+	if len(act.defaults) != 1 || act.defaults[0] != known[0].ID {
+		t.Fatalf("asked for %v, want %q", act.defaults, known[0].ID)
+	}
+	if s.DefaultProfile != "gone" {
+		t.Errorf("the page wrote the draft itself: DefaultProfile = %q", s.DefaultProfile)
+	}
+}
+
+// TestStartupPageAsksBeforeTheWindowCloses covers the switch of
+// confirmCloseWindow: it sits under the switch that closes the window, since
+// with that one off there is no window close to ask about, and a click edits
+// the draft.
+func TestStartupPageAsksBeforeTheWindowCloses(t *testing.T) {
+	s := store.Default()
+	s.ConfirmCloseWindow = false
+	tt := myui.NewTester(func(c *myui.Context) {
+		SettingsTab(c, Settings{Draft: &s, Page: PageStartup}, &navActions{})
+	}, 900, 700)
+	tt.Frame()
+	sw := switchOf(t, tt, locales.ConfirmCloseWindow())
+	last := switchOf(t, tt, locales.CloseOnLastTab())
+	if sw.Bounds.Y <= last.Bounds.Y {
+		t.Fatalf("the question at %v is not under the switch it goes with at %v", sw.Bounds, last.Bounds)
+	}
+	tt.ClickAt(sw.Bounds.X+sw.Bounds.W/2, sw.Bounds.Y+sw.Bounds.H/2)
+	if !s.ConfirmCloseWindow {
+		t.Fatal("a click on the switch left the draft as it was")
+	}
+}
+
+// switchOf is the switch of the field a title labels: the field is one group
+// to a reader, so the switch inside its box is the control it names.
+func switchOf(t *testing.T, tt *myui.Tester, title string) myui.AccessInfo {
+	t.Helper()
+	g, ok := tt.Access(title)
+	if !ok {
+		t.Fatalf("the field %q is missing", title)
+	}
+	for _, a := range tt.AccessAll() {
+		if a.Role != myui.RoleSwitch {
+			continue
+		}
+		inside := a.Bounds.X >= g.Bounds.X && a.Bounds.Y >= g.Bounds.Y &&
+			a.Bounds.X+a.Bounds.W <= g.Bounds.X+g.Bounds.W &&
+			a.Bounds.Y+a.Bounds.H <= g.Bounds.Y+g.Bounds.H
+		if inside {
+			return a
+		}
+	}
+	t.Fatalf("the field %q has no switch", title)
+	return myui.AccessInfo{}
 }
 
 // TestActionsPageToolbar covers what the toolbar of the actions page offers: a
@@ -167,6 +244,102 @@ func TestActionsPageNamesOnlyRealClashes(t *testing.T) {
 	tt.Frame()
 	if _, ok := tt.Find(locales.KeysConflict()); !ok {
 		t.Fatal("two actions on ctrl+t are not named as a clash")
+	}
+}
+
+// TestSettingsBannerShowsTheRefusal covers what the page says when a save
+// refused the draft: the reason is above the fields, in the danger color, so it
+// is not cut off by the foot of the page or hidden by whatever the last action
+// said, and the foot says what to do about it.
+func TestSettingsBannerShowsTheRefusal(t *testing.T) {
+	s := store.Default()
+	const reason = "settings: font.size must be between 4 and 200"
+	tt := myui.NewTester(func(c *myui.Context) {
+		SettingsTab(c, Settings{Draft: &s, Page: PageProfiles, Validation: reason, Dirty: true}, &navActions{})
+	}, 900, 700)
+	tt.Frame()
+	reasonAt, ok := tt.Find(reason)
+	if !ok {
+		t.Fatalf("the page does not say why the save was refused: %q", tt.Texts())
+	}
+	if !tt.HasText(locales.SaveRefusedNote()) {
+		t.Fatalf("the foot does not say what to do about the refusal: %q", tt.Texts())
+	}
+	if tt.HasText(locales.UnsavedChanges()) {
+		t.Error("the foot says the draft is unsaved rather than what is wrong with it")
+	}
+	// Above the fields: past the column of pages, and above the first field
+	// of the page the save was refused on.
+	if reasonAt.X < navWidth {
+		t.Fatalf("the reason at %v is in the column of pages", reasonAt)
+	}
+	font, ok := tt.Find(locales.Font())
+	if !ok {
+		t.Fatal("the page does not show its fields")
+	}
+	if reasonAt.Y >= font.Y {
+		t.Fatalf("the reason at %v is under the field it is about at %v", reasonAt.Y, font.Y)
+	}
+}
+
+// TestSettingsWithoutARefusalShowsNone covers the page of a draft nothing is
+// wrong with: no banner, and the foot says the draft is unsaved.
+func TestSettingsWithoutARefusalShowsNone(t *testing.T) {
+	s := store.Default()
+	tt := myui.NewTester(func(c *myui.Context) {
+		SettingsTab(c, Settings{Draft: &s, Page: PageProfiles, Dirty: true}, &navActions{})
+	}, 900, 700)
+	tt.Frame()
+	if tt.HasText(locales.SaveRefusedNote()) {
+		t.Fatal("the page says a save was refused while none was")
+	}
+	if !tt.HasText(locales.UnsavedChanges()) {
+		t.Fatalf("the foot does not say the draft is unsaved: %q", tt.Texts())
+	}
+}
+
+// TestProfilePageHintsAnEmptyCommand covers a profile that runs the shell of
+// the machine: the command field says what an empty one does, and the hop a
+// program of a person's own starts from.
+func TestProfilePageHintsAnEmptyCommand(t *testing.T) {
+	s := store.Default()
+	p := store.Profile{ID: "p1", Name: "Mine"}
+	args := ""
+	hint := locales.CommandEmptyHint(store.DefaultShellHint())
+	tt := myui.NewTester(func(c *myui.Context) {
+		SettingsTab(c, Settings{Draft: &s, Page: ProfilePage(p.ID), Profile: &p, Args: &args}, &navActions{})
+	}, 900, 700)
+	tt.Frame()
+	if !tt.HasText(hint) {
+		t.Fatalf("an empty command says nothing about what it runs: %q", tt.Texts())
+	}
+	if tt.HasText(locales.DiscoveredProfileNote()) {
+		t.Fatal("a profile of a person's own is said to be the window's")
+	}
+
+	p.Command = "pwsh.exe"
+	tt.Frame()
+	if tt.HasText(hint) {
+		t.Fatal("a command the profile names still reads as empty")
+	}
+}
+
+// TestProfilePageLeavesTheCommandOfADiscoveredProfile covers the profile the
+// window found: its command is the path the window knows, so the page does not
+// hint at emptying it and does not offer to change it.
+func TestProfilePageLeavesTheCommandOfADiscoveredProfile(t *testing.T) {
+	s := store.Default()
+	p := store.Profile{ID: "cmd", Name: "Command Prompt", Command: `C:\Windows\System32\cmd.exe`, Discovered: true}
+	args := ""
+	tt := myui.NewTester(func(c *myui.Context) {
+		SettingsTab(c, Settings{Draft: &s, Page: ProfilePage(p.ID), Profile: &p, Args: &args}, &navActions{})
+	}, 900, 700)
+	tt.Frame()
+	if !tt.HasText(locales.DiscoveredProfileNote()) {
+		t.Fatalf("the page does not say the command is the window's: %q", tt.Texts())
+	}
+	if tt.HasText(locales.CommandEmptyHint(store.DefaultShellHint())) {
+		t.Fatal("a discovered profile reads as one that runs the system shell")
 	}
 }
 

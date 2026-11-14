@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"wtgo/internal/i18n"
+	"wtgo/locales"
 )
 
 // The actions.
@@ -157,6 +158,27 @@ func Title(id string) string {
 func Group(id string) string {
 	a, _ := Lookup(id)
 	return a.GroupKey
+}
+
+// GroupTitle is what the settings page and the palette call the group a key
+// names, in the window's language. A key the catalog does not name stays as
+// it is written, like an unknown action's id.
+func GroupTitle(key string) string {
+	switch key {
+	case GroupTab:
+		return locales.Tab()
+	case GroupPane:
+		return locales.Pane()
+	case GroupProfiles:
+		return locales.Profiles()
+	case GroupFind:
+		return locales.Find()
+	case GroupWindow:
+		return locales.Window()
+	case GroupOther:
+		return locales.Other()
+	}
+	return key
 }
 
 // Number is the number an action that ends in one names, counting from one,

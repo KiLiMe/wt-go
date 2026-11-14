@@ -93,7 +93,7 @@
 - 「操作」页列的是动作目录的全部动作（35 行），不只是文件里已有的键位：`tab.close` 这类没默认键的动作显示「无」，点一下就能录一个键（ADR-023）。
 - 紧凑模式下标签宽度用 `Context.MeasureText` 量名字，夹在 48–240，超出用 `…` 截（ADR-024）；等宽模式仍是定宽。
 - 窗口几何不存设置：mygo 的 `WindowStateStore` 记在 `window-state.json`（与 `settings.json` 同目录），关窗时保存、下次启动还原；原来的 `startSize`（列×行）已删除（ADR-46）。
-- `Ctrl+滚轮` 字号以及 `Ctrl+=` / `Ctrl+-` / `Ctrl+0` 由 mygo 终端插件提供，当前已可用；`Ctrl+Shift+滚轮` 调透明度仍未做。`startOn` 只解析，恢复上次会话要等阶段 5。
+- `Ctrl+滚轮` 字号以及 `Ctrl+=` / `Ctrl+-` / `Ctrl+0` 由 mygo 终端插件提供，当前已可用；`Ctrl+Shift+滚轮` 调透明度仍未做。`startOn` 已生效：`new` 让首个标签绕开 `defaultProfile`，直接开设备 shell；`restore`（恢复上次会话）要等阶段 5.1。
 - URL 识别是终端插件自带的（`OpenLink` 默认交给系统打开），不需要额外开关。
 
 **验收**：设置页改任意项 → 保存后立刻生效并写回同一份文件；手动改文件存盘后同样生效；重启后设置保留；配色方案列表能选到 Campbell 与 Ghostty 的名字。
@@ -159,6 +159,36 @@ Linux 上冷启动的 150 MB RSS 里 Go 代码只占约 9 MB，大头是 MyGo �
 **后续项**（要上游或单独一阶段）：`Theme.SetSource` 延迟、向 mygo 要 `Terminal.Pid()`。
 等 shell 出现与跟随 launcher 的轮询已改用内核的 children 文件（ADR-39），启动后
 4 秒内的 `/proc/<pid>/stat` 打开次数从 2098 降到 9。
+
+---
+
+## 阶段 7：主题与终端配色分立
+
+状态：完成（2026-11-14）。ADR-64 部分取代 ADR-31。
+
+窗口底色此前从终端配色推导（`theme.Chrome`），于是 `theme` 与 `colorScheme` 被绑在一起，
+「深色窗口 + 浅色终端」做不到。这一阶段把两件事分开：**主题管界面**（窗口底、标签栏、
+设置页、对话框、文字与 `×`），**配色方案管终端**（16 色、前景、光标、选中）；
+只有活动标签跟着窗格走，免得标签与它下面的终端之间出现接缝。
+
+**做了什么**
+
+1. `internal/theme`：删 `Chrome`；加 `Native(dark)`（mygo 的内置亮/暗）与
+   `Dark(s) (dark, known bool)`（`known` 为假时由 app 问 `mygo.Theme.IsDark()`）；
+   `UITheme` 只认方案名；`base`/`light` 只服务终端的明暗回退。
+2. `internal/ui`：`State` 加 `Pane Face{Background, Foreground}`，活动标签的面、名字与
+   `×` 取自窗格（零值时回落到主题自己的底色），栏底、分隔线、悬停仍取主题。
+3. `internal/app`：`appearance()` 先挑主题（方案名）与明暗，再 `SetSource`，
+   跟随系统时才问 `mygo.Theme.IsDark()`；`background()` 恒为终端底色；
+   `App.pane` 在 `apply()` 里算好并随 `State.Pane` 交给绘制层，哪块面不铺窗格
+   （零值，或最前面的标签是设置页）由 `internal/ui` 自己判断。
+4. 测试：`theme.Dark` 与 `theme.Native` 的表驱动用例；`app.background()` 不跟主题变；
+   `ui` 里活动标签与设置页那块面的像素、名字颜色都取自 `State.Pane` 或主题。
+5. 文档：`使用说明` 第 8 节、`配置参考` 的 `theme` 行、ADR-64（并在 ADR-31 上注明
+   哪些条目被取代）。
+
+**验收**：`theme: light` + `colorScheme: Campbell` 时设置页是浅色、终端是深色，
+活动标签与窗格仍然同色；`gofmt` / `go vet` / `go test` 全过，`build.ps1 -Test` 出包。
 
 ---
 

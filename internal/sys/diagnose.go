@@ -3,6 +3,7 @@ package sys
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -84,8 +85,10 @@ func Tail(path string, limit int64) (string, bool, error) {
 		}
 	}
 	buf := make([]byte, min(st.Size(), limit))
-	n, err := f.Read(buf)
-	if err != nil && n == 0 {
+	// ReadFull, not Read: one Read of a regular file may stop short, and the
+	// tail would then lose the newest lines the reader asked for.
+	n, err := io.ReadFull(f, buf)
+	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
 		return "", false, fmt.Errorf("sys: %w", err)
 	}
 	text := string(buf[:n])
@@ -115,11 +118,16 @@ func nativeName() string {
 
 // NativeLibrary is the libghostty-vt the terminal plugin would load, in the
 // order it looks: $MYGO_GHOSTTY_VT, next to the executable, then the copies
-// the mygo tool downloaded under %LOCALAPPDATA%\mygo\natives.
+// the mygo tool downloaded under %LOCALAPPDATA%\mygo\natives. The variable is
+// the person's choice, but a path it names that is not a file is no answer: the
+// plugin cannot load it, and reporting it as found would hide the copies that
+// would have loaded (E102).
 func NativeLibrary() (string, error) {
 	name := nativeName()
 	if p := os.Getenv("MYGO_GHOSTTY_VT"); p != "" {
-		return p, nil
+		if _, err := os.Stat(p); err == nil {
+			return p, nil
+		}
 	}
 	if exe, err := os.Executable(); err == nil {
 		p := filepath.Join(filepath.Dir(exe), name)

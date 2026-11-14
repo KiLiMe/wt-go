@@ -6,7 +6,6 @@ import (
 	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/transfer"
 
-	"wtgo/internal/i18n"
 	"wtgo/internal/pane"
 	"wtgo/internal/store"
 	"wtgo/internal/sys"
@@ -22,10 +21,13 @@ type ask struct {
 }
 
 // ask asks a question, doing what its answers say when they come. Dismissing
-// the dialog is its no, which the button says.
+// the dialog is its no, which the button says. Whatever other overlay was open
+// goes, and the question is the one the answers answer: a callback that arrives
+// after another overlay took its place must not act.
 func (a *App) ask(q ui.Confirm, yes, no func()) {
 	q.Open = true
 	q.No = locales.Cancel()
+	a.openOverlay(overlayConfirm)
 	a.confirm = &ask{Confirm: q, yes: yes, no: no}
 	a.redraw()
 }
@@ -33,7 +35,7 @@ func (a *App) ask(q ui.Confirm, yes, no func()) {
 // ConfirmYes does what the question asks.
 func (a *App) ConfirmYes() {
 	q := a.confirm
-	a.confirm = nil
+	a.closeOverlay(overlayConfirm)
 	if q != nil && q.yes != nil {
 		q.yes()
 	}
@@ -43,7 +45,7 @@ func (a *App) ConfirmYes() {
 // ConfirmNo drops the question.
 func (a *App) ConfirmNo() {
 	q := a.confirm
-	a.confirm = nil
+	a.closeOverlay(overlayConfirm)
 	if q != nil && q.no != nil {
 		q.no()
 	}
@@ -67,7 +69,7 @@ func (a *App) askPaste(term *terminal.Terminal, d transfer.Data) bool {
 	}
 	a.ask(ui.Confirm{
 		Title: locales.ConfirmPasteTitle(),
-		Text:  i18n.F("confirmPasteText", map[string]any{"count": lines}),
+		Text:  locales.ConfirmPasteText(lines),
 		Yes:   locales.Paste(),
 	}, func() { term.PasteData(d) }, nil)
 	return true
@@ -89,7 +91,7 @@ func (a *App) askCloseSettings(tab *pane.Tab) {
 func (a *App) askCloseTab(tab *pane.Tab, act tabActivity) {
 	a.ask(ui.Confirm{
 		Title: locales.ConfirmCloseTabTitle(),
-		Text:  a.closeText(act, "tabRunningText", "tabUnsureText", "tabAlwaysText"),
+		Text:  a.closeText(act, closeTabTexts),
 		Yes:   locales.Close(),
 	}, func() { a.closeTab(tab) }, nil)
 }
@@ -99,25 +101,56 @@ func (a *App) askCloseTab(tab *pane.Tab, act tabActivity) {
 func (a *App) askCloseOtherTabs(keep *pane.Tab, act tabActivity) {
 	a.ask(ui.Confirm{
 		Title: locales.ConfirmCloseOthersTitle(),
-		Text:  a.closeText(act, "othersRunningText", "othersUnsureText", "othersAlwaysText"),
+		Text:  a.closeText(act, closeOthersTexts),
 		Yes:   locales.Close(),
 	}, func() { a.closeOtherTabs(keep) }, nil)
 }
 
+// askCloseWindow asks whether the window may close, which takes the tabs it
+// holds and the shells they run with it, and closes it when the answer is yes.
+func (a *App) askCloseWindow() {
+	a.ask(ui.Confirm{
+		Title: locales.ConfirmCloseWindowTitle(),
+		Text:  locales.ConfirmCloseWindowText(len(a.panes.Tabs)),
+		Yes:   locales.Close(),
+	}, a.closeWindow, nil)
+}
+
+// closeTexts are what a closing question says for each of the three answers
+// it may give: what still runs, what the window cannot tell, and what closing
+// ends when the settings ask about every tab.
+type closeTexts struct {
+	running func() string
+	unsure  func() string
+	always  func() string
+}
+
+var (
+	closeTabTexts = closeTexts{
+		running: locales.TabRunningText,
+		unsure:  locales.TabUnsureText,
+		always:  locales.TabAlwaysText,
+	}
+	closeOthersTexts = closeTexts{
+		running: locales.OthersRunningText,
+		unsure:  locales.OthersUnsureText,
+		always:  locales.OthersAlwaysText,
+	}
+)
+
 // closeText is what the question says: which programs still run, or, when the
 // settings ask about every tab, what closing it ends. What the window cannot
-// tell is said as that, and not as a program it found. The three are the keys
-// of the messages it may say.
-func (a *App) closeText(act tabActivity, running, unsure, always string) string {
+// tell is said as that, and not as a program it found.
+func (a *App) closeText(act tabActivity, texts closeTexts) string {
 	switch {
 	case a.settings.ConfirmClose == store.ConfirmAlways:
-		return i18n.T(always)
+		return texts.always()
 	case act.act == sys.Unknown:
-		return i18n.T(unsure)
+		return texts.unsure()
 	case len(act.programs) > 0:
 		// Naming the programs is what makes the question answerable: a
 		// shell at its prompt is not, and a program the user forgot is.
-		return i18n.F("closeRunning", map[string]any{"programs": strings.Join(act.programs, ", ")})
+		return locales.CloseRunning(strings.Join(act.programs, ", "))
 	}
-	return i18n.T(running)
+	return texts.running()
 }

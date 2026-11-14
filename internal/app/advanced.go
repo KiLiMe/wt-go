@@ -6,7 +6,6 @@ import (
 	"slices"
 
 	"wtgo/internal/fault"
-	"wtgo/internal/i18n"
 	"wtgo/internal/profile"
 	"wtgo/internal/store"
 	"wtgo/internal/sys"
@@ -56,16 +55,19 @@ func (a *App) rediscover() {
 func (a *App) reset() {
 	if err := sys.RemoveSettings(); err != nil {
 		log.Printf("wt-go: %s", fault.Line(fault.SettingsGone, err.Error()))
-		a.note = i18n.F("errDeleteSettings", map[string]any{"error": fault.Line(fault.SettingsGone, err.Error())})
+		a.note = locales.ErrDeleteSettings(fault.Line(fault.SettingsGone, err.Error()))
 		a.redraw()
 		return
 	}
 	if err := a.relaunch(); err != nil {
 		log.Printf("wt-go: %s", fault.Line(fault.Relaunch, err.Error()))
-		a.note = i18n.F("errRelaunch", map[string]any{"error": fault.Line(fault.Relaunch, err.Error())})
+		a.note = locales.ErrRelaunch(fault.Line(fault.Relaunch, err.Error()))
 		a.redraw()
 		return
 	}
+	// The settings are gone and the window that writes them is on its way:
+	// the question reset asked was the one about closing, so this close does
+	// not ask another.
 	a.closeWindow()
 }
 
@@ -98,7 +100,7 @@ func (a *App) OpenProgramFolder() {
 func (a *App) openFolder(dir string) {
 	if err := sys.OpenPath(dir); err != nil {
 		log.Printf("wt-go: %s", fault.Line(fault.OpenFolder, err.Error()))
-		a.note = i18n.F("errOpenFolder", map[string]any{"error": fault.Line(fault.OpenFolder, err.Error())})
+		a.note = locales.ErrOpenFolder(fault.Line(fault.OpenFolder, err.Error()))
 	}
 	a.redraw()
 }

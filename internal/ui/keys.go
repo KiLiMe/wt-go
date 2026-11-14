@@ -9,15 +9,27 @@ import (
 
 // ParseKey is a keybinding as settings.json writes it, "ctrl+shift+t", and
 // the key it binds, when it names one: the modifiers, the key, and whether
-// the name is one.
+// the name is one. A name that ends in a + writes the + key, as "ctrl++"
+// does, so that it is not read as an empty key name.
 func ParseKey(s string) (myui.Modifiers, myui.Key, bool) {
-	parts := strings.Split(strings.ToLower(strings.TrimSpace(s)), "+")
-	key, ok := keyName(parts[len(parts)-1])
-	if !ok {
-		return 0, 0, false
+	name := strings.ToLower(strings.TrimSpace(s))
+	var parts []string
+	var key myui.Key
+	if rest, isPlus := cutPlusKey(name); isPlus {
+		key = myui.KeyEqual
+		if rest != "" {
+			parts = strings.Split(rest, "+")
+		}
+	} else {
+		parts = strings.Split(name, "+")
+		var ok bool
+		if key, ok = keyName(parts[len(parts)-1]); !ok {
+			return 0, 0, false
+		}
+		parts = parts[:len(parts)-1]
 	}
 	var mods myui.Modifiers
-	for _, part := range parts[:len(parts)-1] {
+	for _, part := range parts {
 		switch strings.TrimSpace(part) {
 		case "ctrl", "control":
 			mods |= myui.Ctrl
@@ -34,9 +46,31 @@ func ParseKey(s string) (myui.Modifiers, myui.Key, bool) {
 	return mods, key, true
 }
 
+// cutPlusKey splits a keybinding that ends in the + key, as "ctrl++",
+// "ctrl+shift++" or "+", into the modifiers and the key: the last + of the run
+// at the end is the key, and the + before it, when there is one, the separator
+// that writes it. It is not enough to end in +: "ctrl+" has no key after that
+// separator, and "++" is only the separator and the key with no modifier
+// before it, so neither writes the + key.
+func cutPlusKey(s string) (string, bool) {
+	if s == "+" {
+		return "", true
+	}
+	mods, ok := strings.CutSuffix(s, "++")
+	if !ok || mods == "" {
+		// "++" is only the separator before the key, so there is no
+		// modifier in its place.
+		return s, false
+	}
+	return mods, true
+}
+
 // keyName is the key a name writes, "tab" or "t", when it is one.
 func keyName(name string) (myui.Key, bool) {
 	if key, ok := aliases[name]; ok {
+		return key, true
+	}
+	if key, ok := symbols[name]; ok {
 		return key, true
 	}
 	for _, n := range named {
@@ -57,6 +91,19 @@ func keyName(name string) (myui.Key, bool) {
 		return myui.KeyF1 + myui.Key(n-1), true
 	}
 	return 0, false
+}
+
+// symbols are the keys a keybinding names by the character it types, "=" for
+// the equal key, so that a person writing one needs no word for it.
+var symbols = map[string]myui.Key{
+	"-":  myui.KeyMinus,
+	"=":  myui.KeyEqual,
+	",":  myui.KeyComma,
+	".":  myui.KeyPeriod,
+	"/":  myui.KeySlash,
+	";":  myui.KeySemicolon,
+	"'":  myui.KeyQuote,
+	"\\": myui.KeyBackslash,
 }
 
 // KeyName is a key, and the name a keybinding writes for it.
@@ -83,6 +130,11 @@ var named = []KeyName{
 	{"left", myui.KeyLeft},
 	{"right", myui.KeyRight},
 	{"minus", myui.KeyMinus},
+	// "plus" is the key an "equal" is with Shift held; ParseKey keeps it as
+	// KeyEqual, so that it is the one spelling of that key, and the one
+	// name FormatKey writes for it. It comes first, since KeyNames also
+	// answers "equal", which would otherwise be the name written for it.
+	{"plus", myui.KeyEqual},
 	{"equal", myui.KeyEqual},
 	{"comma", myui.KeyComma},
 	{"period", myui.KeyPeriod},

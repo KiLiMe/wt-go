@@ -107,26 +107,93 @@ func TestListedRows(t *testing.T) {
 		{action: action.TabGoto + "5"},
 		{action: action.Settings},
 	}
-	changed := map[string]bool{action.TabGoto + "5": true}
+	ks := &PageKeybindings{
+		changed: map[string]bool{action.TabGoto + "5": true},
+		of:      map[string][]string{},
+	}
 
-	out, folded, more := listedRows(rows, nil, changed, Settings{}, "")
+	out, folded, more := listedRows(rows, ks, Settings{}, "")
 	if len(out) != 4 || folded != 2 || more != 2 {
 		t.Errorf("folded = %d rows, %d folded, %d more, want 4, 2, 2", len(out), folded, more)
 	}
 
-	out, folded, more = listedRows(rows, nil, changed, Settings{KeysExpanded: true}, "")
+	out, folded, more = listedRows(rows, ks, Settings{KeysExpanded: true}, "")
 	if len(out) != 6 || folded != 0 || more != 2 {
 		t.Errorf("unfolded = %d rows, %d folded, %d more, want 6, 0, 2", len(out), folded, more)
 	}
 
-	out, folded, _ = listedRows(rows, nil, changed, Settings{OnlyChanged: true}, "")
+	out, folded, _ = listedRows(rows, ks, Settings{OnlyChanged: true}, "")
 	if len(out) != 1 || out[0].action != action.TabGoto+"5" || folded != 0 {
 		t.Errorf("changed only = %v, want the one changed action", out)
 	}
 
-	out, _, _ = listedRows(rows, nil, changed, Settings{}, "tab.goto.2")
+	out, _, _ = listedRows(rows, ks, Settings{}, "tab.goto.2")
 	if len(out) != 1 || out[0].action != action.TabGoto+"2" {
 		t.Errorf("search = %v, want the one action its id names", out)
+	}
+}
+
+// TestPageKeys covers what the page keeps from frame to frame: the same list
+// and switches answer with the same cache, and a list that holds other keys or
+// a switch that changes the rows builds the answer anew.
+func TestPageKeys(t *testing.T) {
+	all := []store.Keybinding{
+		{Key: "ctrl+t", Action: action.TabNew},
+		{Key: "f12", Action: action.TabNew},
+	}
+	st := Settings{}
+	ks := pageKeys(nil, all, st)
+	if ks == nil || len(ks.groups) == 0 {
+		t.Fatalf("pageKeys(nil) = %+v, want the answer derived for the frame", ks)
+	}
+
+	// A page drawn without a cache keeps nothing past its frame.
+	if again := pageKeys(nil, all, st); again == ks {
+		t.Errorf("pageKeys(nil) returned the cache it was handed, want one for the frame alone")
+	}
+
+	kept := &PageKeybindings{}
+	first := pageKeys(kept, all, st)
+	if first != kept {
+		t.Errorf("pageKeys kept the cache and returned %p, want the one it was handed", first)
+	}
+	if got := first.keys(action.TabNew); len(got) != 2 {
+		t.Errorf("keys = %v, want both keys of the file", got)
+	}
+	if !first.changed[action.TabNew] {
+		t.Errorf("%q is not marked changed, though the file adds f12", action.TabNew)
+	}
+	if got := first.clashing["ctrl+t"]; got != 0 {
+		t.Errorf("ctrl+t runs %d actions, want it no clash", got)
+	}
+
+	// The file unchanged and the switches unchanged: the same answer, and the
+	// keys already asked for still kept.
+	if got := pageKeys(kept, all, st); got != first {
+		t.Errorf("pageKeys rebuilt the cache for the file it already held")
+	}
+	if got := pageKeys(kept, all, Settings{KeysExpanded: true}); got != first {
+		t.Errorf("pageKeys rebuilt the cache for a switch that changes no rows")
+	}
+
+	// A switch that changes the rows builds the answer anew.
+	pageKeys(kept, all, Settings{OnlyChanged: true})
+	if !kept.only {
+		t.Errorf("only = false, want the cache to follow the switch")
+	}
+
+	// A list holding other keys builds the answer anew.
+	moved := []store.Keybinding{
+		{Key: "ctrl+t", Action: action.TabNew},
+		{Key: "ctrl+shift+f", Action: action.Find},
+	}
+	before := kept.all
+	pageKeys(kept, moved, Settings{OnlyChanged: true})
+	if len(kept.all) != len(moved) || kept.keys(action.TabNew)[0] != "ctrl+t" || kept.changed[action.Find] {
+		t.Errorf("the cache did not follow the file: %+v", kept)
+	}
+	if &before[0] == &kept.all[0] {
+		t.Errorf("the cache kept the old file's answer")
 	}
 }
 

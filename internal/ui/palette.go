@@ -21,7 +21,7 @@ const (
 )
 
 // Palette is the command palette: open while the window lists what it does,
-// and what the user typed and picked.
+// and what the user typed and picked. The window keeps it from frame to frame.
 type Palette struct {
 	// Open is whether the palette shows; the palette closes it.
 	Open bool
@@ -36,6 +36,13 @@ type Palette struct {
 	// the keys picked is to show.
 	scroll myui.ScrollState
 	reveal bool
+	// matched is what filtering Commands by Filter last found, kept by its
+	// two inputs so that the pointer moving over the list does not run the
+	// filter and the sort again for each frame it draws.
+	matched []Command
+	filter  string
+	cmds    []Command
+	known   bool
 }
 
 // Command is one thing the palette offers.
@@ -59,7 +66,7 @@ func palette(c *myui.Context, st State, act Actions) {
 	}
 	t := c.Theme()
 	room := Content(c)
-	items := Match(p.Filter, p.Commands)
+	items := p.matchedCommands()
 	p.Selected = min(max(p.Selected, 0), max(len(items)-1, 0))
 	reveal, chosen := p.reveal, ""
 	p.reveal = false
@@ -141,6 +148,42 @@ func paletteRow(c *myui.Context, item Command, selected bool) myui.Element {
 		el = el.Background(t.SurfaceHover)
 	}
 	return el
+}
+
+// matchedCommands are what the palette lists: the commands that answer the
+// filter, which is what Match finds. The window builds the commands for the
+// frame, the same ones until the tabs, the profiles or the keys change, so
+// they are compared with what the answer was found among rather than sorted
+// again. A palette is drawn on the goroutine that draws its window.
+func (p *Palette) matchedCommands() []Command {
+	if p.known && p.filter == p.Filter && sameCommands(p.cmds, p.Commands) {
+		return p.matched
+	}
+	items := Match(p.Filter, p.Commands)
+	if items == nil {
+		// nil stands for an answer never found, and the next frame still
+		// finds it here.
+		items = []Command{}
+	}
+	p.matched = items
+	p.filter = p.Filter
+	p.cmds = append(p.cmds[:0], p.Commands...)
+	p.known = true
+	return items
+}
+
+// sameCommands reports whether two lists offer the same commands, in the same
+// order.
+func sameCommands(a, b []Command) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // Match is the commands that answer a filter: the ones whose title holds what

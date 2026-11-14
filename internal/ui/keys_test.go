@@ -22,7 +22,21 @@ func TestParseKey(t *testing.T) {
 		{"alt+f4", myui.Alt, myui.KeyF4},
 		{"win+enter", myui.Super, myui.KeyEnter},
 		{"ctrl+minus", myui.Ctrl, myui.KeyMinus},
+		{"ctrl+0", myui.Ctrl, myui.Key0},
+		{"ctrl+-", myui.Ctrl, myui.KeyMinus},
+		{"minus", 0, myui.KeyMinus},
+		{"=", 0, myui.KeyEqual},
+		{"equal", 0, myui.KeyEqual},
+		{"ctrl+=", myui.Ctrl, myui.KeyEqual},
+		{"ctrl+equal", myui.Ctrl, myui.KeyEqual},
 		{" Ctrl+Shift+D ", myui.Ctrl | myui.Shift, myui.KeyD},
+		// The + key ends the name, so it is written as the separator and
+		// then the key: "ctrl++" is Ctrl and +, not Ctrl and an empty name.
+		{"+", 0, myui.KeyEqual},
+		{"ctrl++", myui.Ctrl, myui.KeyEqual},
+		{"ctrl+shift++", myui.Ctrl | myui.Shift, myui.KeyEqual},
+		{"ctrl+plus", myui.Ctrl, myui.KeyEqual},
+		{" Ctrl++ ", myui.Ctrl, myui.KeyEqual},
 	}
 	for _, tt := range tests {
 		mods, key, ok := ParseKey(tt.key)
@@ -32,11 +46,40 @@ func TestParseKey(t *testing.T) {
 	}
 }
 
-// TestParseKeyRejects covers names that bind no key.
+// TestParseKeyRejects covers names that bind no key: a name that ends in a +
+// with no key after it, as "ctrl+", names no key, and neither does "++",
+// which is only the separator and the key with no modifier before it.
 func TestParseKeyRejects(t *testing.T) {
-	for _, key := range []string{"", "ctrl+", "ctrl+nope", "ctrl+shift+f13", "hyper+t", "ctrl+!"} {
-		if _, _, ok := ParseKey(key); ok {
-			t.Errorf("ParseKey(%q) bound a key", key)
+	for _, key := range []string{"", "ctrl+", "ctrl+shift+", "++", "+a", "ctrl+nope", "ctrl+shift+f13", "hyper+t", "ctrl+!"} {
+		if mods, k, ok := ParseKey(key); ok {
+			t.Errorf("ParseKey(%q) bound %v, %v", key, mods, k)
+		}
+	}
+}
+
+// TestFormatKeyRoundTrip checks that the one name FormatKey writes for a key
+// parses back to that key, so that the settings page and the default
+// keybindings agree on how the + and - keys are spelled.
+func TestFormatKeyRoundTrip(t *testing.T) {
+	tests := []struct {
+		mods myui.Modifiers
+		key  myui.Key
+		want string
+	}{
+		{myui.Ctrl, myui.KeyEqual, "ctrl+plus"},
+		{myui.Ctrl | myui.Shift, myui.KeyEqual, "ctrl+shift+plus"},
+		{0, myui.KeyEqual, "plus"},
+		{myui.Ctrl, myui.KeyMinus, "ctrl+minus"},
+	}
+	for _, tt := range tests {
+		got, ok := FormatKey(tt.mods, tt.key)
+		if !ok || got != tt.want {
+			t.Errorf("FormatKey(%v, %v) = %q, %v", tt.mods, tt.key, got, ok)
+			continue
+		}
+		mods, key, parsed := ParseKey(got)
+		if !parsed || mods != tt.mods || key != tt.key {
+			t.Errorf("ParseKey(%q) = %v, %v, %v", got, mods, key, parsed)
 		}
 	}
 }
@@ -75,9 +118,9 @@ func TestFormatKey(t *testing.T) {
 	}
 }
 
-// TestFormatKeyRoundTrip covers that a key FormatKey writes parses back to the
-// same modifiers and key.
-func TestFormatKeyRoundTrip(t *testing.T) {
+// TestFormatKeyAllRoundTrip covers that every key FormatKey writes parses back
+// to the same modifiers and key.
+func TestFormatKeyAllRoundTrip(t *testing.T) {
 	tests := []struct {
 		mods myui.Modifiers
 		key  myui.Key
@@ -88,6 +131,8 @@ func TestFormatKeyRoundTrip(t *testing.T) {
 		{myui.Ctrl | myui.Super, myui.KeyT},
 		{myui.Shift | myui.Alt, myui.KeyF12},
 		{myui.Ctrl | myui.Shift | myui.Alt | myui.Super, myui.KeyPageDown},
+		{myui.Ctrl, myui.KeyEqual},
+		{0, myui.KeyMinus},
 	}
 	for _, tt := range tests {
 		name, ok := FormatKey(tt.mods, tt.key)
@@ -97,6 +142,28 @@ func TestFormatKeyRoundTrip(t *testing.T) {
 		mods, key, ok := ParseKey(name)
 		if !ok || mods != tt.mods || key != tt.key {
 			t.Errorf("ParseKey(FormatKey(%v, %v)) = ParseKey(%q) = %v, %v, %v", tt.mods, tt.key, name, mods, key, ok)
+		}
+	}
+}
+
+// TestParseKeySymbols covers the keys named by the character they type.
+func TestParseKeySymbols(t *testing.T) {
+	tests := []struct {
+		key  string
+		want myui.Key
+	}{
+		{"-", myui.KeyMinus},
+		{"=", myui.KeyEqual},
+		{",", myui.KeyComma},
+		{".", myui.KeyPeriod},
+		{"/", myui.KeySlash},
+		{";", myui.KeySemicolon},
+		{"'", myui.KeyQuote},
+		{"\\", myui.KeyBackslash},
+	}
+	for _, tt := range tests {
+		if _, key, ok := ParseKey(tt.key); !ok || key != tt.want {
+			t.Errorf("ParseKey(%q) = %v, %v, want %v", tt.key, key, ok, tt.want)
 		}
 	}
 }

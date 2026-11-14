@@ -3,14 +3,16 @@ package app
 import (
 	"testing"
 
+	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/plugins/terminal"
 
 	"wtgo/internal/action"
-	"wtgo/internal/i18n"
 	"wtgo/internal/layout"
 	"wtgo/internal/pane"
 	"wtgo/internal/profile"
 	"wtgo/internal/store"
+	"wtgo/internal/sys"
+	"wtgo/locales"
 )
 
 // TestLabel covers what a tab is called.
@@ -34,7 +36,7 @@ func TestLabel(t *testing.T) {
 		// strip with a close button on it is what the word below was for.
 		{"", "", "", "bash", "bash"},
 		{"", "", "", "pwsh", "pwsh"},
-		{"", "", "", "", i18n.T("systemProfile")},
+		{"", "", "", "", locales.SystemProfile()},
 	} {
 		if got := label(tc.name, tc.title, tc.profile, tc.runs); got != tc.want {
 			t.Errorf("label(%q, %q, %q, %q) = %q, want %q",
@@ -56,6 +58,35 @@ func TestTabNamesTheShellItRuns(t *testing.T) {
 	tab.ProfileName = "Ubuntu"
 	if got := a.tabName(tab); got != "Ubuntu" {
 		t.Errorf("tabName() = %q with a profile name, want Ubuntu", got)
+	}
+}
+
+// TestTabNameNilRoot covers a tab whose tree holds no pane while the window
+// names tabs by the first pane: there is nothing to read a title from, so the
+// tab keeps the name it was given rather than panicking.
+func TestTabNameNilRoot(t *testing.T) {
+	a := &App{}
+	a.settings.TitleFromActiveTerminal = false
+	// This test says what a tab is called, so it says it in English whatever
+	// the machine's language is set to by the tests before it.
+	mygo.App.SetLocale("en")
+	for _, tc := range []struct {
+		name string
+		tab  *pane.Tab
+		want string
+	}{
+		{"a tab of no panes", &pane.Tab{Focus: &pane.Node{}}, locales.SystemProfile()},
+		// A tab that lost its tree still has a name, and says it.
+		{"a tab of no panes with a name", &pane.Tab{Name: "build", Focus: &pane.Node{}}, "build"},
+		{"a tab of no panes with a profile", &pane.Tab{ProfileName: "Ubuntu", Focus: &pane.Node{}}, "Ubuntu"},
+		{"a tab of no panes that runs a shell", &pane.Tab{Runs: "bash", Focus: &pane.Node{}}, "bash"},
+		// The root is there but holds no terminal, so First finds no pane to
+		// take a title from either.
+		{"a tab whose root holds no terminal", &pane.Tab{Root: &pane.Node{}, Focus: &pane.Node{}}, locales.SystemProfile()},
+	} {
+		if got := a.tabName(tc.tab); got != tc.want {
+			t.Errorf("%s: tabName() = %q, want %q", tc.name, got, tc.want)
+		}
 	}
 }
 
@@ -167,6 +198,137 @@ func TestCloseOtherTabsDropsTheSettingsTab(t *testing.T) {
 	}
 }
 
+// headlessTerminal is a terminal connected to nothing, which the close of a
+// tab can close without a shell of the machine behind it.
+func headlessTerminal(t *testing.T) *terminal.Terminal {
+	t.Helper()
+	term, err := terminal.New(terminal.Options{Conn: sink{}, NoExitMessage: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return term
+}
+
+// sink is the other end of a headless terminal: it never sends anything, and
+// takes what the terminal writes.
+type sink struct{}
+
+func (sink) Read([]byte) (int, error)    { select {} }
+func (sink) Write(p []byte) (int, error) { return len(p), nil }
+func (sink) Close() error                { return nil }
+
+// TestCloseOtherTabsForgetsTerminals covers Keep forgetting the processes of
+// the tabs it drops: the maps of terminals to processes and of processes to
+// terminals do not grow with every batch of tabs a window ever closed.
+func TestCloseOtherTabsForgetsTerminals(t *testing.T) {
+	if err := terminal.Load(); err != nil {
+		t.Skip(err)
+	}
+	a := &App{
+		shells: map[*terminal.Terminal]sys.ShellProc{},
+		taken:  map[int]*terminal.Terminal{},
+	}
+	var tabs []*pane.Tab
+	for i := range 3 {
+		tab := pane.New(headlessTerminal(t))
+		tab.Split(layout.SideBySide, headlessTerminal(t))
+		a.panes.Add(tab)
+		for n, term := range tab.Terminals() {
+			pid := 100*(n+1) + i
+			a.shells[term] = sys.ShellProc{Pid: pid}
+			a.taken[pid] = term
+		}
+		tabs = append(tabs, tab)
+	}
+	keep := tabs[1]
+	kept := make(map[*terminal.Terminal]bool)
+	for _, term := range keep.Terminals() {
+		kept[term] = true
+	}
+
+	a.closeOtherTabs(keep)
+
+	for _, term := range keep.Terminals() {
+		if _, ok := a.shells[term]; !ok {
+			t.Errorf("the kept tab lost its shell process %p", term)
+		}
+	}
+	for pid, term := range a.taken {
+		if !kept[term] {
+			t.Errorf("taken[%d] still belongs to a closed tab", pid)
+		}
+	}
+	for _, tab := range []*pane.Tab{tabs[0], tabs[2]} {
+		for _, term := range tab.Terminals() {
+			if _, ok := a.shells[term]; ok {
+				t.Errorf("a closed tab kept its shell process %p", term)
+			}
+		}
+	}
+	if got, want := len(a.shells), 2; got != want {
+		t.Errorf("shells = %d, want the %d of the kept tab", got, want)
+	}
+	// The kept tab's terminals are the only owners left, one pid each.
+	if got, want := len(a.taken), 2; got != want {
+		t.Errorf("taken = %d, want the %d of the kept tab", got, want)
+	}
+}
+
+// TestNewTerminalDoesNotLeakAfterClose covers the write-back of a process to a
+// terminal the user closed while the window was still looking for it: neither
+// map keeps the terminal, so they do not grow with every tab that came and
+// went before its shell showed.
+func TestNewTerminalDoesNotLeakAfterClose(t *testing.T) {
+	if err := terminal.Load(); err != nil {
+		t.Skip(err)
+	}
+	for _, tc := range []struct {
+		name string
+		// keep is whether the strip still holds the terminal, closed says
+		// whether its program ended.
+		keep, closed bool
+	}{
+		{"a closed terminal in no tab", false, true},
+		{"a live terminal in no tab", false, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			a := &App{
+				shells: map[*terminal.Terminal]sys.ShellProc{},
+				taken:  map[int]*terminal.Terminal{},
+			}
+			term := headlessTerminal(t)
+			if tc.keep {
+				a.panes.Add(pane.New(term))
+			}
+			// The search took the process before the tab went away.
+			const pid = 4242
+			if !a.claim(pid, term) {
+				t.Fatal("the process was already taken")
+			}
+			a.taken[pid+1] = term
+			if tc.closed {
+				term.Close()
+			}
+
+			shell := sys.ShellProc{Pid: pid}
+			if a.recordShell(term, shell) {
+				t.Error("recordShell kept a terminal no tab shows")
+			}
+			a.moveShell(term, pid-1, sys.ShellProc{Pid: pid + 1})
+
+			if _, ok := a.shells[term]; ok {
+				t.Error("the terminal was written back into shells")
+			}
+			if got := len(a.taken); got != 0 {
+				t.Errorf("taken = %d, want the processes of the closed terminal dropped", got)
+			}
+			if got, want := a.hasTerminal(term), tc.keep; got != want {
+				t.Errorf("hasTerminal() = %v, want %v", got, want)
+			}
+		})
+	}
+}
+
 // TestTabProfile covers what a tab opened without a profile of its own runs:
 // the default profile, the way the click on the strip's '+' and the keybinding
 // for a new tab both ask for it, and the shell of the machine when that names
@@ -192,6 +354,85 @@ func TestTabProfile(t *testing.T) {
 		if got := a.tabProfile(tc.id); got.ID != tc.want {
 			t.Errorf("%s: tabProfile(%q) = %q, want %q", tc.name, tc.id, got.ID, tc.want)
 		}
+	}
+}
+
+// TestCloseLastTabClosesTheWindow closes the last tab of a window that says
+// so: the window goes with it. With one tab there is nothing to ask about, so
+// the close asks nothing even with the question turned on.
+func TestCloseLastTabClosesTheWindow(t *testing.T) {
+	a := &App{}
+	a.settings.CloseOnLastTab = true
+	a.settings.ConfirmCloseWindow = true
+	a.panes.Add(&pane.Tab{Name: "bash"})
+
+	a.CloseTab(0)
+	if a.confirm != nil {
+		t.Fatalf("asked %q about a window with one tab", a.confirm.Title)
+	}
+	if !a.closing {
+		t.Fatal("the last tab left the window open")
+	}
+}
+
+// TestWindowAsksBeforeItCloses covers the close the settings ask about, as the
+// window's own button and Alt+F4 raise it: the question says how many tabs go
+// with it, cancelling leaves everything as it was, and the answer goes on to
+// close the window without a second question.
+func TestWindowAsksBeforeItCloses(t *testing.T) {
+	a := &App{}
+	a.settings.ConfirmCloseWindow = true
+	a.panes.Add(&pane.Tab{Name: "bash"})
+	a.panes.Add(&pane.Tab{Name: "pwsh"})
+	a.panes.Add(&pane.Tab{Name: "zsh"})
+
+	e := &mygo.CloseEvent{}
+	a.onClose(e)
+	if !e.DefaultPrevented() {
+		t.Fatal("the window closed without asking")
+	}
+	if a.confirm == nil {
+		t.Fatal("the window kept itself open without a question")
+	}
+	if got := a.confirm.Title; got != locales.ConfirmCloseWindowTitle() {
+		t.Errorf("question = %q, want %q", got, locales.ConfirmCloseWindowTitle())
+	}
+	if got, want := a.confirm.Text, locales.ConfirmCloseWindowText(3); got != want {
+		t.Errorf("question says %q, want %q", got, want)
+	}
+	a.ConfirmNo()
+	if a.closing {
+		t.Error("cancelling left the window on its way out")
+	}
+	if len(a.panes.Tabs) != 3 {
+		t.Errorf("tabs = %d after cancelling, want the three kept", len(a.panes.Tabs))
+	}
+	e = &mygo.CloseEvent{}
+	a.onClose(e)
+	if !e.DefaultPrevented() || a.confirm == nil {
+		t.Fatal("the second try closed without asking")
+	}
+	a.ConfirmYes()
+	if !a.closing {
+		t.Fatal("saying yes left the window open")
+	}
+	again := &mygo.CloseEvent{}
+	a.onClose(again)
+	if again.DefaultPrevented() {
+		t.Error("the window asked a second time about the close it agreed to")
+	}
+}
+
+// TestWindowDoesNotAskWhenTheSettingsDoNot covers the same close with the
+// settings off: the window goes without a word.
+func TestWindowDoesNotAskWhenTheSettingsDoNot(t *testing.T) {
+	a := &App{}
+	a.panes.Add(&pane.Tab{Name: "bash"})
+	a.panes.Add(&pane.Tab{Name: "pwsh"})
+	e := &mygo.CloseEvent{}
+	a.onClose(e)
+	if e.DefaultPrevented() || a.confirm != nil {
+		t.Fatal("the window asked while the settings do not")
 	}
 }
 

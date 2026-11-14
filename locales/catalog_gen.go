@@ -1064,6 +1064,36 @@ func (msgs Messages) AboutRuntime() string {
 	return Catalog.Format(msgs.locale, "aboutRuntime", nil)
 }
 
+// AboutMygo says "mygo"
+// in the language the app shows.
+func AboutMygo() string { return In(i18n.Locale()).AboutMygo() }
+
+// AboutMygo says "mygo"
+// in the language of msgs.
+func (msgs Messages) AboutMygo() string {
+	return Catalog.Format(msgs.locale, "aboutMygo", nil)
+}
+
+// AboutSettings says "Settings file"
+// in the language the app shows.
+func AboutSettings() string { return In(i18n.Locale()).AboutSettings() }
+
+// AboutSettings says "Settings file"
+// in the language of msgs.
+func (msgs Messages) AboutSettings() string {
+	return Catalog.Format(msgs.locale, "aboutSettings", nil)
+}
+
+// AboutLog says "Log"
+// in the language the app shows.
+func AboutLog() string { return In(i18n.Locale()).AboutLog() }
+
+// AboutLog says "Log"
+// in the language of msgs.
+func (msgs Messages) AboutLog() string {
+	return Catalog.Format(msgs.locale, "aboutLog", nil)
+}
+
 // License says "License"
 // in the language the app shows.
 func License() string { return In(i18n.Locale()).License() }
@@ -1172,6 +1202,26 @@ func CloseOnLastTabNote() string { return In(i18n.Locale()).CloseOnLastTabNote()
 // in the language of msgs.
 func (msgs Messages) CloseOnLastTabNote() string {
 	return Catalog.Format(msgs.locale, "closeOnLastTabNote", nil)
+}
+
+// ConfirmCloseWindow says "Confirm close window"
+// in the language the app shows.
+func ConfirmCloseWindow() string { return In(i18n.Locale()).ConfirmCloseWindow() }
+
+// ConfirmCloseWindow says "Confirm close window"
+// in the language of msgs.
+func (msgs Messages) ConfirmCloseWindow() string {
+	return Catalog.Format(msgs.locale, "confirmCloseWindow", nil)
+}
+
+// ConfirmCloseWindowNote says "Ask before the window closes with more than one tab."
+// in the language the app shows.
+func ConfirmCloseWindowNote() string { return In(i18n.Locale()).ConfirmCloseWindowNote() }
+
+// ConfirmCloseWindowNote says "Ask before the window closes with more than one tab."
+// in the language of msgs.
+func (msgs Messages) ConfirmCloseWindowNote() string {
+	return Catalog.Format(msgs.locale, "confirmCloseWindowNote", nil)
 }
 
 // CopyOnSelect says "Copy on select"
@@ -1834,6 +1884,26 @@ func (msgs Messages) CommandLineNote() string {
 	return Catalog.Format(msgs.locale, "commandLineNote", nil)
 }
 
+// DiscoveredProfileNote says "The shell the window found on this machine; its path is not edited here."
+// in the language the app shows.
+func DiscoveredProfileNote() string { return In(i18n.Locale()).DiscoveredProfileNote() }
+
+// DiscoveredProfileNote says "The shell the window found on this machine; its path is not edited here."
+// in the language of msgs.
+func (msgs Messages) DiscoveredProfileNote() string {
+	return Catalog.Format(msgs.locale, "discoveredProfileNote", nil)
+}
+
+// CommandEmptyHint says "Empty: this profile runs the shell the system starts. To run a program of your own, type its path, such as {hint}."
+// in the language the app shows.
+func CommandEmptyHint(hint string) string { return In(i18n.Locale()).CommandEmptyHint(hint) }
+
+// CommandEmptyHint says "Empty: this profile runs the shell the system starts. To run a program of your own, type its path, such as {hint}."
+// in the language of msgs.
+func (msgs Messages) CommandEmptyHint(hint string) string {
+	return Catalog.Format(msgs.locale, "commandEmptyHint", map[string]any{"hint": hint})
+}
+
 // Arguments says "Arguments"
 // in the language the app shows.
 func Arguments() string { return In(i18n.Locale()).Arguments() }
@@ -2134,6 +2204,26 @@ func (msgs Messages) ConfirmCloseOthersTitle() string {
 	return Catalog.Format(msgs.locale, "confirmCloseOthersTitle", nil)
 }
 
+// ConfirmCloseWindowTitle says "Close the window?"
+// in the language the app shows.
+func ConfirmCloseWindowTitle() string { return In(i18n.Locale()).ConfirmCloseWindowTitle() }
+
+// ConfirmCloseWindowTitle says "Close the window?"
+// in the language of msgs.
+func (msgs Messages) ConfirmCloseWindowTitle() string {
+	return Catalog.Format(msgs.locale, "confirmCloseWindowTitle", nil)
+}
+
+// ConfirmCloseWindowText says "Closing the window closes all {count} tabs at once."
+// in the language the app shows.
+func ConfirmCloseWindowText(count int) string { return In(i18n.Locale()).ConfirmCloseWindowText(count) }
+
+// ConfirmCloseWindowText says "Closing the window closes all {count} tabs at once."
+// in the language of msgs.
+func (msgs Messages) ConfirmCloseWindowText(count int) string {
+	return Catalog.Format(msgs.locale, "confirmCloseWindowText", map[string]any{"count": count})
+}
+
 // CloseRunning says "Still running: {programs}"
 // in the language the app shows.
 func CloseRunning(programs string) string { return In(i18n.Locale()).CloseRunning(programs) }
@@ -2282,6 +2372,16 @@ func SettingsChangedNote() string { return In(i18n.Locale()).SettingsChangedNote
 // in the language of msgs.
 func (msgs Messages) SettingsChangedNote() string {
 	return Catalog.Format(msgs.locale, "settingsChangedNote", nil)
+}
+
+// SaveRefusedNote says "Not saved: correct what is wrong and save again, or discard your changes."
+// in the language the app shows.
+func SaveRefusedNote() string { return In(i18n.Locale()).SaveRefusedNote() }
+
+// SaveRefusedNote says "Not saved: correct what is wrong and save again, or discard your changes."
+// in the language of msgs.
+func (msgs Messages) SaveRefusedNote() string {
+	return Catalog.Format(msgs.locale, "saveRefusedNote", nil)
 }
 
 // ErrSettingsInvalid says "settings.json is not valid: {error}; the original was kept at {path}"

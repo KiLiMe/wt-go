@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"sort"
 )
 
@@ -17,8 +18,15 @@ import (
 // own in initialize; we answer with ours, as the spec allows.
 const ProtocolVersion = "2025-06-18"
 
+// maxLine is the longest single message the server reads. A client that sends
+// a bigger one is not speaking this protocol, and reading it anyway would let
+// one request decide how much memory the process takes.
+const maxLine = 1 << 20
+
 // JSON-RPC error codes.
 const (
+	CodeParse     = -32700
+	CodeInvalid   = -32600
 	CodeNoMethod  = -32601
 	CodeBadParams = -32602
 	CodeInternal  = -32603
@@ -84,31 +92,54 @@ type response struct {
 // ErrNoStream is what Serve answers without somewhere to read or write.
 var ErrNoStream = errors.New("mcp: In and Out are both needed")
 
-// Serve reads messages until the stream ends.
+// Serve reads messages until the stream ends. It reads one line per message
+// rather than a json.Decoder on the stream: a decoder that fails half way
+// leaves the stream between messages and every later request is read
+// wrongly, while a line is a boundary the framing already gives us.
 func (s *Server) Serve() error {
 	if s.In == nil || s.Out == nil {
 		return ErrNoStream
 	}
-	dec := json.NewDecoder(bufio.NewReaderSize(s.In, 1<<20))
+	sc := bufio.NewScanner(bufio.NewReaderSize(s.In, 64<<10))
+	sc.Buffer(make([]byte, 0, 64<<10), maxLine)
 	enc := json.NewEncoder(s.Out)
-	for {
-		var req request
-		if err := dec.Decode(&req); err != nil {
-			if err == io.EOF {
-				return nil
-			}
-			// One bad message must not end the session.
-			s.logf("bad message: %v", err)
+	for sc.Scan() {
+		line := sc.Bytes()
+		if len(line) == 0 {
 			continue
 		}
-		// Notifications (no id) get no answer.
+		var req request
+		if err := json.Unmarshal(line, &req); err != nil {
+			// One bad line must not end the session: the next line is still
+			// a message, and the client is told which one it got wrong.
+			s.logf("bad message: %v", err)
+			if err := enc.Encode(&response{
+				JSONRPC: "2.0",
+				Error:   &RPCError{Code: CodeParse, Message: "parse error: " + err.Error()},
+			}); err != nil {
+				return err
+			}
+			continue
+		}
+		// Notifications (no id) get no answer, valid or not: the protocol
+		// has nowhere to put one.
 		if len(req.ID) == 0 {
+			if req.JSONRPC != "2.0" {
+				s.logf("bad message: jsonrpc = %q", req.JSONRPC)
+			}
 			continue
 		}
 		if err := enc.Encode(s.handle(&req)); err != nil {
 			return err
 		}
 	}
+	if err := sc.Err(); err != nil && err != io.EOF {
+		// A line over maxLine means the client's message was never read:
+		// say so and end, since the rest of the stream is half of it.
+		s.logf("read: %v", err)
+		return err
+	}
+	return nil
 }
 
 func (s *Server) logf(format string, a ...any) {
@@ -119,6 +150,12 @@ func (s *Server) logf(format string, a ...any) {
 
 func (s *Server) handle(req *request) *response {
 	res := &response{JSONRPC: "2.0", ID: req.ID}
+	// The spec names the version in every message; a request that spells it
+	// another way is not one we can answer with confidence.
+	if req.JSONRPC != "2.0" {
+		res.Error = &RPCError{Code: CodeInvalid, Message: fmt.Sprintf("invalid request: jsonrpc = %q, want \"2.0\"", req.JSONRPC)}
+		return res
+	}
 	result, rerr := s.dispatch(req)
 	if rerr != nil {
 		res.Error = rerr
@@ -273,14 +310,19 @@ func ArgInt(args map[string]any, key string, def, min, max int) int {
 	if !ok {
 		return def
 	}
-	n := int(v)
-	if n < min {
-		n = min
+	// A JSON number is a float64, and int(v) on one that is not finite or is
+	// outside int64 is undefined in Go: it wraps to a value inside the range
+	// that the clamp below would then let through.
+	if math.IsNaN(v) || math.IsInf(v, 0) {
+		return def
 	}
-	if n > max {
-		n = max
+	if v <= float64(min) {
+		return min
 	}
-	return n
+	if v >= float64(max) {
+		return max
+	}
+	return int(v)
 }
 
 // ArgBool reads a boolean argument.

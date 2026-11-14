@@ -4,6 +4,7 @@
 package store
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -66,11 +67,18 @@ func (c *Confirm) UnmarshalJSON(data []byte) error {
 // MarshalJSON writes the answer as the word the setting documents.
 func (c Confirm) MarshalJSON() ([]byte, error) { return json.Marshal(string(c)) }
 
+// What startOn takes: the default profile first, or a new tab of the machine's
+// shell.
+const (
+	StartDefault = "default"
+	StartNew     = "new"
+)
+
 // Settings is settings.json, as docs/使用说明.md describes it.
 type Settings struct {
 	Language       string `json:"language"`
 	Theme          string `json:"theme"`
-	DefaultProfile string `json:"defaultProfile,omitempty"`
+	DefaultProfile string `json:"defaultProfile"`
 	StartOn        string `json:"startOn"`
 	StartDirectory string `json:"startDirectory"`
 
@@ -97,6 +105,9 @@ type Settings struct {
 	PasteMultilineConfirm bool    `json:"pasteMultilineConfirm"`
 	ConfirmClose          Confirm `json:"confirmClose"`
 	CloseOnLastTab        bool    `json:"closeOnLastTab"`
+	// ConfirmCloseWindow is whether the window asks before it closes with the
+	// tabs it holds.
+	ConfirmCloseWindow bool `json:"confirmCloseWindow"`
 	// ScrollMultiplier scales how far the wheel and the touchpad scroll:
 	// 1 scrolls the way the wheel's own setting says.
 	ScrollMultiplier float32 `json:"scrollMultiplier"`
@@ -123,6 +134,12 @@ type Settings struct {
 	Schemes     []Scheme     `json:"schemes"`
 	Profiles    []Profile    `json:"profiles"`
 	Keybindings []Keybinding `json:"keybindings"`
+
+	// Extra is the keys the file holds that no field above names, kept as
+	// they were written so that saving from the settings page does not drop
+	// a hand-written key or one a later version of the file knows. It is not
+	// part of the settings themselves: Equal, Clone and Validate leave it be.
+	Extra map[string]json.RawMessage `json:"-"`
 }
 
 // Font is the font of a terminal's text.
@@ -194,6 +211,7 @@ func Default() Settings {
 		PasteMultilineConfirm: true,
 		ConfirmClose:          ConfirmRunning,
 		CloseOnLastTab:        true,
+		ConfirmCloseWindow:    true,
 		NewTabPosition:        "last",
 		TabWidth:              "compact",
 		MaxPanes:              4,
@@ -202,9 +220,18 @@ func Default() Settings {
 }
 
 // Equal reports whether two sets of settings are the same, which is how the
-// window knows whether what it shows is what the file holds.
+// window knows whether what it shows is what the file holds. The keys no field
+// names are not settings: a file that differs only in them holds what the
+// window shows.
 func Equal(a, b Settings) bool {
-	return reflect.DeepEqual(a, b)
+	return reflect.DeepEqual(withoutExtra(a), withoutExtra(b))
+}
+
+// withoutExtra is s without the keys no field names, for the comparisons that
+// ask what the settings say rather than what the file also holds.
+func withoutExtra(s Settings) Settings {
+	s.Extra = nil
+	return s
 }
 
 // EqualProfile reports whether two profiles are the same, which is how the
@@ -226,6 +253,8 @@ func (s Settings) Clone() Settings {
 		out.Profiles[i].Args = append([]string(nil), s.Profiles[i].Args...)
 	}
 	out.Keybindings = append([]Keybinding(nil), s.Keybindings...)
+	// Extra is shared like the strings are: a form edits the settings, never
+	// the map of keys it does not know.
 	return out
 }
 
@@ -240,22 +269,90 @@ func Parse(b []byte) (Settings, error) {
 	if err := json.Unmarshal(b, &s); err != nil {
 		return Settings{}, fmt.Errorf("settings: %w", err)
 	}
+	// A key no field names is kept as it was written, so that saving from the
+	// settings page does not drop what a person or a later version put there.
+	// Reading b twice rather than teaching Settings to read itself keeps the
+	// struct a plain shape to write, and a file that is not an object at all is
+	// already rejected above.
+	var all map[string]json.RawMessage
+	if err := json.Unmarshal(b, &all); err != nil {
+		return Settings{}, fmt.Errorf("settings: %w", err)
+	}
+	for key := range knownKeys {
+		delete(all, key)
+	}
+	if len(all) > 0 {
+		s.Extra = all
+	} else {
+		s.Extra = nil
+	}
 	if tag, ok := languageNames[s.Language]; ok {
 		s.Language = tag
 	}
+	// A word no setting takes is a hand-written mistake, not a range to
+	// refuse a file over: it goes back to the default, as docs/配置参考.md
+	// says of the names that are not one of the words. The ranges below are
+	// different — a font no program can draw is a file the window cannot run.
+	s.fallbackUnknown()
 	if err := s.Validate(); err != nil {
 		return Settings{}, err
 	}
 	return s, nil
 }
 
-// Marshal writes settings.json.
+// knownKeys are the keys Settings has a field for, and so the ones Extra does
+// not keep. A key added to Settings without being added here would be kept in
+// Extra too, which Marshal writes second: the field would win, and the test of
+// the two lists would say so.
+var knownKeys = map[string]struct{}{
+	"language": {}, "theme": {}, "defaultProfile": {}, "startOn": {},
+	"startDirectory": {},
+
+	"font": {}, "colorScheme": {}, "padding": {}, "backgroundOpacity": {},
+	"cursorShape": {}, "cursorBlink": {}, "scrollbackMB": {},
+	"paddingColor": {}, "minimumContrast": {},
+
+	"copyOnSelect": {}, "rightClick": {}, "pasteMultilineConfirm": {},
+	"confirmClose": {}, "closeOnLastTab": {}, "confirmCloseWindow": {},
+	"scrollMultiplier": {}, "clipboardRead": {}, "clipboardWrite": {},
+
+	"newTabPosition": {}, "tabWidth": {}, "alwaysOnTop": {},
+	"titleFromActiveTerminal": {},
+
+	"maxPanes": {},
+
+	"schemes": {}, "profiles": {}, "keybindings": {},
+}
+
+// Marshal writes settings.json, with the keys Parse kept that no field names:
+// a file that a person extended by hand, or one a later version wrote, keeps
+// what this window does not understand. A key a field names is written as the
+// field now holds it.
 func Marshal(s Settings) ([]byte, error) {
-	b, err := json.MarshalIndent(s, "", "  ")
+	b, err := json.Marshal(s)
 	if err != nil {
 		return nil, fmt.Errorf("settings: %w", err)
 	}
-	return append(b, '\n'), nil
+	if len(s.Extra) > 0 {
+		fields := map[string]json.RawMessage{}
+		if err := json.Unmarshal(b, &fields); err != nil {
+			return nil, fmt.Errorf("settings: %w", err)
+		}
+		for k, v := range s.Extra {
+			if _, known := fields[k]; !known {
+				fields[k] = v
+			}
+		}
+		if b, err = json.Marshal(fields); err != nil {
+			return nil, fmt.Errorf("settings: %w", err)
+		}
+	}
+	var indented bytes.Buffer
+	if err := json.Indent(&indented, b, "", "  "); err != nil {
+		return nil, fmt.Errorf("settings: %w", err)
+	}
+	indented.WriteByte('\n')
+	return indented.Bytes(), nil
 }
 
 // DefaultKeybindings are the keys the actions start on, as the action catalog

@@ -65,6 +65,13 @@
 | ADR-58 | fork mygo：一条回复一次写，ConPTY 载不动的颜色回复不发 | 有效 |
 | ADR-59 | 程序自己 fork 的剪贴板工具不归 wt-go 管，装 `xclip` 即可 | 有效 |
 | ADR-60 | 设置页整页一个底色，左栏与底栏不铺 `Surface` | 有效 |
+| ADR-61 | 「显示隐藏的配置文件」是页上的一行开关，默认开着，左栏始终只列没隐藏的 | 有效 |
+| ADR-62 | 「跟随系统」改成「跟随设备」：设备显式解析 | 有效 |
+| ADR-63 | 关窗口前问一句：窗口带着多个标签时，×、Alt+F4、关掉最后一个标签都算 | 有效 |
+| ADR-64 | 主题与终端配色分开：窗口照 `theme`，只有活动标签跟着窗格 | 有效 |
+| ADR-65 | 浮层同时只有一个：开新的先关旧的，按键只问 `top()` | 有效 |
+| ADR-66 | 名字写错回落到默认、未知键读入即保留 | 有效 |
+| ADR-68 | 脱敏按文件系统的大小写规则匹配，WSL 列表跳过程序自用的发行版 | 有效 |
 
 ---
 
@@ -1593,3 +1600,233 @@ POSIX 用 `$SHELL`）。结果窗口对这件事一无所知：标签没有 prof
 
 **否决的方案**：让 `Default` 退回「列表里第一条没隐藏的 profile」。那会把「默认」变成一个可以
 被隐藏操作改掉的列表位置，且读 `settings.json` 之前就已经知道设备是什么，没有理由绕这一圈。
+
+---
+
+## ADR-63 关窗口前问一句，按窗口问而不是按标签问
+
+**背景**：关掉最后一个标签（`closeOnLastTab`）、标题栏的 `×`、`Alt+F4` 都会让窗口消失，把它跑着的
+shell 一起结束，此前没有任何一问。「标签里没有程序在跑」恰恰是最容易顺手点成退出的状态（shell
+停在提示符，看起来什么都没有）。
+
+**决定**：
+
+1. `settings.json` 加 `confirmCloseWindow`（布尔，默认 `true`；旧文件不写这一项，关窗口就要问了）。
+2. 判定点只有一个：窗口自己的 `OnClose`（`App.onClose`）。标题栏的 `×`、`Alt+F4`、以及任何一处的
+   `win.Close()` 都到这里；`PreventDefault()` 让窗口留着并弹问，答「关闭」才 `closeWindow()`
+   （先置 `closing` 再关窗口，于是这一次关闭不再问第二遍）；`closeWindow()` 就是「绕过这一问」的
+   唯一入口，它自己不再问。
+3. 问的是「窗口带着的标签」：`asksCloseWindow()` 要求窗口里有**两个及以上**标签，所以问只从窗口
+   自己的关闭传来。只开着一个标签时关窗口就是关那个标签，标签级那一问（`confirmClose`）已经管过，
+   窗口这一问只会是同义反复；关掉最后一个标签时窗口里就只剩它一个，于是那一条路自然不问。
+   问的时候说出会跟着走的标签数（`confirmCloseWindowText` 的 `{count}`）。
+4. 设置页「启动」页的开关跟在「关最后一个标签时关窗口」下面：它管的是窗口，与这一行相邻。
+5. 标签级的 `confirmClose` 仍先问：先问「标签里还有程序在跑」，答是之后才轮到窗口这一问。
+6. 「删除设置并重启」不再问第二遍（见理由）。
+
+**理由**：`OnClose` 是唯一能拦下 `×` 与 `Alt+F4` 的位置——它们在窗口里，不经过 `CloseTab`；反过来说，
+拦在它之外的任何一处都拦不全。窗口这一问与标签那一问是两件事，不借用 `confirmClose` 的 `always`：
+`always` 说的是「每个标签都问」，而有人想每个标签都不问、只在退出前拦一下。默认开着，是因为它挡的
+是一次带走几个 shell 的、不可撤销的误操作，而代价只是在真要走时多点一下「关闭」；只开着一个标签时
+不问，是因为那一问给不出选择：关窗口与关那个标签是同一件事，标签级那一问该问的已经问过。
+「删除设置并重启」的关闭发生在 `sys.RemoveSettings` 与 `relaunch` 之后：这时再问，答「取消」会留下
+一个设置已删、又已经起了第二个实例的窗口，所以那一路直接用 `closeWindow()`；它自己的确认框问在动手之前，
+任何会让窗口消失的路径都至少问过一次。
+
+**否决的方案**：
+
+- 给 `confirmClose` 加第四个值（如 `window`）：三态变四态，两种问答挤进一个字段，触发点与文案都不同。
+- 只在 `closeTab` 的最后标签分支拦：`×` 与 `Alt+F4` 仍会一声不响地退出，而这正是最常见的关窗口方式。
+- 给 `closeTab` 的最后标签分支也加一问：能走到那里时窗口里只剩一个标签，问题给不出选择。
+- 给「删除设置并重启」再叠一问窗口：见理由，答「取消」之后的状态无法收拾。
+- 默认关着：那这道护栏只帮到特意打开它的人，而它挡的正是「顺手一关」这种不看设置的人常犯的错。
+- 只开着一个标签时也问：这时「关掉」与「关掉那个标签」是一回事，问题给不出选择，只多一次点击。
+
+## ADR-64 主题与终端配色分开：窗口照 `theme`，只有活动标签跟着窗格
+
+**背景**：[ADR-31](#adr-31-界面主题从配色方案推导) 让界面从配色方案推导，解决了「默认配置下标签与终端
+两套颜色」的断层，代价是把两把旋钮绑在一起：`theme` 是 `system` / `light` / `dark` 时窗口的颜色来自
+`colorScheme`（`theme.Chrome`），于是「深色窗口 + 浅色终端」这样的组合做不到。
+
+**决定**：
+
+1. 删 `theme.Chrome`。没写方案名时窗口用程序自带的浅色 / 深色（新 `theme.Native(dark)` 拷
+   `myui.DarkTheme()` / `myui.LightTheme()` 的 token），明暗由 `theme` 的字面值定：`light` / `dark`
+   照字面，`system` 问 `mygo.Theme.IsDark()`。这个解析集中在新 `theme.Dark(s)`，返回 `(dark, known)`：
+   `known` 为假表示没人说得准，交给 app 问 mygo。
+2. 写了方案名仍走 `window()`：那是用户点名要的配色，与 ADR-31 一致。
+3. 终端配色只看 `colorScheme`。`background()` 恒取 `theme.Terminal(s).Background`：窗口还没被铺上的
+   地方就是终端的面，其余都会被标签栏或窗格盖住。终端没写 `colorScheme` 时的默认明暗不再单独看
+   `theme` 的字面值，走同一个 `Dark()`。
+4. 唯一跟着终端走的是活动标签。`ui.State` 新增 `Pane Face{Background, Foreground}`（零值表示这个窗口
+   不画窗格，回落到主题自己的底色），标签栏用它在活动标签上铺一块与窗格同色的面、名字也用它的前景，
+   `×` 的悬停同样从这块面派生。app 在 `apply()` 里算一次存进 `App.pane`（解析 Ghostty 主题不能每帧做）；
+   哪块面不该铺窗格由 `internal/ui` 自己判断——零值，或最前面那个标签有 `Page`（设置页是窗口自己画的）。
+
+**理由**：拆开之后窗口与终端是两件东西，两把旋钮各管各的；但活动标签与它下面的窗格必须是一块，
+否则每切一次标签都在阅读区顶上看一道接缝，Windows Terminal 与 iTerm 都是这么画的。把「面」做成
+`State` 的显式输入、而不是让 `internal/ui` 自己去解析配色，保持 `internal/ui` 纯绘制、
+`internal/theme` 纯函数的分层。
+
+**代价**：默认配置（`theme: dark` + `colorScheme: Campbell`）的窗口从「按 Campbell 推导的灰」变成 mygo
+内置深色，不再与终端底色同源；浅色窗口配深色终端时，标签栏上那块深色面贴着浅色栏，能看见一条边界——
+这是分立的必然而不是缺陷。想两边同色，得自己把 `theme` 与 `colorScheme` 设成同一套。
+
+**否决的方案**：
+
+- 只删 `Chrome`、让标签栏照主题画（不引入 `Pane`）：浅色窗口配深色终端时，活动标签是浅色的，
+  下面的窗格是深色的，每个标签顶上都一道接缝；设置页的卡片底（`t.Background` 的混合色）也会与终端底色串色。
+- 给 `settings.json` 再加一个手写 UI 颜色的对象：617 套方案之外再让人逐个填十来个 token，
+  换方案就全废，与自己配色的初衷矛盾。
+- 保留 `Chrome` 作默认、只给方案名放开：默认配置仍是两套颜色绑死，用户报的正是这个。
+
+---
+
+## ADR-65 浮层同时只有一个：开新的先关旧的，按键只问 `top()`
+
+**背景**：命令面板、查找栏、重命名、确认框、「关于」各自一个字段，各自在入口处零散地关掉别人
+（`OpenPalette` 关查找栏、`OpenAbout` 关面板、`BeginRename`/`ask` 谁也不关）。于是「先问了再开面板」
+会留下两个浮层：`ui.View` 按构造顺序画，后画的盖住前一个，可前一个的 `Modal` 仍拿着窗口快捷键，
+而查找栏画在模态之上、谁也不让路。进入设置页时（设置标签不是终端）查找栏也要等下一帧 `findState`
+才发现没有终端。
+
+**决定**：
+
+1. 新增 `internal/app/overlay.go`：`overlayKind`（`overlayNone`/`overlayRename`/`overlayConfirm`/
+   `overlayAbout`/`overlayPalette`/`overlayFind`）与四个入口——`top()` 说现在开的是哪个，
+   `openOverlay(kind)` 先 `closeOpen()` 再开，`closeOverlay(kind)` 只在该层正显示时关，
+   `closeOverlays()` 全收。所有打开/关闭都走它们，别处不再直接赋值这些字段。
+2. `closeOverlay(kind)` 带条件是为了迟到的回调：确认框已经随新浮层关掉后，一个晚到的 `ConfirmYes`
+   不会关掉顶上的新浮层，也不会执行旧问句的动作。
+3. 按键分派唯一依据 `top()`：`bind` 在任一浮层打开时不挂窗口快捷键，`run` 再挡一次（确认框、重命名、
+   「关于」期间窗口动作不生效）；查找栏只挡窗格的键，窗口的键位照旧可用。命令面板本身就是从窗口打开的，
+   它自己负责关自己再 `act`。
+4. 离开终端视图（`OpenSettings`）调 `closeOverlays()`，查找栏的搜索同时结束。
+5. `view` 每帧开头把面板/重命名/确认/关于里 `Open == false` 的那些丢掉（`Modal` 点背景或 `Escape`
+   会把 `Open` 置 false），查找栏不参与——它没有 `Open`，靠 `findState` 与 `EndFind` 管。
+
+**代价**：`ask` 与 `OpenFind` 不能直接走 `openOverlay` 的通用分支（问句要带回调，查找栏要先确认有终端），
+于是它们先调 `openOverlay` 关掉旧的、再自己赋值；`openOverlay` 里没有 `overlayConfirm` 分支，读代码时
+需要知道这一点（注释里写了）。
+
+**否决的方案**：
+
+- 让 `internal/ui` 自己保证只画一个：它每帧拿到的 `State` 里已经有多个非 nil，挑哪一个画就把
+  「谁是顶」的判断搬进了纯绘制层，而 app 侧仍能同时持有两份状态、迟到的回调照样会串。
+- 用 `overlay` 接口（`overlayKind()` 方法）+ 断言来消除重复的 switch：Go 不允许给外部包的类型加方法，
+  `internal/ui` 的 `Palette`/`Find` 等方法只能加在 ui 里，为一个簿记接口去改纯绘制层不划算。
+
+---
+
+## ADR-66 名字写错回落到默认、未知键读入即保留
+
+**背景**：`store.Validate` 只管范围（字号、透明度、窗格数），枚举字段（`theme`、`cursorShape`、
+`tabWidth`、`rightClick`、`confirmClose` …）写错时没有任何检查：窗口悄悄画成别的样子，设置页的下拉框
+显示空。另一半是写文件：`Parse` 只认 `Settings` 声明的键，`Marshal` 也只写它们，于是手写的扩展键
+（以及以后版本才有的键）在设置页改一项再保存时就没了。
+
+**决定**：
+
+1. 名字写错与数值越界**分开处理**：越界仍然整个文件被拒（`docs/配置参考.md` 第 1 节的归档流程不变），
+   名字写错只把那一项换成 `Default()` 的值，见 `internal/store/validate.go` 的 `fallbackUnknown`。
+   每个枚举的正规取值写成一张表（`enumCursorShapes` 等），默认值取自 `Default()`，不在两处各写一遍。
+   这一步只在 `Parse` 里跑一次，窗口自己从不写出错的名字，所以保存前不必再跑，跑也不会改动任何东西。
+2. `theme` 与 `colorScheme` 不能逐字对照一张表：方案名是任何名字（自定义、内置、Ghostty 617 套），
+   而内置与 Ghostty 的名单在 `internal/theme` 里，`store` 不许 import 它。于是 `theme` 只认
+   `system` / `light` / `dark` 与文件自己 `schemes` 里的名字，其余（包括没写，即 `""`）回到 `dark`；
+   内置与 Ghostty 的方案名在 `internal/theme` 里同样会认不出而回落到默认深色（`theme.Dark` 的
+   `known == false`），所以两边各自回落，结果一致。`colorScheme` 不做校验，仍然交给 `internal/theme`。
+3. `language` 只校验形状：不是 BCP 47 标签（含空格、路径）的回到 `""`（跟随系统）；是标签而没有译文的
+   （如 `fr-FR`）保留，界面显示原文语言——与 `i18n.Valid` 的取舍一致，也不把人写下的语言标签悄悄抹掉。
+4. `Settings` 增加 `Extra map[string]json.RawMessage`（`json:"-"`），存 `Parse` 时认不出的顶层键；
+   `Marshal` 先按字段写出对象，再把 `Extra` 里不与该对象冲突的键并进去，然后统一 `MarshalIndent`
+   （先合并再缩进，是为了键按字母序排、文件每次写出来一样，而不是已知键在前、未知键在后）。
+   冲突时以字段为准。`knownKeys` 是这些键名的唯一一份清单，`TestKnownKeysAreTheFields` 用反射把它和
+   `Settings` 的 json tag 对齐，新加字段忘了登记会直接失败。
+5. `Extra` 不参与 `Equal`：`dirty()` 问的是「窗口有没有没保存的设置」，而键都不是设置，谁也没改过它们。
+   `Clone` 原样带过去（这个 map 不算设置，没人写它）；`Validate` 不看它。
+6. 嵌套对象（`font`、`profiles[i]`、`schemes[i]`）里的未知键**不保留**：那个对象整个由窗口重写，
+   把它里面的键留下来需要每个子类型都带一份 `Extra`，收益远小于代价。
+
+**理由**：`docs/配置参考.md` 早就对 `cursorShape` 写了「认不出按 `bar`」，把这条推广到所有枚举字段，
+用户看到的就是设置页显示的值；拒绝整个文件只为「窗口跑不动」的情况保留，所以范围留在 `Validate`，
+名字走回落。未知键读入即保留，才能让手写的文件经过一次 GUI 保存之后仍然是原来那份文件。
+
+**代价**：`Parse` 要 `json.Unmarshal` 两遍（一次进 `Settings`，一次进 `map`），`Marshal` 在 `Extra` 非空时
+多一次 `Unmarshal` 与一次 `Indent`；文件通常只有几十 KB，这部分可以忽略。另外「名字写错就回落」意味着
+写错的人不会看到任何提示——文件里的值仍在设置页底部显示的不是这个名字，只有对比 `settings.json` 才能发现。
+
+**否决的方案**：
+
+- 名字写错也算越界、整个文件被拒：一个人把 `tabWidth` 打成 `titleLength`，设置页就整份变成默认值并被归档，
+  代价与收益不成比例；`Confirm` 已经按「旧文件写 `true`/`false` 也读得懂」的思路做了回落。
+- 让 `Settings` 自己实现 `UnmarshalJSON`/`MarshalJSON` 来保留未知键：字段一多在两处都要维护，
+  而且 `Confirm` 已经用着 `UnmarshalJSON`，再套一层容易出错。
+- 在 `store` 里照抄一份 Ghostty 主题名来校验 `theme`：名单在 `internal/theme`（来自 mygo），两份必然走散。
+- `Extra` 参与 `Equal`：那么只要文件里有一个未知键，`Parse` 之后 `dirty()` 就永远为真，设置页一打开就问
+  「要保存吗」。
+
+---
+
+## ADR-67 保存被校验挡下时，原因留在页面上，草稿不动
+
+**背景**：`App.SaveSettings` 校验失败时只把错误写进底栏那条 `note`（`a.setNote(err.Error())`）。
+那条 note 有三处不够用：它和「已保存」「settings.json 被外部改过」共用同一个位置，下一条提示就把它顶掉；
+它在底栏里 `SingleLine().MaxWidth(420)`，多条越界被 `strings.Join(bad, "; ")` 连成一行，最要紧的那条可能
+正好被截掉；放弃草稿（`DiscardSettings`）会把 note 清空，于是「为什么没保存」和草稿一起消失。
+另外 profile 页的命令行为空时只有占位符，没有任何文字说明「留空会跑系统 shell」，也没有提示该填什么。
+
+**决定**：
+
+1. `App` 增加 `validation string`，只在保存被 `Validate` 挡下时写入，在下一次保存成功、`DiscardSettings`、
+   `closeSettingsTab` 时清空。它与 `note`（上一次动作的结果）、`configErr`（文件本身不是设置）各管一件事：
+   `note` 会被任何动作覆盖，`validation` 在被改正或放弃前一直在。
+2. `ui.Settings` 增加 `Validation` 字段。`SettingsTab` 在左栏右侧、页头上方画一条红底横幅（`Theme.Danger`
+   文字、`Danger` 混 10% 的底色，与 `dangerSection` 同一套颜色），全文 `Wrap()`，不截断。
+   底栏在 `Validation` 非空时显示 `saveRefusedNote`（「没有保存：改正后再存，或放弃当前修改」）并用
+   `Danger` 色，而不是「有未保存的更改」——原因在横幅里，底栏回答「现在该怎么办」。
+   判断顺序是 `Note` → `Validation` → `Dirty`：刚发生的动作仍然先说。
+3. 校验失败**不改当前页、不改草稿、不写文件**，`dirty` 保持为真，保存/放弃按钮照常可用。
+4. profile 页：非只读（`Discovered == false`）的 profile 命令行为空时，字段下方给一行内联提示
+   `commandEmptyHint`（说明留空会跑系统默认 shell，并给出 `store.DefaultShellHint()` 的例子）；
+   带「内置」的（`Discovered == true`）命令行为只读，说明换成 `discoveredProfileNote`（探测来的路径不在这里改）。
+5. 文案只加在 `locales/en.json` 与 `locales/zh-Hans.json`，`go tool mygo generate` 重写 `catalog_gen.go`；
+   `commandEmptyHint` 带占位符 `{hint}`，两边都声明 `@commandEmptyHint.placeholders`。
+
+**理由**：校验失败是「你还得改，然后才能存」的状态，不是一次性事件，所以它需要一块不随下一次动作消失的
+地方；同时它必须贴着表单，因为要改的是表单。草稿不动是原有的正确行为（`SaveSettings` 失败时直接 `return`），
+这里只是让它看得见。发现来的 profile 命令行改成只读是为了让「留空跑默认 shell」这条提示只说真话：
+探测来的条目由 `apply` 重新解析，页面上改它的命令行在下次启动会被覆盖。
+
+**代价**：多一份与 `note` 并行的状态（`validation`），要在保存成功、放弃、关标签三处记得清空；
+`SettingsTab` 多一层 `Column` 包住滚动区。带「内置」的 profile 在页面上不能再改命令行，要改只能改文件
+或重新探测——与 `docs/使用说明.md` 7.2 里「重新探测会把这些命令行换成现在装的那份」一致。
+
+**备选**：
+- 只加长、改成多行底栏提示：底栏高度固定 48，改成多行会让每一页都矮一截，而且它离越界的字段很远。
+- 把越界项按字段标红：需要把 `Validate` 的英文串解析回字段名，`store` 与 `ui` 之间多一层约定；
+  横幅先解决「看得见」，按字段标红留到有需要时再做。
+
+## ADR-68 脱敏按文件系统的大小写规则匹配，WSL 列表跳过程序自用的发行版
+
+**背景**：`wt-go diag --redact` 原来用 `strings.ReplaceAll` 逐条替换，是字节相等比较。
+Windows 上同一个目录会被写成 `C:\Users\Foo`（环境变量）与 `c:\users\foo`（某些程序报回来的路径），
+后者于是原样留在报告里——脱敏最需要生效的场合正好漏掉了。另一边 WSL 的发行版列表整个从注册表
+`Lxss` 读出，Docker Desktop 运行期间写入的 `docker-desktop`、`docker-desktop-data` 也在里面，
+在它们上面开标签是一个没有可交互内容的容器宿主。
+
+**决定**：
+1. `internal/cli` 的 `redact` 改成 `replacePath`：`foldCase`（`runtime.GOOS == "windows" || "darwin"`）
+   为真时把 needle 转小写、逐次 `strings.Index` 找并跳过 `len(needle)` 字节，只把匹配到的路径换成
+   占位符，周围文本的大小写不动；为假时仍是 `ReplaceAll`。仍然不 import `os`/`path/filepath`。
+2. `internal/sys` 的 `userDistribution` 按 `internalDistros`（`docker-desktop`、`docker-desktop-data`）
+   过滤，用 `strings.EqualFold`（WSL 自己也不分大小写），过滤在 `discover` 里做，不只在读注册表时做。
+3. `job_other.go` 的 `HoldChildren` 仍是无操作，注释写清它为什么无操作：POSIX 上没有等价的作业对象，
+   进程组清理由 mygo 关终端时完成，剩下的缺口（本进程未运行清理就死掉）写在这里，不假装它不存在。
+
+**理由**：文件名不分大小写的系统上，两个只差大小写的路径就是同一个文件，替换其中一个是为另一个
+编造一个不存在的路径；反过来在 Linux 上做不敏感匹配会把真实路径改错。过滤放在 `discover` 而不是
+注册表读取处，是因为它是「哪些发行版是给人用的」的判断，不是「怎么读注册表」的细节。
+
+**代价**：Windows/macOS 上 `replacePath` 每个匹配位置多一次 `strings.ToLower` 的扫描，报告只有几十条
+路径，代价可忽略。`foldCase` 是包级变量，测试用 `withFold` 临时改它；按真实 GOOS 运行时它不会变。

@@ -97,7 +97,7 @@ command is missing opens a tab with nothing in it.`,
 window closed by itself: the fault line names the code the doc explains.`,
 				Schema: mcp.ObjectSchema(map[string]any{
 					"lines": mcp.Prop("number", "how many lines from the end, 1 to 2000 (default 120)"),
-					"path":  mcp.Prop("string", "a log path from wtgo_status; the newest crash log when empty"),
+					"path":  mcp.Prop("string", "a log path from wtgo_status, inside the wt-go directory; the newest crash log when empty"),
 				}, nil),
 				Run: func(args map[string]any) (string, error) {
 					lines := mcp.ArgInt(args, "lines", 120, 1, 2000)
@@ -111,6 +111,10 @@ window closed by itself: the fault line names the code the doc explains.`,
 							return "", errors.New("no crash log: wt-go has not stopped with a panic")
 						}
 						path = paths[0]
+					} else if !sys.IsLogPath(path) {
+						// The path comes from the client: only the logs wt-go wrote
+						// are readable, not any file the machine holds.
+						return "", fmt.Errorf("not a wt-go log: %s", path)
 					}
 					text, cut, err := sys.Tail(path, 1<<20)
 					if err != nil {

@@ -25,10 +25,26 @@ func about(c *myui.Context, st State, act Actions) {
 				if a.Revision != "" {
 					aboutLine(c, locales.AboutCommit(), a.Revision)
 				}
+				if a.Mygo != "" {
+					aboutLine(c, locales.AboutMygo(), a.Mygo)
+				}
 				aboutLine(c, locales.AboutRuntime(), a.Go+" "+a.Platform)
 				aboutLine(c, locales.License(), "MIT")
 				aboutLine(c, locales.ProjectPage(), projectShown(a.Project))
 			})
+			// The files are long, and a path cut off at the dialog's edge
+			// says nothing: each one gets a line of its own, the value under
+			// its name, wrapping as far as it needs.
+			if a.Settings != "" || a.Log != "" {
+				myui.Column(c).Gap(9).Children(func() {
+					if a.Settings != "" {
+						aboutPath(c, locales.AboutSettings(), a.Settings)
+					}
+					if a.Log != "" {
+						aboutPath(c, locales.AboutLog(), a.Log)
+					}
+				})
+			}
 			if a.Note != "" {
 				myui.Text(c, a.Note).FontSize(11).TextColor(t.Danger)
 			}
@@ -45,6 +61,16 @@ func aboutLine(c *myui.Context, label, value string) {
 	myui.Row(c).Justify(myui.SpaceBetween).Gap(16).Children(func() {
 		myui.Text(c, label).FontSize(12).TextColor(c.Theme().TextMuted)
 		myui.Text(c, value).FontSize(12).SingleLine()
+	})
+}
+
+// aboutPath is a line of the dialog that holds a file's path: the name, and the
+// path under it, wrapped rather than cut, since a path is only useful whole.
+func aboutPath(c *myui.Context, label, path string) {
+	t := c.Theme()
+	myui.Column(c).Gap(2).Children(func() {
+		myui.Text(c, label).FontSize(12).TextColor(t.TextMuted)
+		myui.Text(c, path).FontSize(11).Wrap()
 	})
 }
 

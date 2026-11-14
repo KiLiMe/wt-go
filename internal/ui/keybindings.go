@@ -7,7 +7,6 @@ import (
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/action"
-	"wtgo/internal/i18n"
 	"wtgo/internal/store"
 	"wtgo/locales"
 )
@@ -20,20 +19,19 @@ import (
 // groups it belongs to.
 func actionsPage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
-	changed := changedActions(s.Keybindings)
-	clashing := clashingKeys(s.Keybindings)
+	ks := pageKeys(st.KeysCache, s.Keybindings, st)
 	query := strings.ToLower(searchText(st.ActionFilter))
-	actionsToolbar(c, act, len(changed), len(clashing) > 0, st.OnlyChanged, st.ActionFilter)
+	actionsToolbar(c, act, len(ks.changed), len(ks.clashing) > 0, st.OnlyChanged, st.ActionFilter)
 	listed := 0
-	for _, g := range groups(s.Keybindings) {
-		rows, folded, more := listedRows(g.rows, s.Keybindings, changed, st, query)
+	for _, g := range ks.groups {
+		rows, folded, more := listedRows(g.rows, ks, st, query)
 		if len(rows) == 0 && folded == 0 {
 			continue
 		}
 		listed++
-		section(c, i18n.T(g.title), func() {
+		section(c, action.GroupTitle(g.title), func() {
 			for _, e := range rows {
-				keybindingRow(c, st, act, e, s.Keybindings, changed[e.action], clashing)
+				keybindingRow(c, st, act, e, ks)
 			}
 			switch {
 			case folded > 0:
@@ -97,13 +95,14 @@ func searchText(filter *string) string {
 // click changes, the action it runs, and the two buttons that take those keys
 // away or put the catalog's back. Both buttons keep their room while they have
 // nothing to do, so that a row never shifts under the pointer as keys change.
-func keybindingRow(c *myui.Context, st Settings, act Actions, e entry, all []store.Keybinding, isChanged bool, clashing map[string]int) {
+func keybindingRow(c *myui.Context, st Settings, act Actions, e entry, ks *PageKeybindings) {
 	t := c.Theme()
-	keys := keysOf(all, e.action)
+	isChanged := ks.changed[e.action]
+	keys := ks.keys(e.action)
 	shown := strings.Join(keys, " · ")
 	color := t.Text
 	for _, key := range keys {
-		if clashing[key] > 1 {
+		if ks.clashing[key] > 1 {
 			color = t.Danger
 		}
 	}
@@ -141,8 +140,6 @@ func keybindingRow(c *myui.Context, st Settings, act Actions, e entry, all []sto
 	})
 }
 
-// actionGroup is one group of actions, and the rows it holds, in the order the
-// catalog lists them.
 type actionGroup struct {
 	title string
 	rows  []entry
@@ -207,6 +204,92 @@ func rank(group string) int {
 	return len(groupOrder)
 }
 
+// PageKeybindings is what the actions page derives from the keybindings of the
+// file: the groups it lists, the actions whose keys are not the catalog's and
+// the keys more than one action runs. Every row asks for the keys of its
+// action and for both of those, so a page of hundreds of rows built them anew
+// every frame. The page keeps one from frame to frame, in Settings.KeysCache.
+type PageKeybindings struct {
+	// _ keeps `==` from comparing two caches equal, which would say the
+	// settings page holds the one and not the other.
+	_ [0]func()
+	// all are the keybindings the rest was derived from, kept as the page was
+	// handed them: the settings page holds the slice, and it is the same one
+	// until the file changes.
+	all      []store.Keybinding
+	only     bool
+	expanded bool
+	groups   []actionGroup
+	changed  map[string]bool
+	clashing map[string]int
+	// of holds the keys of each action the page has asked about: a page asks
+	// about the same actions frame after frame.
+	of map[string][]string
+}
+
+// pageKeys is what the page derives from the keybindings of the file, built
+// again only as the file or the switches that show what it holds change. The
+// page keeps the answer from frame to frame.
+func pageKeys(k *PageKeybindings, all []store.Keybinding, st Settings) *PageKeybindings {
+	// A page drawn without a window to keep its answer keeps it for the frame
+	// alone: the next frame derives it again.
+	if k == nil {
+		return newPageKeybindings(all, st)
+	}
+	// The list is the one the page was handed before: the settings page holds
+	// it, and builds a new one only as the file changes, so the same slice
+	// holding the same keys is the file unchanged.
+	if k.groups != nil && k.only == st.OnlyChanged && k.expanded == st.KeysExpanded &&
+		sameKeybindings(k.all, all) {
+		return k
+	}
+	*k = *newPageKeybindings(all, st)
+	return k
+}
+
+// newPageKeybindings is what the page derives from the keybindings of the file.
+func newPageKeybindings(all []store.Keybinding, st Settings) *PageKeybindings {
+	return &PageKeybindings{
+		all:      all,
+		only:     st.OnlyChanged,
+		expanded: st.KeysExpanded,
+		groups:   groups(all),
+		changed:  changedActions(all),
+		clashing: clashingKeys(all),
+		of:       map[string][]string{},
+	}
+}
+
+// keys are the keys the file binds an action on, in the order it lists them.
+func (k *PageKeybindings) keys(id string) []string {
+	if keys, ok := k.of[id]; ok {
+		return keys
+	}
+	// An action with no key is stored as an empty list, not nil: a nil slice
+	// would be looked up again, and built again, every frame.
+	keys := keysOf(k.all, id)
+	if keys == nil {
+		keys = []string{}
+	}
+	k.of[id] = keys
+	return keys
+}
+
+// sameKeybindings reports whether two lists bind the same keys to the same
+// actions, in the same order: the length, then what they hold, since the page
+// hands the cache the list it already kept.
+func sameKeybindings(a, b []store.Keybinding) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // numberedPast is the number after which the page folds the numbered actions
 // away: the first three stay, so that the keys a person presses all day show
 // and the ones they look up now and then do not.
@@ -216,13 +299,13 @@ const numberedPast = 3
 // folds away, and how many it would fold away were they folded: the page draws
 // the bar that unfolds them while there are any, and the one that folds them
 // back while they show.
-func listedRows(rows []entry, all []store.Keybinding, changed map[string]bool, st Settings, query string) (out []entry, folded, more int) {
+func listedRows(rows []entry, ks *PageKeybindings, st Settings, query string) (out []entry, folded, more int) {
 	folding := !st.KeysExpanded && query == "" && !st.OnlyChanged
 	for _, e := range rows {
-		if st.OnlyChanged && !changed[e.action] {
+		if st.OnlyChanged && !ks.changed[e.action] {
 			continue
 		}
-		if query != "" && !matchesQuery(e, all, query) {
+		if query != "" && !matchesQuery(e, ks, query) {
 			continue
 		}
 		if n, ok := action.Number(e.action); ok && n > numberedPast {
@@ -239,12 +322,12 @@ func listedRows(rows []entry, all []store.Keybinding, changed map[string]bool, s
 
 // matchesQuery reports whether a row is one the page searches for: its name,
 // its id, or a key the file binds it on, in any case.
-func matchesQuery(e entry, all []store.Keybinding, query string) bool {
+func matchesQuery(e entry, ks *PageKeybindings, query string) bool {
 	if strings.Contains(strings.ToLower(e.action), query) ||
 		strings.Contains(strings.ToLower(action.Title(e.action)), query) {
 		return true
 	}
-	for _, key := range keysOf(all, e.action) {
+	for _, key := range ks.keys(e.action) {
 		if strings.Contains(strings.ToLower(key), query) {
 			return true
 		}

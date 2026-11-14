@@ -151,6 +151,9 @@
   "about": "About",
   "aboutCommit": "Commit",
   "aboutRuntime": "Runtime",
+  "aboutMygo": "mygo",
+  "aboutSettings": "Settings file",
+  "aboutLog": "Log",
   "license": "License",
   "projectPage": "Project page",
   "unsavedChanges": "Unsaved changes",
@@ -162,6 +165,8 @@
   "startDirectoryNote": "Where a new tab starts when its profile names no directory: current (where wt-go was started), home, or a path. Empty means home.",
   "closeOnLastTab": "Close on last tab",
   "closeOnLastTabNote": "Close the window when its last tab closes.",
+  "confirmCloseWindow": "Confirm close window",
+  "confirmCloseWindowNote": "Ask before the window closes with more than one tab.",
   "copyOnSelect": "Copy on select",
   "copyOnSelectNote": "Copy what a selection takes as it takes it.",
   "rightClick": "Right click",
@@ -228,6 +233,15 @@
   "name": "Name",
   "commandLine": "Command line",
   "commandLineNote": "The program the profile runs; empty runs the shell the system starts.",
+  "discoveredProfileNote": "The shell the window found on this machine; its path is not edited here.",
+  "commandEmptyHint": "Empty: this profile runs the shell the system starts. To run a program of your own, type its path, such as {hint}.",
+  "@commandEmptyHint": {
+    "placeholders": {
+      "hint": {
+        "type": "String"
+      }
+    }
+  },
   "arguments": "Arguments",
   "argumentsNote": "The arguments of the command, one on each line.",
   "profileStartNote": "Where the profile starts: current, home, a path, or empty to use the setting above.",
@@ -265,6 +279,15 @@
   "confirmCloseSettingsText": "The settings hold changes you have not saved.",
   "confirmCloseTabTitle": "Close the tab?",
   "confirmCloseOthersTitle": "Close the other tabs?",
+  "confirmCloseWindowTitle": "Close the window?",
+  "confirmCloseWindowText": "Closing the window closes all {count} tabs at once.",
+  "@confirmCloseWindowText": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "closeRunning": "Still running: {programs}",
   "@closeRunning": {
     "placeholders": {
@@ -322,6 +345,7 @@
     }
   },
   "settingsChangedNote": "settings.json changed on disk; discard your changes to take it.",
+  "saveRefusedNote": "Not saved: correct what is wrong and save again, or discard your changes.",
   "errSettingsInvalid": "settings.json is not valid: {error}; the original was kept at {path}",
   "@errSettingsInvalid": {
     "placeholders": {

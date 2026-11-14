@@ -35,8 +35,12 @@ import (
 
 // App is the window and what it holds.
 type App struct {
-	win      *mygo.Window
-	closed   bool
+	win    *mygo.Window
+	closed bool
+	// closing is the window already on its way out: the question about
+	// closing it is answered, so the window that hears the close does not
+	// ask again.
+	closing  bool
 	settings store.Settings
 
 	// startDir is the directory the command line's -d named: it stands in for
@@ -81,9 +85,13 @@ type App struct {
 	// a settings file naming one leaves a line behind and not one a tab.
 	fontWarned string
 	// uiTheme is the theme the window draws with: the one the settings name,
-	// else the terminal's own colors, so that the strip and the panes below it
-	// are one surface. nil until the settings are read.
+	// else mygo's own for the appearance they ask for. nil until the settings
+	// are read.
 	uiTheme *myui.Theme
+	// pane is the face of the pane below the strip: the terminal's colors,
+	// which the tab in front carries up into it. The window keeps it because
+	// asking for it parses a scheme, which no frame may pay for.
+	pane ui.Face
 	// fonts are the machine's monospace families and the measures the window
 	// made of them; the settings page lists the families, so they are asked for
 	// when that page first shows.
@@ -97,6 +105,12 @@ type App struct {
 	// frame and the page both need it, and building it twice costs a directory
 	// read and a sort of the color scheme names.
 	settingsShown ui.Settings
+	// keysDerived and schemesDerived are what the actions page and the color
+	// schemes page of the settings derived from the file, which the pages
+	// keep from frame to frame: a frame that changes neither the file nor the
+	// switches that change the page's rows draws it from these.
+	keysDerived    ui.PageKeybindings
+	schemesDerived ui.SchemesCache
 	// content is the room the panes took in the last frame, which the keys
 	// that split and move between panes measure.
 	content layout.Rect
@@ -123,8 +137,10 @@ type App struct {
 	// recording is the action that waits for a key, "" while none does.
 	recording string
 	// note is what the last action did; configErr is why the file is not
-	// settings and stays until the file is settings again.
-	note string
+	// settings and stays until the file is settings again; validation is why
+	// the last save refused the draft, cleared by the next save or discard.
+	note       string
+	validation string
 	// relaunch starts the program again, which the advanced page does after
 	// it deletes the settings; the tests replace it.
 	relaunch  func() error
@@ -210,6 +226,7 @@ func Run() (err error) {
 			Content:           myui.View(a.view),
 		})
 		a.win.OnClosed(a.onClosed)
+		a.win.OnClose(a.onClose)
 		a.watchWindowButtons()
 		a.openFirst()
 		if a.settingsNote() != "" {
@@ -312,41 +329,44 @@ func newApp(startDir string) *App {
 }
 
 // background is the color the window fills what the page has not painted yet:
-// the theme the window draws with, which is the terminal's own unless the
-// settings name a theme.
+// the terminal's own, which the tab in front carries up into the strip.
 func (a *App) background() myui.Color {
-	if a.uiTheme != nil {
-		return a.uiTheme.Background
-	}
 	return theme.Terminal(a.settings).Background
 }
 
 // appearance gives the window the appearance the settings ask for: dark and
 // light are the settings', system is the machine's, and a theme of its own is
-// the one that theme is.
+// the one that theme is. The window draws in that theme, or in mygo's own for
+// the appearance; the terminal's colors are the terminal's business, so that a
+// light window can hold a dark terminal without a seam between them.
 func (a *App) appearance() {
+	// A theme of the settings' own says both what the window draws with and
+	// which way the desktop's own menus and dialogs go.
 	if t, ok := theme.UITheme(a.settings, a.settings.Theme); ok {
 		a.uiTheme = t
-		if t.Dark {
-			mygo.Theme.SetSource(mygo.ThemeDark)
-		} else {
-			mygo.Theme.SetSource(mygo.ThemeLight)
-		}
+		darkMode(t.Dark)
 		return
 	}
-	// No theme of its own: the window still draws in the terminal's colors, so
-	// that the tab in front carries the pane's background up into the strip.
-	// What the settings name as the appearance is what the desktop's own
-	// window, menus and dialogs follow.
-	a.uiTheme = theme.Chrome(a.settings)
-	switch a.settings.Theme {
-	case "light":
-		mygo.Theme.SetSource(mygo.ThemeLight)
-	case "dark":
-		mygo.Theme.SetSource(mygo.ThemeDark)
-	default:
+	dark, known := theme.Dark(a.settings)
+	if known {
+		darkMode(dark)
+	} else {
+		// Following the desktop: ask it, then draw in the colors its own
+		// windows, menus and dialogs are drawn in.
 		mygo.Theme.SetSource(mygo.ThemeSystem)
+		dark = mygo.Theme.IsDark()
 	}
+	a.uiTheme = theme.Native(dark)
+}
+
+// darkMode asks the desktop's own windows, menus and dialogs to be dark or
+// light, which is the appearance the settings name.
+func darkMode(dark bool) {
+	if dark {
+		mygo.Theme.SetSource(mygo.ThemeDark)
+		return
+	}
+	mygo.Theme.SetSource(mygo.ThemeLight)
 }
 
 // windowButtons are the buttons the strip draws where the window hides the
@@ -565,23 +585,15 @@ func (a *App) view(c *myui.Context) {
 	// than by the desktop: a menu of the desktop's beside the window's own
 	// strip reads as another program's.
 	c.SetMenuPresentation(myui.PopoverMenus)
-	if a.renaming != nil && !a.renaming.Open {
-		a.renaming = nil
-	}
-	if a.confirm != nil && !a.confirm.Open {
-		a.confirm = nil
-	}
-	if a.about != nil && !a.about.Open {
-		a.about = nil
-	}
-	if a.palette != nil && !a.palette.Open {
-		a.palette = nil
+	if a.dismissed() {
+		a.dropClosed()
 	}
 	a.content = ui.Content(c)
 	a.apply()
 	a.bind(c)
 	st := ui.State{
 		Active:     a.panes.Active,
+		Pane:       a.pane,
 		Profiles:   a.menuProfiles(),
 		Device:     a.device.Name,
 		Rename:     a.renaming,
@@ -634,13 +646,13 @@ func (a *App) settingsView(c *myui.Context) myui.Element {
 }
 
 // bind gives the window the keys of the tabs, unless the settings wait for a
-// key of their own.
+// key of their own or an overlay has the keyboard.
 func (a *App) bind(c *myui.Context) {
-	if a.recording != "" {
+	if a.recording != "" || a.top() != overlayNone {
 		return
 	}
 	for _, b := range a.keys {
-		c.OnShortcut(b.mods, b.key, func() { a.act(b.action) })
+		c.OnShortcut(b.mods, b.key, func() { a.run(b.action) })
 	}
 }
 
@@ -679,6 +691,11 @@ func (a *App) tabName(tab *pane.Tab) string {
 	n := tab.Focus
 	if !a.settings.TitleFromActiveTerminal {
 		n = tab.First()
+		// A tab with no pane in its tree has nothing to take a title from;
+		// it still has a name, which is what the strip should show.
+		if n == nil {
+			return label(tab.Name, "", tab.ProfileName, tab.Runs)
+		}
 	}
 	term := n.Term
 	if term == nil {
@@ -714,7 +731,7 @@ func label(name, title, profileName, runs string) string {
 	case runs != "":
 		return runs
 	default:
-		return i18n.T("systemProfile")
+		return locales.SystemProfile()
 	}
 }
 
@@ -806,9 +823,20 @@ func (a *App) onClosed() {
 }
 
 // openFirst opens the tab the settings start with; with no profile named it
-// runs the shell of this machine.
+// runs the shell of this machine. `startOn: new` says the window starts on a
+// new tab: the shell of this machine, whatever defaultProfile names. Session
+// restore is not part of that choice yet, so the two words differ only here.
 func (a *App) openFirst() {
-	a.openTab(profile.Default(a.profiles, a.settings.DefaultProfile, a.device), "")
+	a.openTab(a.firstTab(), "")
+}
+
+// firstTab is the profile of the tab the window opens with: the default one,
+// or the device's for `startOn: new`.
+func (a *App) firstTab() profile.Profile {
+	if a.settings.StartOn == store.StartNew {
+		return profile.Default(a.profiles, "", a.device)
+	}
+	return profile.Default(a.profiles, a.settings.DefaultProfile, a.device)
 }
 
 // startDirectory is where a tab starts when neither it nor its profile names

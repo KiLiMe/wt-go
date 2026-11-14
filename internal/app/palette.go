@@ -2,22 +2,22 @@ package app
 
 import (
 	"wtgo/internal/action"
-	"wtgo/internal/i18n"
 	"wtgo/internal/ui"
+	"wtgo/locales"
 )
 
 // OpenPalette shows the command palette, which lists what the window does.
-// The find bar goes: the palette is modal, and two open bars would leave the
-// keys, Escape among them, to whichever was built last.
+// Whatever other overlay was open goes: the palette holds the keyboard, and
+// two of them would leave the keys, Escape among them, to whichever was built
+// last.
 func (a *App) OpenPalette() {
-	a.EndFind()
-	a.palette = &ui.Palette{Open: true}
+	a.openOverlay(overlayPalette)
 	a.redraw()
 }
 
 // Run does the action the palette picked.
 func (a *App) Run(id string) {
-	a.palette = nil
+	a.closeOverlay(overlayPalette)
 	a.act(id)
 	a.redraw()
 }
@@ -47,7 +47,7 @@ func (a *App) paletteCommands() []ui.Command {
 		out = append(out, ui.Command{
 			Action: cmd.ID,
 			Title:  action.Title(cmd.ID),
-			Group:  i18n.T(cmd.GroupKey),
+			Group:  action.GroupTitle(cmd.GroupKey),
 			Key:    a.shortcut(cmd.ID),
 		})
 	}
@@ -59,7 +59,7 @@ func (a *App) paletteCommands() []ui.Command {
 		out = append(out, ui.Command{
 			Action: id,
 			Title:  a.tabName(tab),
-			Group:  i18n.T(action.GroupTab),
+			Group:  action.GroupTitle(action.GroupTab),
 			Key:    a.shortcut(id),
 		})
 	}
@@ -70,8 +70,8 @@ func (a *App) paletteCommands() []ui.Command {
 		id := action.ProfileAction(i + 1)
 		out = append(out, ui.Command{
 			Action: id,
-			Title:  i18n.F("paletteNewTabWith", map[string]any{"profile": p.Name}),
-			Group:  i18n.T(action.GroupProfiles),
+			Title:  locales.PaletteNewTabWith(p.Name),
+			Group:  action.GroupTitle(action.GroupProfiles),
 			Key:    a.shortcut(id),
 		})
 	}

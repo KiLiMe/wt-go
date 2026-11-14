@@ -67,6 +67,9 @@ func discover(lookPath func(string) (string, error), distros []string) []Shell {
 		return shells
 	}
 	for _, name := range distros {
+		if !userDistribution(name) {
+			continue
+		}
 		shells = append(shells, Shell{ID: "wsl:" + name, Command: wsl, Args: []string{"-d", name}})
 	}
 	return shells
@@ -81,7 +84,8 @@ func wslStub(path string) bool {
 		strings.EqualFold(filepath.Base(filepath.Dir(path)), "system32")
 }
 
-// distributions is the WSL distributions the registry lists, in name order.
+// distributions is the WSL distributions the registry lists that a person can
+// open a terminal in, in name order.
 func distributions() []string {
 	key, err := registry.OpenKey(registry.CURRENT_USER,
 		`Software\Microsoft\Windows\CurrentVersion\Lxss`,
@@ -102,11 +106,35 @@ func distributions() []string {
 		}
 		distro, _, err := sub.GetStringValue("DistributionName")
 		sub.Close()
-		if err != nil || distro == "" {
+		if err != nil || !userDistribution(distro) {
 			continue
 		}
 		found = append(found, distro)
 	}
 	sort.Strings(found)
 	return found
+}
+
+// internalDistros are the distributions an application registers for itself,
+// which no person opens a terminal in.
+//
+// Docker Desktop lists docker-desktop and docker-desktop-data while it runs:
+// a tab on either starts a shell inside a container host with nothing to type
+// at. Only what an application made is skipped; a distribution whose name
+// merely reads like one, which Ubuntu can be renamed to, stays listed.
+var internalDistros = []string{"docker-desktop", "docker-desktop-data"}
+
+// userDistribution reports whether distro is one a person can open a terminal
+// in: WSL compares distribution names without case, so the match here does too.
+func userDistribution(distro string) bool {
+	name := strings.TrimSpace(distro)
+	if name == "" {
+		return false
+	}
+	for _, internal := range internalDistros {
+		if strings.EqualFold(name, internal) {
+			return false
+		}
+	}
+	return true
 }

@@ -12,6 +12,36 @@ import (
 // names, in that order, each only when PATH answers for it; Bash unless that
 // Bash is the one Windows keeps for the WSL distributions; and the
 // distributions last.
+// TestUserDistribution covers which distributions a strip lists: the ones a
+// person can open a terminal in, not the ones an application registered for
+// itself. WSL compares the names without case, so a name Docker Desktop
+// wrote in another case is still its own.
+func TestUserDistribution(t *testing.T) {
+	tests := []struct {
+		distro string
+		want   bool
+	}{
+		{"Ubuntu", true},
+		{"Debian", true},
+		// A person may rename a distribution to anything, an uglier name
+		// included, and it is still theirs.
+		{"Ubuntu-24.04", true},
+		{"docker-desktop", false},
+		{"docker-desktop-data", false},
+		{"Docker-Desktop", false},
+		{"DOCKER-DESKTOP-DATA", false},
+		{"  docker-desktop  ", false},
+		{" docker-desktop\r\n", false},
+		{"", false},
+		{"   ", false},
+	}
+	for _, tt := range tests {
+		if got := userDistribution(tt.distro); got != tt.want {
+			t.Errorf("userDistribution(%q) = %v, want %v", tt.distro, got, tt.want)
+		}
+	}
+}
+
 func TestDiscover(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -70,6 +100,18 @@ func TestDiscover(t *testing.T) {
 			path:    map[string]string{"cmd.exe": `C:\Windows\system32\cmd.exe`},
 			distros: []string{"Ubuntu"},
 			want:    []Shell{{ID: "cmd", Command: `C:\Windows\system32\cmd.exe`}},
+		},
+		{
+			name: "the distributions Docker Desktop registers are not listed",
+			path: map[string]string{
+				"cmd.exe": `C:\Windows\system32\cmd.exe`,
+				"wsl.exe": `C:\Windows\system32\wsl.exe`,
+			},
+			distros: []string{"Debian", "Docker-Desktop", "docker-desktop-data"},
+			want: []Shell{
+				{ID: "cmd", Command: `C:\Windows\system32\cmd.exe`},
+				{ID: "wsl:Debian", Command: `C:\Windows\system32\wsl.exe`, Args: []string{"-d", "Debian"}},
+			},
 		},
 	}
 	for _, tt := range tests {

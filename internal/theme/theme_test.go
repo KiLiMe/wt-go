@@ -139,44 +139,67 @@ func TestUITheme(t *testing.T) {
 	}
 }
 
-// TestChrome covers the window's theme where the settings name none of their
-// own: the terminal's colors, so that the tab in front carries the pane's
-// background up into the strip, with shades derived between them.
-func TestChrome(t *testing.T) {
-	s := store.Default()
-	for _, appearance := range []string{"", "system", "light", "dark"} {
-		s.Theme = appearance
-		th := Terminal(s)
-		ui := Chrome(s)
-		if ui == nil {
-			t.Fatalf("Chrome with the %q appearance is no theme", appearance)
+// TestNative covers the theme of a window that names none of its own: the one
+// mygo draws for the appearance, whose surfaces stand out from its background.
+func TestNative(t *testing.T) {
+	for _, tc := range []struct {
+		dark bool
+		want myui.Color
+	}{
+		{true, myui.DarkTheme().Background},
+		{false, myui.LightTheme().Background},
+	} {
+		ui := Native(tc.dark)
+		if ui.Background != tc.want {
+			t.Errorf("Native(%v) draws on %v, want mygo's %v", tc.dark, ui.Background, tc.want)
 		}
-		if ui.Background != th.Background || ui.Text != th.Foreground {
-			t.Errorf("the %q appearance draws %v on %v, want the terminal's %v on %v",
-				appearance, ui.Text, ui.Background, th.Foreground, th.Background)
-		}
-		if want := luminance(th.Background) < 0.5; ui.Dark != want {
-			t.Errorf("the %q appearance is dark = %v, want %v", appearance, ui.Dark, want)
+		if ui.Dark != tc.dark {
+			t.Errorf("Native(%v) is dark = %v", tc.dark, ui.Dark)
 		}
 		// The strip stands behind a tab that carries the background itself, so
 		// the surfaces and the borders have to read as such.
 		if ui.Surface == ui.Background || ui.Border == ui.Background || ui.Border == ui.Surface {
-			t.Errorf("the %q appearance draws %v on %v with %v between them",
-				appearance, ui.Surface, ui.Background, ui.Border)
+			t.Errorf("Native(%v) draws %v on %v with %v between them",
+				tc.dark, ui.Surface, ui.Background, ui.Border)
+		}
+	}
+}
+
+// TestDark covers whether the window is dark, and whether the settings say so:
+// the appearance, or the background of a theme of their own. The terminal's
+// scheme is not asked.
+func TestDark(t *testing.T) {
+	s := store.Default()
+	s.ColorScheme = "Catppuccin Latte" // light, and no business of the window's
+	for _, tc := range []struct {
+		theme       string
+		dark, known bool
+	}{
+		{"", false, false},
+		{"system", false, false},
+		{"light", false, true},
+		{"dark", true, true},
+		{"Nord", true, true},
+		{"Catppuccin Latte", false, true},
+		{"No Such Scheme", false, false},
+	} {
+		s.Theme = tc.theme
+		dark, known := Dark(s)
+		if dark != tc.dark || known != tc.known {
+			t.Errorf("Dark with the %q theme = (%v, %v), want (%v, %v)",
+				tc.theme, dark, known, tc.dark, tc.known)
 		}
 	}
 
-	// A colorScheme of its own is what the terminal, and so the window, draws
-	// with.
-	s = store.Default()
-	s.Theme = "system"
-	s.ColorScheme = "Catppuccin Latte"
-	th, ok := Scheme(s, s.ColorScheme)
-	if !ok {
-		t.Fatalf("%q is no scheme", s.ColorScheme)
+	// A scheme of the settings' own says it by the background it paints.
+	s.Theme = "Paper"
+	s.Schemes = []store.Scheme{{Name: "Paper", Background: "#fafafa"}}
+	if dark, known := Dark(s); dark || !known {
+		t.Errorf("Dark with a light scheme of its own = (%v, %v), want (false, true)", dark, known)
 	}
-	if got := Chrome(s).Background; got != th.Background {
-		t.Errorf("the window draws on %v, want the scheme's %v", got, th.Background)
+	s.Schemes[0].Background = "#101010"
+	if dark, known := Dark(s); !dark || !known {
+		t.Errorf("Dark with a dark scheme of its own = (%v, %v), want (true, true)", dark, known)
 	}
 }
 

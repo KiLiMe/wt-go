@@ -3,15 +3,11 @@ package app
 import (
 	"bytes"
 	"log"
-	"runtime/debug"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/egoist/mygo/plugins/terminal"
 
-	"wtgo/internal/i18n"
 	"wtgo/internal/pane"
 	"wtgo/internal/profile"
 	"wtgo/internal/store"
@@ -22,8 +18,10 @@ import (
 )
 
 // OpenSettings shows the settings, which one tab holds: it opens that tab, or
-// a new one.
+// a new one. The terminal's overlays go: the settings tab is not a terminal, so
+// a bar that asks the one in front for text has nothing left to ask.
 func (a *App) OpenSettings() {
+	a.closeOverlays()
 	if a.settingsTab == nil {
 		a.settingsTab = &pane.Tab{Name: locales.Settings()}
 		a.settingsPage = ui.PageStartup
@@ -57,10 +55,13 @@ func (a *App) settingsState() ui.Settings {
 	}
 	return ui.Settings{
 		Page:         a.settingsPage,
+		KeysCache:    &a.keysDerived,
+		SchemesCache: &a.schemesDerived,
 		Draft:        &a.settings,
 		Dirty:        a.dirty(),
 		Note:         a.settingsNote(),
 		Recording:    a.recording,
+		Validation:   a.validation,
 		Filter:       &a.filter,
 		ActionFilter: &a.actionSearch,
 		OnlyChanged:  a.onlyChangedKeys,
@@ -142,6 +143,15 @@ func (a *App) SelectSettingsPage(page string) {
 	a.redraw()
 }
 
+// SetDefaultProfile names the profile the window opens first; "" follows the
+// shell of the machine. It is what the select of the page asks for while the
+// profile the file names is not one the page offers: the select shows the
+// device, and a click on it writes the choice down instead of the page doing it.
+func (a *App) SetDefaultProfile(id string) {
+	a.settings.DefaultProfile = id
+	a.redraw()
+}
+
 // editProfile opens a copy of a profile for the profile page to edit: the page
 // leaves the file alone until the settings are saved, so that looking at a
 // profile writes nothing.
@@ -183,16 +193,21 @@ func profileByID(s store.Settings, id string) (store.Profile, bool) {
 
 // SaveSettings writes the settings to the file, and keeps the copy the window
 // compares against to know what is unsaved. It refuses to write over a file
-// that changed on disk since the window last read or saved it.
+// that changed on disk since the window last read or saved it, and refuses a
+// draft no window can run with, which it says where the page is looking.
 func (a *App) SaveSettings() {
 	if a.editing != nil {
 		a.editing.Args = splitArgs(a.editingArgs)
 		a.upsertProfile(*a.editing)
 	}
 	if err := a.settings.Validate(); err != nil {
+		// The draft stays as it is: what is wrong with it is something the
+		// person corrects on the page, frame after frame.
+		a.validation = err.Error()
 		a.setNote(err.Error())
 		return
 	}
+	a.validation = ""
 	data, err := store.Marshal(a.settings)
 	if err != nil {
 		a.setNote(err.Error())
@@ -200,7 +215,7 @@ func (a *App) SaveSettings() {
 	}
 	unchanged, err := a.settingsFileUnchanged()
 	if err != nil {
-		a.setNote(i18n.F("errSettings", map[string]any{"error": err}))
+		a.setNote(locales.ErrSettings(err.Error()))
 		return
 	}
 	if !unchanged {
@@ -263,6 +278,7 @@ func (a *App) upsertProfile(p store.Profile) {
 func (a *App) closeSettingsTab() {
 	a.settings = a.saved.Clone()
 	a.note = ""
+	a.validation = ""
 	a.recording = ""
 	a.editNone()
 	a.refreshSettings()
@@ -274,9 +290,15 @@ func (a *App) closeSettingsTab() {
 func (a *App) DiscardSettings() {
 	a.settings = a.saved.Clone()
 	a.note = ""
+	a.validation = ""
 	a.recording = ""
 	if a.editing != nil {
 		a.editProfile(a.editing.ID)
+		if a.editing == nil {
+			// The profile was never saved, so there is no page to edit: the
+			// list is where the others are.
+			a.settingsPage = ui.PageProfiles
+		}
 	}
 	a.refreshSettings()
 	a.redraw()
@@ -287,13 +309,31 @@ func (a *App) DiscardSettings() {
 func (a *App) refreshSettings() {
 	data, ok, err := sys.ReadSettings()
 	if err != nil {
-		a.setNote(i18n.F("errSettings", map[string]any{"error": err}))
+		a.setNote(locales.ErrSettings(err.Error()))
 		return
 	}
 	if !ok {
+		a.forgetBadFile()
 		return
 	}
 	a.reloadSafely(data)
+}
+
+// forgetBadFile drops what the settings page says about a file that is not
+// settings, for a file that is gone: the window wrote none until the first
+// launch, so a file the reader deleted is not something to keep explaining.
+// The reason is the page's own, so nothing is shown while there is none to
+// drop, which is the first launch on a machine that has no file yet.
+func (a *App) forgetBadFile() bool {
+	if a.configErr == "" && a.badData == nil {
+		return false
+	}
+	a.configErr, a.badData = "", nil
+	// The content the watcher remembers goes too, so that a file written back
+	// to what it held before it was deleted is taken as a new file.
+	a.file.forgetSeen()
+	a.redraw()
+	return true
 }
 
 // RecordKeybinding waits for a key of an action; asking again for the one it
@@ -392,6 +432,14 @@ func (a *App) ToggleChangedKeys() {
 // or folds them again.
 func (a *App) ToggleNumberedKeys() {
 	a.numberedKeys = !a.numberedKeys
+	a.redraw()
+}
+
+// PickScheme paints with a color scheme, as a click on the color schemes page
+// asks: the choice of the page edits the draft in place, so the window applies
+// the scheme as it does any other change.
+func (a *App) PickScheme(name string) {
+	a.settings.ColorScheme = name
 	a.redraw()
 }
 
@@ -510,6 +558,9 @@ func (a *App) AddProfile() {
 	a.settings.Profiles = append(a.settings.Profiles, p)
 	a.settingsPage = ui.ProfilePage(p.ID)
 	a.editing, a.editingFrom = &p, p
+	// The page shows the arguments it holds, so a line left from the profile
+	// that was open before would become this profile's arguments on save.
+	a.editingArgs = ""
 	a.redraw()
 }
 
@@ -576,9 +627,13 @@ func (a *App) DuplicateProfile(id string) {
 	p.ID = a.newProfileID()
 	p.Name = p.Name + " " + locales.CopySuffix()
 	p.Discovered = false
+	// Args is a slice, so a copy that kept it would share its lines with the
+	// profile it copies, and the page's edits would write both.
+	p.Args = append([]string(nil), p.Args...)
 	a.settings.Profiles = append(a.settings.Profiles, p)
 	a.settingsPage = ui.ProfilePage(p.ID)
 	a.editing, a.editingFrom = &p, p
+	a.editingArgs = strings.Join(p.Args, "\n")
 	a.redraw()
 }
 
@@ -611,6 +666,7 @@ func (a *App) apply() {
 	a.profiles = profile.Resolve(s.Profiles, a.found)
 	font := a.terminalFont()
 	colors := theme.Terminal(s)
+	a.pane = ui.Face{Background: colors.Background, Foreground: colors.Foreground}
 	copyOnSelect := terminal.CopyOnSelectNone
 	if s.CopyOnSelect {
 		copyOnSelect = terminal.CopyOnSelectClipboard
@@ -626,7 +682,7 @@ func (a *App) apply() {
 		}
 	}
 	if a.win != nil {
-		if err := a.win.SetBackgroundColor(theme.Hex(a.background())); err != nil {
+		if err := a.win.SetBackgroundColor(theme.Hex(colors.Background)); err != nil {
 			log.Printf("wt-go: background: %v", err)
 		}
 		a.win.SetOpacity(opacity(s.BackgroundOpacity))
@@ -637,205 +693,6 @@ func (a *App) apply() {
 	// a new list: it is built again when the page asks.
 	a.schemes = nil
 	a.redraw()
-}
-
-// watch takes the settings the file holds when another program writes them,
-// once a second, as Windows Terminal does, until stop closes.
-func (a *App) watch(stop <-chan struct{}) {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-stop:
-			return
-		case <-ticker.C:
-			a.poll(a.Do)
-		}
-	}
-}
-
-// poll reads the file once and hands a change to dispatch, which runs it on the
-// UI thread. It reads the same file without dispatching anything while the
-// content is unchanged. A panic in one read is logged and the watcher goes on:
-// a bad setting is not a reason to stop watching the rest.
-func (a *App) poll(dispatch func(func())) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("wt-go: settings watcher: %v\n%s", r, debug.Stack())
-		}
-	}()
-	data, ok, err := sys.ReadSettings()
-	if err != nil {
-		note := i18n.F("errSettings", map[string]any{"error": err})
-		if a.file.setReadError(note) {
-			dispatch(func() { a.setNote(note) })
-		}
-		return
-	}
-	if note, had := a.file.clearReadError(); had {
-		dispatch(func() { a.clearNote(note) })
-	}
-	if !ok {
-		return
-	}
-	if !a.file.changed(data) {
-		a.file.clearBad()
-		return
-	}
-	if _, err := store.Parse(data); err != nil && !a.file.settledBad(data) {
-		return
-	}
-	a.file.markSeen(data)
-	dispatch(func() { a.reloadSafely(data) })
-}
-
-// reload takes the settings the file holds now, when they are settings: a file
-// that is not keeps the ones the window shows, and says why.
-func (a *App) reload(data []byte) {
-	a.file.markSeen(data)
-	if a.savedData != nil && bytes.Equal(data, a.savedData) {
-		if a.badData != nil {
-			a.badData, a.configErr = nil, ""
-			a.setNote("")
-		}
-		if a.note == locales.SettingsChangedNote() {
-			a.setNote("")
-		}
-		return
-	}
-	if a.badData != nil && bytes.Equal(data, a.badData) {
-		return
-	}
-	if a.badData != nil {
-		a.badData, a.configErr = nil, ""
-	}
-	if a.dirty() {
-		a.setNote(locales.SettingsChangedNote())
-		return
-	}
-	settings, err := store.Parse(data)
-	if err != nil {
-		a.badData = data
-		a.reject(data, err)
-		return
-	}
-	a.settings, a.saved, a.savedData, a.badData = settings, settings.Clone(), data, nil
-	a.configErr = ""
-	if a.editing != nil {
-		a.editProfile(a.editing.ID)
-	}
-	a.setNote("")
-	a.redraw()
-}
-
-// reject keeps what the file held that was not settings, and says on the
-// settings page why the window is not showing it. The note is kept apart from
-// what the last save said, so switching pages or discarding a draft does not
-// clear it.
-func (a *App) reject(data []byte, err error) {
-	note := configError(data, err)
-	if note == a.configErr {
-		return
-	}
-	a.note = ""
-	a.configErr = note
-	a.redraw()
-	if a.win != nil && !a.closed && a.settingsTab == nil {
-		a.OpenSettings()
-	}
-}
-
-// reloadSafely runs reload on the UI thread. A panic is logged and shown on the
-// settings page instead of escaping: the watcher must keep running, and a
-// reload that failed must be visible.
-func (a *App) reloadSafely(data []byte) {
-	a.safely(func() { a.reload(data) })
-}
-
-// safely runs fn, turning a panic into a note. It is the boundary between a
-// background read and the window: nothing a reload does may take the watcher
-// down with it.
-func (a *App) safely(fn func()) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("wt-go: settings reload: %v\n%s", r, debug.Stack())
-			a.setNote(i18n.F("errSettings", map[string]any{"error": r}))
-		}
-	}()
-	fn()
-}
-
-// fileState is what the watcher knows of settings.json: the content it has
-// already handed to the UI, bad content it is waiting to see twice, and the
-// read error it last showed. The mutex keeps the watcher goroutine and the UI
-// thread from racing on it.
-type fileState struct {
-	mu      sync.Mutex
-	seen    []byte
-	bad     []byte
-	readErr string
-}
-
-// changed reports whether data differs from the content the watcher last
-// handed to the UI. It does not record data: only content that is dispatched
-// is seen.
-func (f *fileState) changed(data []byte) bool {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	return !bytes.Equal(data, f.seen)
-}
-
-// markSeen records the content the watcher handed to the UI.
-func (f *fileState) markSeen(data []byte) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.seen = append([]byte(nil), data...)
-	f.bad = nil
-}
-
-// clearBad forgets bad content that was seen once but never reported, as when
-// an editor restores the file it was writing.
-func (f *fileState) clearBad() {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.bad = nil
-}
-
-// settledBad reports whether data is the same bad content the watcher saw on
-// its last read. A file an editor is still writing changes from read to read;
-// waiting for the same bytes twice keeps its half-written state from being
-// archived once a second.
-func (f *fileState) settledBad(data []byte) bool {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if !bytes.Equal(data, f.bad) {
-		f.bad = append([]byte(nil), data...)
-		return false
-	}
-	return true
-}
-
-// setReadError records a read error and reports whether it is new.
-func (f *fileState) setReadError(note string) bool {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if f.readErr == note {
-		return false
-	}
-	f.readErr = note
-	return true
-}
-
-// clearReadError forgets a read error and answers with the note it showed.
-func (f *fileState) clearReadError() (string, bool) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if f.readErr == "" {
-		return "", false
-	}
-	note := f.readErr
-	f.readErr = ""
-	return note, true
 }
 
 // settingsNote is what the settings page says: what the last action did, and
@@ -863,13 +720,13 @@ func (a *App) clearNote(note string) {
 // settings: what is wrong, and where the content that was wrong is kept.
 func configError(data []byte, err error) string {
 	if data == nil {
-		return i18n.F("errSettings", map[string]any{"error": err})
+		return locales.ErrSettings(err.Error())
 	}
 	path, aerr := sys.ArchiveSettings(data)
 	if aerr != nil {
-		return i18n.F("errSettingsInvalidKeep", map[string]any{"error": err, "keepError": aerr})
+		return locales.ErrSettingsInvalidKeep(err.Error(), aerr.Error())
 	}
-	return i18n.F("errSettingsInvalid", map[string]any{"error": err, "path": path})
+	return locales.ErrSettingsInvalid(err.Error(), path)
 }
 
 // setNote says what the settings page says, and redraws when it is something

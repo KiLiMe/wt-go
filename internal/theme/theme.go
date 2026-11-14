@@ -48,34 +48,41 @@ func Hex(c myui.Color) string {
 	return fmt.Sprintf("#%02x%02x%02x", c.R, c.G, c.B)
 }
 
-// base is the colors of the window's theme: dark, unless the settings ask for
-// light, or name a theme of their own that is light.
+// base is the colors the terminal falls back on: dark, unless the settings ask
+// for light, or name a theme of their own that is light. A window that follows
+// the desktop falls back on dark, which is what the terminal did before the
+// window and the terminal were told apart.
 func base(s store.Settings) *terminal.Theme {
-	if light(s) {
+	if dark, known := Dark(s); known && !dark {
 		return terminal.LightTheme()
 	}
 	return terminal.DarkTheme()
 }
 
-// light reports whether the window is light: the appearance the settings name,
-// or the background of the theme of their own. It reads the schemes without
-// going through base, which asks it.
-func light(s store.Settings) bool {
+// Dark reports whether the window is dark, and whether the settings say so at
+// all: "light" and "dark" say outright, and a theme of their own says through
+// the background it paints. "system" is none of them — the desktop answers
+// that one — and neither is a name no scheme has.
+func Dark(s store.Settings) (dark, known bool) {
 	switch s.Theme {
 	case "light":
-		return true
-	case "", "system", "dark":
-		return false
+		return false, true
+	case "dark":
+		return true, true
+	case "", "system":
+		return false, false
 	}
-	if th, known := named(s.Theme); known {
-		return luminance(th.Background) >= 0.5
-	}
+	// A scheme the file writes wins over the one of that name it is written
+	// over, the way Scheme resolves them.
 	if sc, own := custom(s, s.Theme); own {
 		if bg, ok := Color(sc.Background); ok {
-			return luminance(bg) >= 0.5
+			return luminance(bg) < 0.5, true
 		}
 	}
-	return false
+	if th, known := named(s.Theme); known {
+		return luminance(th.Background) < 0.5, true
+	}
+	return false, false
 }
 
 // override sets *c to the color s writes, and keeps it when s writes none.

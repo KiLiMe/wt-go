@@ -151,6 +151,9 @@
   "about": "关于",
   "aboutCommit": "提交",
   "aboutRuntime": "运行环境",
+  "aboutMygo": "mygo",
+  "aboutSettings": "设置文件",
+  "aboutLog": "日志",
   "license": "许可",
   "projectPage": "项目主页",
   "unsavedChanges": "有未保存的更改",
@@ -162,6 +165,8 @@
   "startDirectoryNote": "profile 未指定目录时，新标签从哪里开始：current（wt-go 启动时所在的目录）、home（主目录），或一个路径。留空时用主目录。",
   "closeOnLastTab": "关最后一个标签时关窗口",
   "closeOnLastTabNote": "最后一个标签关闭时关闭窗口。",
+  "confirmCloseWindow": "关闭窗口前确认",
+  "confirmCloseWindowNote": "窗口里有多个标签时，关窗口前先问一句。",
   "copyOnSelect": "选中即复制",
   "copyOnSelectNote": "选中内容后立刻复制到剪贴板。",
   "rightClick": "右键行为",
@@ -228,6 +233,15 @@
   "name": "名称",
   "commandLine": "命令行",
   "commandLineNote": "这个配置文件运行的命令行；留空则用系统的默认 shell。",
+  "discoveredProfileNote": "窗口在这台机器上找到的 shell；这里不改它的路径。",
+  "commandEmptyHint": "留空：这个配置文件运行系统的默认 shell。要运行自己的程序，请填写它的路径，例如 {hint}。",
+  "@commandEmptyHint": {
+    "placeholders": {
+      "hint": {
+        "type": "String"
+      }
+    }
+  },
   "arguments": "参数",
   "argumentsNote": "命令行的参数，每行一个。",
   "profileStartNote": "这个配置文件的标签从哪个目录开始：current、home、一个路径；留空则用上面的起始目录。",
@@ -265,6 +279,15 @@
   "confirmCloseSettingsText": "设置有未保存的更改。",
   "confirmCloseTabTitle": "关闭标签？",
   "confirmCloseOthersTitle": "关闭其它标签？",
+  "confirmCloseWindowTitle": "关闭窗口？",
+  "confirmCloseWindowText": "关掉窗口会把这 {count} 个标签页一起关掉。",
+  "@confirmCloseWindowText": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "closeRunning": "还在运行：{programs}",
   "@closeRunning": {
     "placeholders": {
@@ -322,6 +345,7 @@
     }
   },
   "settingsChangedNote": "settings.json 在磁盘上被改动；放弃当前修改才能应用。",
+  "saveRefusedNote": "没有保存：请改正有问题的地方再保存，或放弃当前修改。",
   "errSettingsInvalid": "settings.json 内容无效：{error}；原文已保存到 {path}",
   "@errSettingsInvalid": {
     "placeholders": {

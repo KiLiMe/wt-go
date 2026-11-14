@@ -3,8 +3,8 @@ package app
 import (
 	"log"
 	"strings"
-	"time"
 
+	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/plugins/terminal"
 
 	"wtgo/internal/action"
@@ -13,7 +13,6 @@ import (
 	"wtgo/internal/pane"
 	"wtgo/internal/profile"
 	"wtgo/internal/sys"
-	"wtgo/internal/ui"
 )
 
 // NewTab opens a tab that runs a profile; "" runs the default profile, which
@@ -68,9 +67,9 @@ func (a *App) closeTab(tab *pane.Tab) {
 		return
 	}
 	if len(a.panes.Tabs) == 1 && a.settings.CloseOnLastTab {
+		// The window goes with this tab; whether it asks first is the
+		// window's own business (see onClose).
 		a.closeWindow()
-		closeTerminals(tab)
-		a.forget(tab.Terminals()...)
 		return
 	}
 	a.panes.Remove(i)
@@ -84,6 +83,25 @@ func (a *App) closeTab(tab *pane.Tab) {
 	a.redraw()
 }
 
+// onClose keeps the window open to ask about it, when the settings say to.
+// Every way the window closes arrives here — its own button, Alt+F4, the code
+// that asks for it — so this is the one place that asks.
+func (a *App) onClose(e *mygo.CloseEvent) {
+	if !a.asksCloseWindow() {
+		return
+	}
+	e.PreventDefault()
+	a.askCloseWindow()
+}
+
+// asksCloseWindow reports whether closing the window asks first: the settings
+// say so, and it holds more than one tab — with one, closing the window is
+// what closing that tab means, which the close of a tab already asks about.
+// A close the window agreed to, as the answer to this question, does not ask.
+func (a *App) asksCloseWindow() bool {
+	return a.settings.ConfirmCloseWindow && !a.closing && !a.closed && len(a.panes.Tabs) > 1
+}
+
 // closeTerminals closes what a tab holds.
 func closeTerminals(tab *pane.Tab) {
 	for _, term := range tab.Terminals() {
@@ -91,249 +109,13 @@ func closeTerminals(tab *pane.Tab) {
 	}
 }
 
-// newTerminal starts the program a terminal runs and remembers its process:
-// the plugin keeps the process to itself, so the window learns it from the one
-// child that starts between the two lists.
-func (a *App) newTerminal(opts terminal.Options) (*terminal.Terminal, error) {
-	before, berr := sys.Subtree(sys.OwnPID())
-	created, err := terminal.New(opts)
-	if err != nil {
-		return nil, err
-	}
-	term := created
-	if berr == nil {
-		// The plugin starts the program in a goroutine of its own, so the
-		// child is not there the moment New returns: wait for it off the UI
-		// thread, and hand the answer back when it comes.
-		go func() {
-			if shell, ok := a.spawned(term, before); ok {
-				a.Do(func() { a.shells[term] = shell })
-				// A launcher on PATH starts the program again, and the program
-				// is the shell: the launcher under it would keep the tab busy
-				// for as long as it is open, so the window moves on to the
-				// child as soon as it shows.
-				if real, ok := a.reexec(shell, term); ok {
-					a.Do(func() {
-						if known, ok := a.shells[term]; ok && known.Pid == shell.Pid {
-							a.shells[term] = real
-						}
-					})
-				}
-			}
-		}()
-	}
-	return term, nil
-}
-
-// spawned waits for the process a terminal started: the child of this process
-// that was not there before, and that no other terminal took. A shell that
-// reads its startup files takes a while to appear, so the window keeps looking
-// for a few seconds, less and less often.
-func (a *App) spawned(term *terminal.Terminal, before []sys.Proc) (sys.ShellProc, bool) {
-	start := time.Now()
-	deadline := start.Add(3 * time.Second)
-	wait := 10 * time.Millisecond
-	for time.Now().Before(deadline) {
-		// The children of this process are the ones the kernel names for it, so
-		// looking again costs a few small reads instead of a list of every
-		// process the machine runs, which this would throw away each time.
-		if after, err := sys.Subtree(sys.OwnPID()); err == nil {
-			if p, ok := sys.Spawned(before, after, sys.OwnPID(), a.claimed()); ok && a.claim(p.Pid, term) {
-				return sys.ShellProc{Pid: p.Pid, Name: p.Name}, true
-			}
-		}
-		select {
-		case <-term.Done():
-			// The program ended, or could not start: no process is coming, so
-			// the wait is over before its three seconds are.
-			log.Printf("wt-go: %s", fault.Line(fault.UnknownShell, "the terminal ended before a child process appeared"))
-			return sys.ShellProc{}, false
-		case <-time.After(wait):
-		}
-		if wait < 100*time.Millisecond {
-			wait *= 2
-		}
-	}
-	log.Printf("wt-go: %s", fault.Line(fault.UnknownShell, "no child process appeared within "+time.Since(start).Round(time.Millisecond).String()))
-	return sys.ShellProc{}, false
-}
-
-// shellSettle is how long the window watches a program it started for one that
-// runs the program again. A launcher starts its program at once, so this is a
-// moment rather than a wait, and a shell that is the program itself costs one
-// look at the process list.
-const shellSettle = 250 * time.Millisecond
-
-// reexec follows a shell through the launcher that started it, and reports the
-// program the tab really runs. It reports false when the program the window
-// started is the shell itself.
-func (a *App) reexec(shell sys.ShellProc, term *terminal.Terminal) (sys.ShellProc, bool) {
-	deadline := time.Now().Add(shellSettle)
-	wait := 10 * time.Millisecond
-	cur := sys.Proc{Pid: shell.Pid, Name: shell.Name}
-	moved := false
-	for time.Now().Before(deadline) {
-		if all, err := sys.Subtree(cur.Pid); err == nil {
-			if next, ok := sys.Reexec(all, cur); ok {
-				if a.adopt(cur.Pid, next.Pid, term) {
-					cur, moved = next, true
-				}
-			} else if moved {
-				break
-			}
-		}
-		select {
-		case <-term.Done():
-			return shell, false
-		case <-time.After(wait):
-		}
-		if wait < 100*time.Millisecond {
-			wait *= 2
-		}
-	}
-	if !moved {
-		return shell, false
-	}
-	return sys.ShellProc{Pid: cur.Pid, Name: cur.Name}, true
-}
-
-// claimed is the processes the window already gave to terminals.
-func (a *App) claimed() map[int]bool {
-	a.spawnMu.Lock()
-	defer a.spawnMu.Unlock()
-	out := make(map[int]bool, len(a.taken))
-	for pid := range a.taken {
-		out[pid] = true
-	}
-	return out
-}
-
-// claim takes a process for a terminal, and reports whether no other terminal
-// had it.
-func (a *App) claim(pid int, term *terminal.Terminal) bool {
-	a.spawnMu.Lock()
-	defer a.spawnMu.Unlock()
-	if a.taken == nil {
-		a.taken = make(map[int]*terminal.Terminal)
-	}
-	if _, ok := a.taken[pid]; ok {
-		return false
-	}
-	a.taken[pid] = term
-	return true
-}
-
-// adopt adds the process a terminal's shell started to what that terminal
-// took, and reports false when the terminal no longer holds the one it came
-// from, as when the tab closed while the window was looking. The launcher
-// stays taken too: it belongs to the same tab, and leaving it free would let
-// the search of a tab that starts at the same time take it for its own shell.
-func (a *App) adopt(from, to int, term *terminal.Terminal) bool {
-	a.spawnMu.Lock()
-	defer a.spawnMu.Unlock()
-	if a.taken[from] != term {
-		return false
-	}
-	a.taken[to] = term
-	return true
-}
-
-// tabActivity is what a tab does: whether it runs something, and what that is,
-// so that the question the window asks can name it.
-type tabActivity struct {
-	act      sys.Activity
-	programs []string
-}
-
-// processList is the machine's process list as one question sees it: the list,
-// and whether it could be read at all. A question that covers several tabs reads
-// it once, because a scan of the process table costs milliseconds per call.
-type processList struct {
-	procs []sys.Proc
-	known bool
-}
-
-// processList reads the machine's processes, and says so in the log when it
-// cannot: the answer to a question about a tab is then that the window cannot
-// speak for it.
-func (a *App) processList() processList {
-	procs, err := sys.Processes()
-	if err != nil {
-		log.Printf("wt-go: %s", fault.Line(fault.NoProcessList, err.Error()))
-		return processList{}
-	}
-	return processList{procs: procs, known: true}
-}
-
-// activity is what a tab does, as the processes of the shells it runs say. A
-// shell that ended runs nothing, and neither does the console the pty runs
-// behind. A shell the window did not learn is one it cannot speak for, and
-// saying so beats guessing either way.
-func (a *App) activity(tab *pane.Tab, list processList) tabActivity {
-	var live []*terminal.Terminal
-	for _, term := range tab.Terminals() {
-		select {
-		case <-term.Done():
-		default:
-			live = append(live, term)
-		}
-	}
-	if len(live) == 0 {
-		return tabActivity{}
-	}
-	if !list.known {
-		return tabActivity{act: sys.Unknown}
-	}
-	out := tabActivity{}
-	for _, term := range live {
-		shell, ok := a.shells[term]
-		if !ok {
-			log.Printf("wt-go: %s", fault.Line(fault.UnknownShell, "a tab has no shell process"))
-			out.act = sys.Unknown
-			continue
-		}
-		switch shell.Activity(list.procs) {
-		case sys.Busy:
-			out.act = sys.Busy
-			out.programs = append(out.programs, shell.Programs(list.procs)...)
-		case sys.Unknown:
-			if out.act == sys.Idle {
-				out.act = sys.Unknown
-			}
-		}
-	}
-	if out.act != sys.Busy {
-		out.programs = nil
-	}
-	return out
-}
-
 // asksClose reports whether the settings ask before a tab that does act closes.
-func (a *App) asksClose(act tabActivity) bool {
-	return a.settings.ConfirmClose.Ask(act.act != sys.Idle)
-}
 
-// forget drops the processes of the terminals that close, so that the map of
-// terminals to processes does not grow with every tab that ever opened.
-func (a *App) forget(terms ...*terminal.Terminal) {
-	for _, term := range terms {
-		delete(a.shells, term)
-	}
-	gone := make(map[*terminal.Terminal]bool, len(terms))
-	for _, term := range terms {
-		gone[term] = true
-	}
-	a.spawnMu.Lock()
-	defer a.spawnMu.Unlock()
-	for pid, owner := range a.taken {
-		if gone[owner] {
-			delete(a.taken, pid)
-		}
-	}
-}
-
-// closeWindow closes the window, which closes its terminals.
+// closeWindow closes the window, which closes its terminals. The close it hears
+// asks about it first (see onClose), so this is the way past that question: the
+// answer to it, a reset that asked its own, or a close nothing asks about.
 func (a *App) closeWindow() {
+	a.closing = true
 	if a.win == nil || a.closed {
 		return
 	}
@@ -413,6 +195,7 @@ func (a *App) closeOtherTabs(keep *pane.Tab) {
 			a.closeSettingsTab()
 		}
 		closeTerminals(tab)
+		a.forget(tab.Terminals()...)
 	}
 	a.syncTitle()
 	a.redraw()
@@ -454,12 +237,15 @@ const revealFrames = 2
 func (a *App) revealTab() { a.revealTabs = revealFrames }
 
 // BeginRename opens the dialog that renames the tab at i, with the name the
-// tab has in its field.
+// tab has in its field. Whatever other overlay was open goes: the dialog holds
+// the keyboard.
 func (a *App) BeginRename(i int) {
 	if i < 0 || i >= len(a.panes.Tabs) {
 		return
 	}
-	a.renaming = &ui.Rename{Open: true, Tab: i, Text: a.panes.Tabs[i].Name}
+	a.openOverlay(overlayRename)
+	a.renaming.Tab = i
+	a.renaming.Text = a.panes.Tabs[i].Name
 	a.redraw()
 }
 
@@ -469,14 +255,14 @@ func (a *App) RenameTab(i int, name string) {
 	if i >= 0 && i < len(a.panes.Tabs) {
 		a.panes.Tabs[i].Name = strings.TrimSpace(name)
 	}
-	a.renaming = nil
+	a.closeOverlay(overlayRename)
 	a.syncTitle()
 	a.redraw()
 }
 
 // CancelRename closes the rename dialog.
 func (a *App) CancelRename() {
-	a.renaming = nil
+	a.closeOverlay(overlayRename)
 	a.redraw()
 }
 

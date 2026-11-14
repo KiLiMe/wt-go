@@ -53,6 +53,10 @@ type Actions interface {
 	SelectSettingsPage(page string)
 	// SaveSettings writes the settings to the file.
 	SaveSettings()
+	// SetDefaultProfile opens the profile with an id in the tab the window
+	// opens first, or the shell of the machine for "": the choice stands for
+	// the profile the file names that the page no longer offers.
+	SetDefaultProfile(id string)
 	// DiscardSettings goes back to the settings the file holds.
 	DiscardSettings()
 	// OpenSettingsFolder opens the folder settings.json lives in.
@@ -84,6 +88,10 @@ type Actions interface {
 	ToggleNumberedKeys()
 	// ResetKeybindings goes back to the keybindings the window starts with.
 	ResetKeybindings()
+	// PickScheme paints with the color scheme the settings page names. The
+	// page asks for it rather than writing the draft itself, so that the
+	// window applies the new scheme as it does any other change.
+	PickScheme(name string)
 	// CopyScheme makes a color scheme of the settings from the one the
 	// terminal paints with, and picks it.
 	CopyScheme()
@@ -182,6 +190,13 @@ type Rename struct {
 type Settings struct {
 	// Page is the page the left column shows.
 	Page string
+	// KeysCache is what the actions page derived from the file, and
+	// SchemesCache what the color schemes page did: the window keeps one of
+	// each from frame to frame, and a page drawn without one keeps nothing
+	// past its frame. They hold no settings, only the answers to a file that
+	// has not changed.
+	KeysCache    *PageKeybindings
+	SchemesCache *SchemesCache
 	// Draft is the settings the form edits, and the window applies as it
 	// goes.
 	Draft *store.Settings
@@ -190,6 +205,10 @@ type Settings struct {
 	// Note says what the last save did, or why the file is not the
 	// settings.
 	Note string
+	// Validation is why the last save refused the draft, "" while the
+	// draft is one the window can run with. It stays while the note goes,
+	// so that what a person clicks away from does not hide what is wrong.
+	Validation string
 	// Recording is the action the window waits for a key of, "" while it
 	// waits for none.
 	Recording string
@@ -227,7 +246,8 @@ type Settings struct {
 }
 
 // About is the dialog that says what the program is: the version it runs, what
-// it was built from, and what it is licensed under.
+// it was built from, what it runs on and the files it leaves, and what it is
+// licensed under.
 type About struct {
 	// Open is whether the dialog shows; the dialog closes it.
 	Open bool
@@ -239,6 +259,15 @@ type About struct {
 	// Go and Platform are what it runs on.
 	Go       string
 	Platform string
+	// Mygo is the mygo version the window and the terminals are built on:
+	// which build of the framework a bug report is about matters as much as
+	// which build of the program.
+	Mygo string
+	// Settings and Log are where settings.json and wt-go.log are, the first
+	// thing `wt-go diag` is asked about: a person sent to look at a file by a
+	// bug report should not have to open a console to find it.
+	Settings string
+	Log      string
 	// Project is the address of the program's page, which the dialog opens.
 	Project string
 	// Note is what went wrong the last time the dialog opened the page, which
@@ -259,12 +288,25 @@ type Confirm struct {
 	No    string
 }
 
+// Face is the surface a pane paints: the color behind the tab in front and the
+// one text reads on there. The strip around that tab is the window's, in the
+// theme's colors, so a window whose theme is not the terminal's still joins the
+// tab that is in front to the pane below it.
+type Face struct {
+	Background myui.Color
+	Foreground myui.Color
+}
+
 // State is what the window shows this frame.
 type State struct {
 	// Tabs are the tabs, in order.
 	Tabs []Tab
 	// Active is the tab in front.
 	Active int
+	// Pane is the face of the pane below the strip, which the tab in front
+	// merges with. The zero Face takes the theme's own background instead,
+	// for a window that draws no pane there.
+	Pane Face
 	// Profiles are the ones the menu that opens tabs lists.
 	Profiles []Profile
 	// Device is the shell following the device runs, by the name the table

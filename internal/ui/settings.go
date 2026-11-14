@@ -38,10 +38,13 @@ func SettingsTab(c *myui.Context, st Settings, act Actions) myui.Element {
 	return myui.Column(c).Fill().Children(func() {
 		myui.Row(c).Grow(1).AlignItems(myui.Stretch).Children(func() {
 			nav(c, st, act)
-			myui.Scroll(c).Grow(1).Children(func() {
-				myui.Column(c).Padding(24, 24, 16, 24).Gap(24).Children(func() {
-					pageIntro(c, st)
-					page(c, st, act)
+			myui.Column(c).Grow(1).Children(func() {
+				banner(c, st)
+				myui.Scroll(c).Grow(1).Children(func() {
+					myui.Column(c).Padding(24, 24, 16, 24).Gap(24).Children(func() {
+						pageIntro(c, st)
+						page(c, st, act)
+					})
 				})
 			})
 		})
@@ -121,24 +124,48 @@ func navAction(c *myui.Context, icon *myui.SVG, label string, onClick func()) {
 	})
 }
 
+// banner is why the last save refused the draft, above the page it refused it
+// on: the footer's note scrolls with nothing and cuts a long reason at the
+// width of the row, when what is wrong is the thing to correct.
+func banner(c *myui.Context, st Settings) {
+	if st.Validation == "" {
+		return
+	}
+	t := c.Theme()
+	myui.Row(c).Padding(10, 24).Gap(8).AlignItems(myui.Start).
+		Background(t.Background.MixOklab(t.Danger, 0.1)).Children(func() {
+		myui.Text(c, st.Validation).FontSize(12).TextColor(t.Danger).Wrap()
+	})
+}
+
 // footer is what saves the page: what the draft holds that the file does not,
 // and the buttons that write it or drop it.
 func footer(c *myui.Context, st Settings, act Actions) myui.Element {
 	t := c.Theme()
 	return myui.Row(c).Height(48).Padding(0, 16).AlignItems(myui.Center).Gap(8).
 		BorderWidth(1, 0, 0, 0).BorderColor(cardLine(t)).Children(func() {
-		note := st.Note
-		if note == "" && st.Dirty {
-			note = locales.UnsavedChanges()
-		}
-		if note != "" {
-			myui.Text(c, note).FontSize(11).TextColor(t.TextMuted).SingleLine().MaxWidth(420)
+		switch {
+		case st.Note != "":
+			myui.Text(c, st.Note).FontSize(11).TextColor(t.TextMuted).SingleLine().MaxWidth(420)
+		case st.Validation != "":
+			// The banner carries the reason itself, so the row says what to do
+			// about it, which is what a person reads at the button they pressed.
+			myui.Text(c, st.SaveRefusedNote()).FontSize(11).TextColor(t.Danger).SingleLine().MaxWidth(420)
+		case st.Dirty:
+			myui.Text(c, locales.UnsavedChanges()).FontSize(11).TextColor(t.TextMuted).SingleLine().MaxWidth(420)
 		}
 		myui.Spacer(c)
 		myui.Button(c, locales.OpenSettingsFolder()).OnClick(act.OpenSettingsFolder)
 		myui.Button(c, locales.Discard()).Disabled(!st.Dirty).Opacity(dimmed(st.Dirty)).OnClick(act.DiscardSettings)
 		myui.PrimaryButton(c, locales.Save()).Disabled(!st.Dirty).Opacity(dimmed(st.Dirty)).OnClick(act.SaveSettings)
 	})
+}
+
+// SaveRefusedNote is what the foot of the settings page says once a save
+// refused the draft: whatever went wrong is the banner's to name, and this is
+// the way out of it.
+func (st Settings) SaveRefusedNote() string {
+	return locales.SaveRefusedNote()
 }
 
 // dimmed is how much of a button that does nothing shows: the theme does not
@@ -218,16 +245,18 @@ func startupPage(c *myui.Context, st Settings, act Actions) {
 			}
 			// A profile the file names but no longer offers runs the shell of the
 			// machine anyway, so the select says following the device rather than
-			// a choice that is gone; only choosing writes it, so opening the
-			// page does not change the draft.
+			// a choice that is gone. The value the select edits is the page's
+			// copy, so that drawing the page never changes the draft: only a
+			// click names a profile for the window to write down.
 			offered := s.DefaultProfile
 			if offered != "" && !offers(st.Known, offered) {
 				offered = ""
 			}
+			opts[0].Value = offered
 			picked := offered
 			choice(c, &picked, opts)
 			if picked != offered {
-				s.DefaultProfile = picked
+				act.SetDefaultProfile(picked)
 			}
 		})
 		field(c, locales.Language(), "", func() {
@@ -244,6 +273,11 @@ func startupPage(c *myui.Context, st Settings, act Actions) {
 		})
 		field(c, locales.CloseOnLastTab(), locales.CloseOnLastTabNote(), func() {
 			myui.Switch(c, &s.CloseOnLastTab)
+		})
+		// It asks about the way the window goes, which closes the tab below it
+		// too, so it follows that switch.
+		field(c, locales.ConfirmCloseWindow(), locales.ConfirmCloseWindowNote(), func() {
+			myui.Switch(c, &s.ConfirmCloseWindow)
 		})
 	})
 }
@@ -448,20 +482,39 @@ func profilesPage(c *myui.Context, st Settings, act Actions) {
 	})
 }
 
-// profilePage is the profile with an id, as the copy the page edits.
+// profilePage is the profile with an id, as the copy the page edits. The
+// profile the window found runs a shell it knows the path of, so its command is
+// not the page's to change.
 func profilePage(c *myui.Context, st Settings, act Actions, id string) {
 	p := st.Profile
 	if p == nil || p.ID != id {
 		myui.Text(c, locales.SelectProfile()).TextColor(c.Theme().TextMuted)
 		return
 	}
+	// The window finds this profile again on the next start, so a command it
+	// changed here would be a change the page could not keep.
+	readonly := p.Discovered
 	section(c, "", func() {
 		field(c, locales.Name(), "", func() {
 			myui.TextInput(c, &p.Name)
 		})
-		fieldBlock(c, locales.CommandLine(), locales.CommandLineNote(), func() {
-			myui.TextInput(c, &p.Command).Placeholder(store.DefaultShellHint())
-		})
+		if readonly {
+			fieldBlock(c, locales.CommandLine(), locales.DiscoveredProfileNote(), func() {
+				myui.TextInput(c, &p.Command).ReadOnly(true)
+			})
+		} else {
+			fieldBlock(c, locales.CommandLine(), locales.CommandLineNote(), func() {
+				myui.TextInput(c, &p.Command).Placeholder(store.DefaultShellHint())
+			})
+			// Below the field rather than beside it: the note says what
+			// emptying the field does, and the hint says why the empty one a
+			// person just left is not what runs yet.
+			if strings.TrimSpace(p.Command) == "" {
+				myui.Column(c).Gap(3).MinWidth(0).Children(func() {
+					myui.Text(c, locales.CommandEmptyHint(store.DefaultShellHint())).FontSize(12).TextColor(c.Theme().TextMuted).Wrap()
+				})
+			}
+		}
 		fieldBlock(c, locales.Arguments(), locales.ArgumentsNote(), func() {
 			myui.TextArea(c, st.Args).Lines(2, 6)
 		})
