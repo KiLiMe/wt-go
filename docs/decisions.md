@@ -62,7 +62,7 @@
 | ADR-55 | 「操作」页：一个动作一个键，改没改看得见 | 有效 |
 | ADR-56 | 没有可用 profile 就是「跟随系统」，不在菜单里留空位 | 有效 |
 | ADR-57 | ConPTY 载不动的键位，在 mygo 的编码器里换成老式字节 | 有效 |
-| ADR-58 | fork mygo：一条回复一次写，ConPTY 载不动的颜色回复不发 | 已被 ADR-72 修订（病因） |
+| ADR-58 | fork mygo：一条回复一次写，ConPTY 载不动的颜色回复不发 | 已被 ADR-72/73 修订（病因、范围） |
 | ADR-59 | 程序自己 fork 的剪贴板工具不归 wt-go 管，装 `xclip` 即可 | 有效 |
 | ADR-60 | 设置页整页一个底色，左栏与底栏不铺 `Surface` | 有效 |
 | ADR-61 | 「显示隐藏的配置文件」是页上的一行开关，默认开着，左栏始终只列没隐藏的 | 已被 ADR-71 取代 |
@@ -76,6 +76,7 @@
 | ADR-70 | 「外观与排版」的预览吸在页面顶上，不随字段滚走 | 有效 |
 | ADR-71 | 隐藏跟着配置文件走：字段里设，列表照样列出并标「已隐藏」，探测到的条目只给隐藏 | 有效 |
 | ADR-72 | ConPTY 剥掉 OSC 回复的头：ADR-58 的病因改写，决定不变 | 有效 |
+| ADR-73 | ConPTY 一条回复都不发：ADR-58 的拆条作废，过滤面扩到全部答复 | 有效 |
 
 ---
 
@@ -1490,6 +1491,8 @@ Kitty 分支与 ConPTY 判断都没动，上游 `main` 也一样（git issue #12
 `reply_skip_test.go`（Windows 无 `Conn` 时 `OSC 4/10/11/12` 跳过、标题与 CSI 照发、有 `Conn` 一律不跳）；
 键位兜底在 `legacykey_test.go`（ADR-57）。
 
+**后续**：`splitReplies` 已移除、`skipReply` 扩成「一条回复都不发」，见 ADR-73。
+
 ## ADR-59 程序自己 fork 的剪贴板工具不归 wt-go 管，装 `xclip` 即可
 
 **背景**：X11（`kwin_x11`，非 Wayland、非 SSH）上，在 wt-go 的标签里跑 `pi`，选中复制后界面闪出
@@ -1946,3 +1949,46 @@ Windows 上同一个目录会被写成 `C:\Users\Foo`（环境变量）与 `c:\u
 
 **留待评估**：自带 `conpty.dll`/`OpenConsole.exe` 是 ADR-58 从未评估过的分支（能让 Windows 上的程序
 重新问到配色），记在 `docs/plan.md` 的「待评估」，不与本条一起决定。
+
+**后续**：这里留着的两处过滤已并成一个入口、拆条一并删掉，见 ADR-73。
+
+## ADR-73 ConPTY 一条回复都不发：ADR-58 的拆条作废，过滤面扩到全部答复
+
+**背景**：ADR-58 的决定有两个假设没验过：一是「拆成逐条写」对送不到的答复无害也有益，二是
+`skipReply` 只挡 `OSC 4/10/11/12` 就够——注释里写的是「ConPTY 保留 CSI」。
+
+**实测**（同一个子进程用 `ENABLE_VIRTUAL_TERMINAL_INPUT` 进 raw 模式，只换 ConPTY 实现；子进程问
+`OSC 10`、`OSC 11`、16 条 `OSC 4` 加 DA1，父进程把答复写进 pty 输入端）：
+
+| ConPTY | 一次写 19 条 | 逐条写 | 答复里夹纯文本 |
+| --- | --- | --- | --- |
+| 系统 conhost（`kernel32.CreatePseudoConsole`） | 子进程收到 7 字节，全是 conhost 自答的 `ESC[?1;0c` | 同样 7 字节 | 还是 7 字节，`A`/`E` 也没到 |
+| 自带 `conpty.dll` 1.25 + `OpenConsole.exe` | 454 字节，18 条完整 | 同样 454 字节 | 37 字节，逐字节完整 |
+
+两个假设都不成立：①拆条对系统 conhost **毫无影响**（一次写与逐条写都是 0 字节到达）；②CSI 答复同样被吃
+——单独写 `ESC[?62;22c` 时子进程只收到前后的 `Z`、`Y`，应答没了。上游也印证了后者：
+`earendil-works/pi#10717` 里 Windows + WezTerm 漏出的碎片是 `ESC[6;21;10t`，那是 CSI 的窗口报告。
+
+**决定**：把「不发」收成一个入口 `(*Terminal).writeReply`。`conpty()` 为真时**什么都不写**（`OSC`、
+`CSI`、`DCS` 一体对待），否则整批一次 `push`。三处都走它：
+1. `WritePTY` 回调——终端对程序答复的常规路径；
+2. `schemeChanged` 的 `?997;n`——此前绕过过滤直接 `t.in.push`；
+3. `sendReply`（剪贴板的整段答复，走 `replying` 标记）——`conpty()` 时直接返回。
+
+`splitReplies`、`replyLen`、`skipReply` 一并删除：上游 `main` 本来就成批写，pi 也早已能整批消费
+（ADR-72 的上游结论），拆条既无用又多一处与上游的分歧。
+
+**理由**：①ConPTY 保留哪些字节不可预测——同一实现下连普通文本都不一定到，只有「不发」是确定的；
+②过滤面按「是不是终端→程序的答复」划，比按具体操作数划好维护，也不会漏掉下一个漏进输入框的字节；
+③fork 因此更薄：`wtgo` 分支只剩两件事——键位降级（ADR-57）与不写回复。
+
+**代价**：与 ADR-58 相同。Windows 上程序问不到终端配色与深浅（`OSC 4/10/11/12`、`?996n`），读剪贴板
+（OSC 52 read、Kitty 的 5522）也拿不到答复；macOS/Linux 与 `Options.Conn`（程序在另一台机器）不受影响。
+判据仍收在 `(*Terminal).conpty()` 一处。
+
+**否决的方案**：①保留拆条——实测对系统 conhost 零效果；②只堵 `OSC` 不堵 `CSI`——DA1、DSR 同样到不了，
+且「CSI 能过」这个前提已被实测推翻；③探测程序是否 VT 输入模式——那是 hyla 自带 ConPTY 的前提，不是
+「发不发」的前提。
+
+**测试**：fork 的 `plugins/terminal/reply_conpty_test.go`——`TestWriteReply` 在 `conpty()` 下队列为空、
+有 `Conn` 时整批一次写入（非 Windows 跳过）。

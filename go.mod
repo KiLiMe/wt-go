@@ -23,6 +23,6 @@ require (
 
 tool github.com/egoist/mygo/cmd/mygo
 
-// Our fork of mygo: it writes a terminal's replies to programs one per write,
-// which pi and the like need to tell a reply from typing (ADR-58).
-replace github.com/egoist/mygo => github.com/KiLiMe/mygo v0.9.1-0.20261113062854-43b180c1f204
+// Our fork of mygo: a terminal behind a ConPTY writes no reply at all, and keys
+// go as the plain forms while a program has CSI u on (ADR-72, ADR-57).
+replace github.com/egoist/mygo => github.com/KiLiMe/mygo v0.9.1-0.20261114072300-2632a920569b

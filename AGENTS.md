@@ -39,4 +39,5 @@
 | `Scripts/build.sh` | 同上（Linux / macOS）：出 `build/<os>-<arch>/wt-go`，平台按 `go env` |
 | `docs/` | `使用说明.md` / `配置参考.md`（`settings.json` 全字段）/ `键位.md`（默认键位与键位写法）/ `故障排查.md`（故障码）/ `MCP.md`（`wt-go mcp` 的工具、资源与协议）/ `Linux.md` / `代码导读.md` / `decisions.md`（ADR）/ `plan.md`（阶段计划） |
 | `mygo.json` | `go tool mygo build` 的包名、版本与打包信息 |
+| `refs/` | 别人写的同类应用（只读参考，已在 `.gitignore` 里）：清单、许可证与获取方式见 `refs/AGENTS.md` |
 | `Scripts/build.ps1` / `Scripts/build.sh` | 参数：`-Test`/`--test` 先跑 vet 与测试、`-Clean`/`--clean` 清掉 `build/`、`-Package`/`--package` 只出 `dist/`、`-Version`/`--expect <版本>` 断言 `mygo.json` 的版本就是这一串（发版对 tag 用） |

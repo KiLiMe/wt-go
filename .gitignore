@@ -6,3 +6,4 @@
 *.exe
 *.syso
 tmp_*.png
+/refs/
