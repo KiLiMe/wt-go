@@ -89,7 +89,7 @@ const tabStep float32 = 176
 // this the strip shows no tab at all, only the buttons that move tabs that are
 // not there. It is a variable because stripButtonsWidth is a function.
 var MinWindowWidth = stripGutter + minTabWidth + dragRoom +
-	stripButtonsWidth(false) + 2*stepWidth + 3*46
+	stripButtonsWidth() + 2*stepWidth + 3*46
 
 // tabDrag is a tab on its way to another place in the strip.
 type tabDrag struct {
@@ -235,9 +235,8 @@ func windowButton(c *myui.Context, b *WindowButtons, act Actions, name string) {
 // stripTabs is the room the tabs take: the buttons that move them, and the
 // tabs themselves, which scroll sideways when they outgrow the room.
 func stripTabs(c *myui.Context, st State, act Actions) {
-	front := len(st.Tabs) > 0 && st.Active == len(st.Tabs)-1
 	if st.TabsScroll == nil {
-		room := tabsRoom(c, st, false, front)
+		room := tabsRoom(c, st, false)
 		myui.Row(c).Height(TitleBarHeight).Grow(1).AlignItems(myui.Center).Children(func() {
 			tabs(c, st, act, room)
 			stripButtons(c, st, act, true)
@@ -250,7 +249,7 @@ func stripTabs(c *myui.Context, st State, act Actions) {
 	// they are in keeps them: what they take is what makes the tabs
 	// outgrow the strip.
 	scrolls := st.TabsScroll.MaxX > 0
-	room := tabsRoom(c, st, scrolls, front)
+	room := tabsRoom(c, st, scrolls)
 	myui.Row(c).Height(TitleBarHeight).Grow(1).AlignItems(myui.Center).Children(func() {
 		if scrolls {
 			stepButton(c, st, act, -1)
@@ -269,10 +268,10 @@ func stripTabs(c *myui.Context, st State, act Actions) {
 // tabsRoom is the room the tabs have: the window, less the strip's own padding,
 // the room that moves the window and the window's buttons, the buttons beside
 // the tabs and, when they show, the buttons that move the tabs.
-func tabsRoom(c *myui.Context, st State, scrolls, front bool) float32 {
+func tabsRoom(c *myui.Context, st State, scrolls bool) float32 {
 	w, _ := c.Size()
 	bar := c.TitleBar()
-	room := w - bar.Left - stripGutter - bar.Right - dragRoom - stripButtonsWidth(front)
+	room := w - bar.Left - stripGutter - bar.Right - dragRoom - stripButtonsWidth()
 	if b := st.WindowButtons; b != nil {
 		room -= windowGroupWidth(len(b.Start)) + windowGroupWidth(len(b.End))
 	}
@@ -284,14 +283,15 @@ func tabsRoom(c *myui.Context, st State, scrolls, front bool) float32 {
 
 // stripButtonsWidth is the room the buttons beside the tabs take, as
 // stripButtons lays them out: the one that opens a tab, the menu beside it, and
-// the line on the left of the first when that line is drawn. The line is the
-// tab's, so it is left out beside the tab in front.
-func stripButtonsWidth(front bool) float32 {
-	w := 2*stripButtonSize + stripDividerRoom + 2*stripButtonsGap
-	if front {
-		return w
-	}
-	return w + stripDividerRoom + stripButtonsGap
+// the line on either side of the first. The line on its left is the tab's, so
+// it is not drawn beside the tab in front -- but it keeps its room either way,
+// and this is why the width takes no argument: what the strip gives the tabs,
+// and where the buttons after them stand, are the same whichever tab is in
+// front. Windows Terminal holds that too, measured on 2026-11-14: the buttons
+// stand in the same place in its strip with either of two tabs in front, and
+// only that line comes and goes.
+func stripButtonsWidth() float32 {
+	return 2*stripButtonSize + 2*stripDividerRoom + 3*stripButtonsGap
 }
 
 // windowGroupWidth is the room a group of n window's buttons takes.
@@ -375,9 +375,11 @@ func tabs(c *myui.Context, st State, act Actions, room float32) {
 		for i := range st.Tabs {
 			// Windows Terminal draws a line between two tabs that are both
 			// behind, and none beside the tab in front: that tab is the dark
-			// rounded one, which is the line the others are given.
-			if i > 0 && i != st.Active && i-1 != st.Active {
-				stripDivider(c)
+			// rounded one, which is the line the others are given. The line
+			// keeps its room either way, so that a tab is as wide with it in
+			// front as with the tab next to it in front.
+			if i > 0 {
+				dividerSlot(c, i != st.Active && i-1 != st.Active, tabLineRoom)
 			}
 			el := tab(c, st, act, i, share)
 			if d, ok := myui.Drop[tabDrag](el); ok && move == nil {
@@ -390,21 +392,22 @@ func tabs(c *myui.Context, st State, act Actions, room float32) {
 	}
 }
 
-// tabsShare is the room one tab may take: the room the tabs have, less the
-// lines between them, split among them. A tab takes no more than this, so that
-// tabs grow narrower as more of them come, before the strip starts to scroll.
+// tabLineRoom is the room a line between two tabs takes: the line itself, which
+// sits flush against both of them.
+const tabLineRoom float32 = 1
+
+// tabsShare is the room one tab may take: the room the tabs have, less the lines
+// between them, split among them. Every place a line can take keeps one, drawn
+// or not -- the line beside the tab in front is left out -- so that the tabs keep
+// their width as another tab comes to the front. A tab takes no more than this,
+// so that tabs grow narrower as more of them come, before the strip starts to
+// scroll.
 func tabsShare(st State, room float32) float32 {
 	n := len(st.Tabs)
 	if n == 0 {
 		return 0
 	}
-	lines := float32(0)
-	for i := 1; i < n; i++ {
-		if i != st.Active && i-1 != st.Active {
-			lines++
-		}
-	}
-	return max((room-lines)/float32(n), 0)
+	return max((room-float32(n-1)*tabLineRoom)/float32(n), 0)
 }
 
 // stripButtons are the buttons after the last tab: the one that opens a tab
@@ -416,14 +419,14 @@ func tabsShare(st State, room float32) float32 {
 func stripButtons(c *myui.Context, st State, act Actions, beside bool) myui.Element {
 	// The line on the left belongs to the tab it separates from, and a tab in
 	// front is given none: beside the tab in front, that line is left out, as
-	// Windows Terminal leaves it out between two of its own.
+	// Windows Terminal leaves it out between two of its own. It keeps its room
+	// even then: a strip whose buttons moved as another tab came to the front
+	// would make the same press land on a different button.
 	front := len(st.Tabs) > 0 && st.Active == len(st.Tabs)-1
 	return myui.Row(c).Height(TitleBarHeight).AlignItems(myui.Center).Gap(stripButtonsGap).Children(func() {
-		if !beside || !front {
-			stripDivider(c).Margin(0, stripDividerGutter)
-		}
+		dividerSlot(c, !beside || !front, stripDividerRoom)
 		newTabButton(c, act)
-		stripDivider(c).Margin(0, stripDividerGutter)
+		dividerSlot(c, true, stripDividerRoom)
 		profilesMenu(c, st, act)
 	})
 }
@@ -809,6 +812,19 @@ func shortcut(it *myui.MenuItem, st State, action string) {
 func newTabButton(c *myui.Context, act Actions) myui.Element {
 	base := myui.Box(c).
 		Size(stripButtonSize, stripButtonSize).
+// dividerSlot is one of the strip's lines -- the line itself when drawn is set,
+// and the room it would take when it is not. The strip leaves a line out beside
+// the tab in front, and lays itself out around it either way: a strip that moved
+// as another tab came to the front would make the same press land on another
+// button, or a tab change width under the pointer.
+func dividerSlot(c *myui.Context, drawn bool, room float32) {
+	if !drawn {
+		myui.Box(c).Width(room).Height(16)
+		return
+	}
+	stripDivider(c).Margin(0, (room-1)/2)
+}
+
 		Radius(6).
 		AlignItems(myui.Center).
 		Justify(myui.Center).

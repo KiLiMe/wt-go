@@ -355,12 +355,12 @@ func TestTabsShare(t *testing.T) {
 		tabs, active int
 		room, want   float32
 	}{
-		// Four tabs, one line between the two behind: the tab in front takes
-		// none on either side of it.
-		{4, 1, 301, 75},
-		// With the tab in front at the start there is one more line: three
-		// tabs are left to split the rest.
-		{4, 0, 301, 74.75},
+		// Four tabs and the three places a line may take: the tab in front
+		// takes no line beside it, and that line keeps its room anyway, so the
+		// share is the same whichever tab is in front.
+		{4, 1, 301, 74.5},
+		{4, 0, 301, 74.5},
+		{4, 3, 301, 74.5},
 	} {
 		st := State{Tabs: make([]Tab, tc.tabs), Active: tc.active}
 		if got := tabsShare(st, tc.room); got != tc.want {
@@ -461,6 +461,38 @@ func stripOfNamed(t *testing.T, n int, active int, width int, name string) (*myu
 	t.Helper()
 	at := &myui.ScrollState{}
 	act := &scrollActions{at: at}
+// TestStripButtonsStayPut covers where the buttons after the tabs stand: the
+// line on the left of the button that opens a tab is not drawn beside the tab
+// in front, and keeps its room anyway, so that the buttons do not move as
+// another tab comes to the front. Windows Terminal's strip holds them still the
+// same way: with either of two tabs in front its buttons stand in the same
+// place, and only that line comes and goes.
+func TestStripButtonsStayPut(t *testing.T) {
+	for _, n := range []int{1, 2, 3} {
+		var want [2]float32
+		for active := 0; active < n; active++ {
+			tt, _, _ := stripOf(t, n, active, 900)
+			open, ok := tt.Find(locales.NewTab())
+			if !ok {
+				t.Fatal("the strip draws no button to open a tab")
+			}
+			menu, ok := tt.Find(locales.Profiles())
+			if !ok {
+				t.Fatal("the strip draws no menu of profiles")
+			}
+			got := [2]float32{open.X, menu.X}
+			if active == 0 {
+				want = got
+				continue
+			}
+			if got != want {
+				t.Errorf("with tab %d of %d in front the buttons stand at %v, want %v",
+					active, n, got, want)
+			}
+		}
+	}
+}
+
 	st := &State{Tabs: make([]Tab, n), Active: active, TabsScroll: at}
 	for i := range st.Tabs {
 		st.Tabs[i].Name = name
