@@ -119,6 +119,10 @@ type Actions interface {
 	// it now: the shell the probe finds, and the name and dot of the
 	// built-in table.
 	ResetProfile(id string)
+	// SetProfileIcon gives the profile the page edits a mark: a preset such
+	// as "pwsh7:official", "" for the one its command asks for, which is what
+	// the character box clears.
+	SetProfileIcon(mark string)
 	// Run does the action with an id, as the palette picked it.
 	Run(action string)
 	// Find searches the terminal in front for text, as it is typed.
@@ -149,6 +153,10 @@ type Tab struct {
 	// Color is the color of the dot of the profile the tab runs, when it
 	// has one.
 	Color string
+	// Icon is the mark the tab wears: a preset such as "pwsh7:official",
+	// one character, or "" for the plain terminal mark in the profile's
+	// color.
+	Icon string
 	// Panes are the panes the tab holds.
 	Panes *pane.Tab
 	// Mount shows the terminal of a pane. A terminal shows in one view at a
@@ -164,6 +172,8 @@ type Profile struct {
 	ID    string
 	Name  string
 	Color string
+	// Icon is the mark the tab of this profile wears, as Tab.Icon has it.
+	Icon string
 	// Discovered is whether the window found this profile on the machine
 	// rather than a person writing it, which is what the settings page calls
 	// a built-in one.
@@ -246,6 +256,10 @@ type Settings struct {
 	// on a line.
 	Profile *store.Profile
 	Args    *string
+	// Glyph is the character the profile page's mark box holds, which is the
+	// profile's mark while it is a character and "" while it is a preset: the
+	// box shows one kind of mark, and the marks are one field of the file.
+	Glyph *string
 	// Schemes are the color schemes the color schemes page lists.
 	Schemes []Scheme
 	// FontFamilies are the installed families the terminal can draw with,

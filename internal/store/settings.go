@@ -168,14 +168,17 @@ type Scheme struct {
 
 // Profile is a program a tab can run.
 type Profile struct {
-	ID         string   `json:"id"`
-	Name       string   `json:"name"`
-	Command    string   `json:"command"`
-	Args       []string `json:"args"`
-	Dir        string   `json:"dir"`
-	Color      string   `json:"color"`
-	Hidden     bool     `json:"hidden"`
-	Discovered bool     `json:"discovered"`
+	ID      string   `json:"id"`
+	Name    string   `json:"name"`
+	Command string   `json:"command"`
+	Args    []string `json:"args"`
+	Dir     string   `json:"dir"`
+	Color   string   `json:"color"`
+	// Icon is the mark the tab wears: a preset such as "pwsh7:official",
+	// one character, or "" for the one the command asks for.
+	Icon       string `json:"icon"`
+	Hidden     bool   `json:"hidden"`
+	Discovered bool   `json:"discovered"`
 }
 
 // Keybinding is one key and the action it stands for.

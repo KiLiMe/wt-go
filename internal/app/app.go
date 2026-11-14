@@ -165,6 +165,10 @@ type App struct {
 	editing     *store.Profile
 	editingFrom store.Profile
 	editingArgs string
+	// editingGlyph is the character the mark box holds, and "" while the mark
+	// is a shape or a shape's absence: the box shows one kind of mark, while
+	// the file holds both in one field.
+	editingGlyph string
 }
 
 // binding is a key, and the action it does.
@@ -636,7 +640,7 @@ func (a *App) view(c *myui.Context) {
 // uiTab is a tab as the window draws it: the settings tab draws its pages,
 // the others their panes.
 func (a *App) uiTab(tab *pane.Tab) ui.Tab {
-	out := ui.Tab{Name: a.tabName(tab), Color: tab.Color, Panes: tab, Mount: a.mount}
+	out := ui.Tab{Name: a.tabName(tab), Color: tab.Color, Icon: tab.Icon, Panes: tab, Mount: a.mount}
 	if tab == a.settingsTab {
 		out.Page = a.settingsView
 	}
@@ -680,7 +684,7 @@ func (a *App) menuProfiles() []ui.Profile {
 		if p.Hidden {
 			continue
 		}
-		out = append(out, ui.Profile{ID: p.ID, Name: p.Name, Color: p.Color})
+		out = append(out, ui.Profile{ID: p.ID, Name: p.Name, Color: p.Color, Icon: p.Icon})
 	}
 	return out
 }
@@ -885,7 +889,7 @@ func (a *App) openTab(p profile.Profile, dir string) {
 		return
 	}
 	tab := pane.New(term)
-	tab.ProfileID, tab.ProfileName, tab.Color = p.ID, p.Name, p.Color
+	tab.ProfileID, tab.ProfileName, tab.Color, tab.Icon = p.ID, p.Name, p.Color, p.Icon
 	// Only a profile that names no program leaves the shell to the terminal,
 	// and only then does the strip have to say which shell that was.
 	if len(p.CommandLine()) == 0 {

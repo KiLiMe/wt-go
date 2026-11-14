@@ -3,6 +3,7 @@ package ui
 import (
 	"image/color"
 	"slices"
+	"strings"
 	"testing"
 
 	myui "github.com/egoist/mygo/ui"
@@ -585,5 +586,26 @@ func TestStripScrolls(t *testing.T) {
 	tt.Frame()
 	if at.X >= before {
 		t.Errorf("the button at the start did not move the tabs: X = %v, was %v", at.X, before)
+	}
+}
+
+// TestMarkIcon covers the three kinds of mark a tab wears: a shape drawn as it
+// is, a character in the square of the profile's color, and the plain terminal
+// mark, with and without a color, in front and behind.
+func TestMarkIcon(t *testing.T) {
+	tt := myui.NewTester(func(c *myui.Context) {
+		myui.Row(c).Children(func() {
+			markIcon(c, "bash:arch", "#4eaa25", 16, true)
+			markIcon(c, "\U0001F92C", "#3b78ff", 16, true)
+			markIcon(c, "\U0001F92C", "", 16, false)
+			markIcon(c, "", "#cccccc", 16, true)
+			markIcon(c, "", "", 16, false)
+		})
+	}, 200, 24)
+	tt.Frame()
+	// The character is written rather than drawn, so the frame says it twice:
+	// once on the profile's color and once on the quiet square.
+	if got := strings.Count(strings.Join(tt.Texts(), ""), "\U0001F92C"); got != 2 {
+		t.Fatalf("the character is drawn %d times, want 2: %q", got, tt.Texts())
 	}
 }

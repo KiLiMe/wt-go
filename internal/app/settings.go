@@ -69,6 +69,7 @@ func (a *App) settingsState() ui.Settings {
 		KeysExpanded:  a.numberedKeys,
 		Profile:       a.editing,
 		Args:          &a.editingArgs,
+		Glyph:         &a.editingGlyph,
 		Profiles:      fileProfiles(a.settings),
 		ProfileFilter: &a.profileSearch,
 		Search:        &a.settingsSearch,
@@ -108,7 +109,7 @@ func uiSchemes(s store.Settings) []ui.Scheme {
 func fileProfiles(s store.Settings) []ui.Profile {
 	out := make([]ui.Profile, 0, len(s.Profiles))
 	for _, p := range s.Profiles {
-		out = append(out, ui.Profile{ID: p.ID, Name: p.Name, Color: p.Color, Discovered: p.Discovered, Hidden: p.Hidden})
+		out = append(out, ui.Profile{ID: p.ID, Name: p.Name, Color: p.Color, Icon: profile.IconFor(p), Discovered: p.Discovered, Hidden: p.Hidden})
 	}
 	return out
 }
@@ -122,7 +123,7 @@ func knownProfiles(profiles []profile.Profile) []ui.Profile {
 		if p.Hidden {
 			continue
 		}
-		out = append(out, ui.Profile{ID: p.ID, Name: p.Name, Color: p.Color, Discovered: p.Discovered})
+		out = append(out, ui.Profile{ID: p.ID, Name: p.Name, Color: p.Color, Icon: p.Icon, Discovered: p.Discovered})
 	}
 	return out
 }
@@ -194,11 +195,12 @@ func (a *App) editProfile(id string) {
 	}
 	a.editing, a.editingFrom = &p, p
 	a.editingArgs = strings.Join(p.Args, "\n")
+	a.editingGlyph = profile.Glyph(p.Icon)
 }
 
 // editNone closes the profile page's copy: nothing is being edited.
 func (a *App) editNone() {
-	a.editing, a.editingFrom, a.editingArgs = nil, store.Profile{}, ""
+	a.editing, a.editingFrom, a.editingArgs, a.editingGlyph = nil, store.Profile{}, "", ""
 }
 
 // splitArgs is the arguments a text holds, one on each line.
@@ -229,6 +231,14 @@ func profileByID(s store.Settings, id string) (store.Profile, bool) {
 func (a *App) SaveSettings() {
 	if a.editing != nil {
 		a.editing.Args = splitArgs(a.editingArgs)
+		// The box is the mark while it holds a character, and clearing it is
+		// a profile that wears none: a shape it kept, or the one its command
+		// asks for.
+		if g := profile.Glyph(a.editingGlyph); g != "" {
+			a.editing.Icon = g
+		} else if profile.IconKey(a.editing.Icon) == "" {
+			a.editing.Icon = ""
+		}
 		a.upsertProfile(*a.editing)
 	}
 	if err := a.settings.Validate(); err != nil {
@@ -594,6 +604,7 @@ func (a *App) AddProfile() {
 	// The page shows the arguments it holds, so a line left from the profile
 	// that was open before would become this profile's arguments on save.
 	a.editingArgs = ""
+	a.editingGlyph = ""
 	a.redraw()
 }
 
@@ -693,6 +704,7 @@ func (a *App) resetProfile(p store.Profile, f profile.Found, present bool) {
 	if a.editing != nil && a.editing.ID == p.ID {
 		*a.editing = p
 		a.editingArgs = strings.Join(p.Args, "\n")
+		a.editingGlyph = profile.Glyph(p.Icon)
 	}
 	a.setNote(locales.ResetProfileDone(p.Name))
 }
@@ -724,6 +736,7 @@ func (a *App) DuplicateProfile(id string) {
 	a.settingsPage = ui.ProfilePage(p.ID)
 	a.editing, a.editingFrom = &p, p
 	a.editingArgs = strings.Join(p.Args, "\n")
+	a.editingGlyph = profile.Glyph(p.Icon)
 	a.redraw()
 }
 
@@ -737,6 +750,9 @@ func (a *App) dirty() bool {
 		return false
 	}
 	if a.editingArgs != strings.Join(a.editingFrom.Args, "\n") {
+		return true
+	}
+	if profile.Glyph(a.editingGlyph) != profile.Glyph(a.editingFrom.Icon) {
 		return true
 	}
 	return !store.EqualProfile(*a.editing, a.editingFrom)
@@ -828,4 +844,17 @@ func (a *App) setNote(note string) bool {
 	a.note = note
 	a.redraw()
 	return true
+}
+
+// SetProfileIcon gives the profile the page edits a mark: a preset, or "" for
+// the one its command asks for. The character box is cleared, because the
+// marks of a profile are one setting, and a shape and a character cannot both
+// be the one it holds.
+func (a *App) SetProfileIcon(mark string) {
+	if a.editing == nil {
+		return
+	}
+	a.editing.Icon = mark
+	a.editingGlyph = ""
+	a.redraw()
 }

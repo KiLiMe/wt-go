@@ -32,10 +32,12 @@ type Tab struct {
 	// Focus is the pane with the keyboard.
 	Focus *Node
 	// ProfileID, ProfileName and Color are the profile the tab runs and the
-	// color of its dot.
+	// color of its dot, and Icon the mark it wears, which the strip draws in
+	// place of that dot.
 	ProfileID   string
 	ProfileName string
 	Color       string
+	Icon        string
 	// Name is the name the user gave the tab.
 	Name string
 	// Runs is the program the tab started when its profile names no command

@@ -7,6 +7,8 @@ import (
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/i18n"
+	"wtgo/internal/icons"
+	"wtgo/internal/profile"
 	"wtgo/internal/store"
 	"wtgo/internal/theme"
 	"wtgo/locales"
@@ -732,6 +734,10 @@ func profileRow(c *myui.Context, st Settings, act Actions, p Profile) {
 		el.Background(t.Surface)
 	}
 	el.Children(func() {
+		// The mark the tab will wear, at the size the tab wears it: the list is
+		// where a profile is chosen, and two profiles of the same shell are the
+		// case the mark is for.
+		markIcon(c, p.Icon, p.Color, 16, true)
 		name := myui.Text(c, p.Name).FontSize(13).SingleLine().Shrink(1).MinWidth(0)
 		if p.Hidden {
 			// A profile the page hides reads as one it does not offer, but still
@@ -799,6 +805,9 @@ func profilePage(c *myui.Context, st Settings, act Actions, id string) {
 		fieldBlock(c, locales.StartDirectory(), locales.ProfileStartNote(), func() {
 			myui.TextInput(c, &p.Dir).Placeholder(store.DefaultHomeHint())
 		})
+		fieldBlock(c, locales.Icon(), locales.IconNote(), func() {
+			iconField(c, st, act, p)
+		})
 		field(c, locales.IconColor(), locales.IconColorNote(), func() {
 			colorField(c, &p.Color)
 		})
@@ -821,6 +830,50 @@ func profilePage(c *myui.Context, st Settings, act Actions, id string) {
 		myui.Button(c, locales.Hidden()).OnClick(func() { act.HideProfile(p.ID) })
 		if !p.Discovered {
 			myui.Button(c, locales.Remove()).OnClick(func() { act.RemoveProfile(p.ID) })
+		}
+	})
+}
+
+// iconField is the mark of the profile the page edits: the built-in shapes,
+// the automatic one first, and a box for one character of the person's own.
+//
+// The squares are drawn at the size a tab has, so that the page shows what the
+// strip will show: a preview at the size of the icon's own file would promise
+// detail that 16 DIP has no room for. A preset paints its own face, which is
+// why the color beside it only holds for the other two kinds of mark.
+func iconField(c *myui.Context, st Settings, act Actions, p *store.Profile) {
+	t := c.Theme()
+	glyph := ""
+	if st.Glyph != nil {
+		glyph = profile.Glyph(*st.Glyph)
+	}
+	// Which square is lit: a character in the box is a mark of its own, so
+	// none of them is.
+	chosen := func(key string) bool { return glyph == "" && profile.IconKey(p.Icon) == key }
+	chip := func(key, label string, ic *icons.Icon) {
+		el := myui.Box(c).Size(24, 24).Shrink(0).Radius(6).Center().
+			BorderWidth(1).BorderColor(t.Border).Cursor(myui.CursorPointer).
+			Label(label).Tooltip(label).OnClick(func() { act.SetProfileIcon(key) })
+		if chosen(key) {
+			el.BorderWidth(2).BorderColor(t.Accent)
+		}
+		el.Children(func() { myui.Icon(c, ic.SVG).Size(16, 16) })
+	}
+	// Wrapped, because twelve shapes and a box are wider than the column
+	// the field is written in, and a row of chips that runs past the card
+	// reads as a broken card rather than as a long list.
+	myui.Row(c).Wrap().Gap(6).AlignItems(myui.Center).Children(func() {
+		auto := profile.GuessIcon(p.Command)
+		ic := icons.Preset(auto)
+		if ic == nil {
+			ic = icons.Terminal
+		}
+		chip("", locales.IconAuto(), ic)
+		for _, pr := range profile.Presets() {
+			chip(pr.Key, pr.Shape+" \u00b7 "+pr.Name, icons.Preset(pr.Key))
+		}
+		if st.Glyph != nil {
+			myui.TextInput(c, st.Glyph).Width(56).Placeholder(locales.IconGlyph())
 		}
 	})
 }

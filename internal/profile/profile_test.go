@@ -1,6 +1,7 @@
 package profile
 
 import (
+	"strings"
 	"testing"
 
 	"wtgo/internal/store"
@@ -171,5 +172,98 @@ func TestReset(t *testing.T) {
 	got.Args[0] = "-Changed"
 	if found.Args[0] != "-NoLogo" {
 		t.Errorf("found args = %q, want the caller's own", found.Args)
+	}
+}
+
+// TestGuessIcon covers the mark a command asks for: the shape of the shell it
+// is, whatever path it is named by, and none for a program no shape is drawn
+// for.
+func TestGuessIcon(t *testing.T) {
+	for _, tc := range []struct{ command, want string }{
+		{"pwsh", "pwsh7:official"},
+		{"pwsh.exe", "pwsh7:official"},
+		{"C:\\Program Files\\PowerShell\\7\\pwsh.exe", "pwsh7:official"},
+		{"powershell.exe", "powershell:classic"},
+		{"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "powershell:classic"},
+		{"cmd.exe", "cmd:black"},
+		{"C:/Program Files/Git/bin/bash.exe", "bash:gnu"},
+		{"wsl.exe", ""},
+		{"", ""},
+		{"zsh", ""},
+	} {
+		if got := GuessIcon(tc.command); got != tc.want {
+			t.Errorf("GuessIcon(%q) = %q, want %q", tc.command, got, tc.want)
+		}
+	}
+}
+
+// TestIconFor covers which of the three kinds of mark a profile wears: the
+// preset it names, else the character it names, else the one its command asks
+// for, and a key of a build that is gone read as the command's.
+func TestIconFor(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		profile store.Profile
+		want    string
+	}{
+		{"a preset", store.Profile{Icon: "bash:arch"}, "bash:arch"},
+		{"a character", store.Profile{Icon: "P"}, "P"},
+		{"an emoji", store.Profile{Icon: "\U0001F92C"}, "\U0001F92C"},
+		{"nothing named", store.Profile{Command: "cmd.exe"}, "cmd:black"},
+		{"a key no shape is drawn for", store.Profile{Icon: "nu:purple", Command: "pwsh.exe"}, "pwsh7:official"},
+		{"a word that is neither", store.Profile{Icon: "not a key", Command: "bash"}, "bash:gnu"},
+	} {
+		if got := IconFor(tc.profile); got != tc.want {
+			t.Errorf("%s: IconFor = %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
+
+// TestGlyph covers the one character a mark box holds: the first one typed, a
+// flag's two runes, and the marks that join onto an emoji.
+func TestGlyph(t *testing.T) {
+	for _, tc := range []struct{ mark, want string }{
+		{"", ""},
+		{"   ", ""},
+		{"P", "P"},
+		{"abc", "a"},
+		{"\U0001F602\U0001F602", "\U0001F602"},
+		{"\U0001F1EF\U0001F1F5", "\U0001F1EF\U0001F1F5"},
+		{"\U0001F468\u200d\U0001F469\u200d\U0001F467", "\U0001F468\u200d\U0001F469\u200d\U0001F467"},
+		{"1\ufe0f\u20e3", "1\ufe0f\u20e3"},
+		{"pwsh7:official", ""},
+	} {
+		if got := Glyph(tc.mark); got != tc.want {
+			t.Errorf("Glyph(%q) = %q, want %q", tc.mark, got, tc.want)
+		}
+	}
+}
+
+// TestPresets covers the shapes the page offers: one key per shape and
+// palette, and every one of them a key IconKey takes.
+func TestPresets(t *testing.T) {
+	presets := Presets()
+	if len(presets) != 12 {
+		t.Fatalf("len = %d, want 12", len(presets))
+	}
+	seen := map[string]bool{}
+	shapes := map[string]bool{}
+	for _, p := range presets {
+		// The shape is the id of the program of that shape, so a key is its
+		// shape's program and its palette, not the words the page shows.
+		if shape, _, ok := strings.Cut(p.Key, ":"); !ok || shape == "" {
+			t.Errorf("key %q is not a shape and a palette", p.Key)
+		}
+		if seen[p.Key] {
+			t.Errorf("key %q twice", p.Key)
+		}
+		seen[p.Key] = true
+		if IconKey(p.Key) != p.Key {
+			t.Errorf("IconKey(%q) does not take it", p.Key)
+		}
+		shapes[p.Shape] = true
+	}
+	if len(shapes) != 4 {
+		t.Errorf("shapes = %v, want four", shapes)
 	}
 }

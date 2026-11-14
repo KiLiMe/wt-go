@@ -7,6 +7,8 @@ import (
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/action"
+	"wtgo/internal/icons"
+	"wtgo/internal/profile"
 	"wtgo/internal/store"
 	"wtgo/locales"
 )
@@ -18,6 +20,7 @@ type navActions struct {
 	added    int
 	hidden   []string
 	reset    []string
+	marks    []string
 	toggled  int
 	page     string
 	defaults []string
@@ -29,6 +32,7 @@ func (a *navActions) ResetProfile(id string)         { a.reset = append(a.reset,
 func (a *navActions) ToggleChangedKeys()             { a.toggled++ }
 func (a *navActions) SelectSettingsPage(page string) { a.page = page }
 func (a *navActions) SetDefaultProfile(id string)    { a.defaults = append(a.defaults, id) }
+func (a *navActions) SetProfileIcon(mark string)     { a.marks = append(a.marks, mark) }
 
 // settingsOf draws the settings tab over a list of profiles.
 func settingsOf(t *testing.T, profiles []Profile) (*myui.Tester, *navActions) {
@@ -689,7 +693,10 @@ func TestProfilePageHidesTheProfileItEdits(t *testing.T) {
 			act := &navActions{}
 			tt := myui.NewTester(func(c *myui.Context) {
 				SettingsTab(c, Settings{Draft: &s, Page: ProfilePage("p"), Profile: &p, Args: &args}, act)
-			}, 900, 1000)
+				// Tall enough that the fields and the buttons under them do not
+				// share a row: a click on the one in front would land on the
+				// page's own footer.
+			}, 900, 1200)
 			tt.Frame()
 			// The fields name this setting too, so the button is the one asked
 			// for by its role rather than by a word two controls share.
@@ -788,5 +795,45 @@ func TestProfileReset(t *testing.T) {
 	tt, _ = draw(mine)
 	if _, ok := tt.Find(locales.ResetProfile()); ok {
 		t.Error("a profile the person wrote has a reset button")
+	}
+}
+
+// TestProfileIcon covers the field that picks the mark of a profile: a square
+// is one of the built-in shapes, and the first square is the mark the command
+// asks for, which is the file's "".
+func TestProfileIcon(t *testing.T) {
+	s := store.Default()
+	p := store.Profile{ID: "p", Name: "P", Command: "pwsh.exe", Discovered: true}
+	args, glyph := "", ""
+	act := &navActions{}
+	tt := myui.NewTester(func(c *myui.Context) {
+		SettingsTab(c, Settings{Draft: &s, Page: ProfilePage("p"), Profile: &p, Args: &args, Glyph: &glyph}, act)
+	}, 900, 1200)
+	tt.Frame()
+
+	click := func(name string) {
+		t.Helper()
+		a, ok := tt.Access(name)
+		if !ok {
+			t.Fatalf("the page does not offer %q: %q", name, tt.Texts())
+		}
+		tt.ClickAt(a.Bounds.X+a.Bounds.W/2, a.Bounds.Y+a.Bounds.H/2)
+	}
+	click("Bash · arch")
+	click(locales.IconAuto())
+	want := []string{"bash:arch", ""}
+	if len(act.marks) != len(want) {
+		t.Fatalf("marks = %v, want %v", act.marks, want)
+	}
+	for i := range want {
+		if act.marks[i] != want[i] {
+			t.Fatalf("marks = %v, want %v", act.marks, want)
+		}
+	}
+	// Every shape the profile page offers is one the tab strip can draw.
+	for _, pr := range profile.Presets() {
+		if icons.Preset(pr.Key) == nil {
+			t.Errorf("no icon is drawn for %q", pr.Key)
+		}
 	}
 }

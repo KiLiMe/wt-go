@@ -2114,6 +2114,46 @@ func (msgs Messages) ProfileStartNote() string {
 	return Catalog.Format(msgs.locale, "profileStartNote", nil)
 }
 
+// Icon says "Icon"
+// in the language the app shows.
+func Icon() string { return In(i18n.Locale()).Icon() }
+
+// Icon says "Icon"
+// in the language of msgs.
+func (msgs Messages) Icon() string {
+	return Catalog.Format(msgs.locale, "icon", nil)
+}
+
+// IconNote says "The mark the tab wears: one of the built-in shapes, or one character of your own (an emoji works). A shape paints its…"
+// in the language the app shows.
+func IconNote() string { return In(i18n.Locale()).IconNote() }
+
+// IconNote says "The mark the tab wears: one of the built-in shapes, or one character of your own (an emoji works). A shape paints its…"
+// in the language of msgs.
+func (msgs Messages) IconNote() string {
+	return Catalog.Format(msgs.locale, "iconNote", nil)
+}
+
+// IconAuto says "From the command"
+// in the language the app shows.
+func IconAuto() string { return In(i18n.Locale()).IconAuto() }
+
+// IconAuto says "From the command"
+// in the language of msgs.
+func (msgs Messages) IconAuto() string {
+	return Catalog.Format(msgs.locale, "iconAuto", nil)
+}
+
+// IconGlyph says "One character"
+// in the language the app shows.
+func IconGlyph() string { return In(i18n.Locale()).IconGlyph() }
+
+// IconGlyph says "One character"
+// in the language of msgs.
+func (msgs Messages) IconGlyph() string {
+	return Catalog.Format(msgs.locale, "iconGlyph", nil)
+}
+
 // IconColor says "Icon color"
 // in the language the app shows.
 func IconColor() string { return In(i18n.Locale()).IconColor() }
@@ -2124,11 +2164,11 @@ func (msgs Messages) IconColor() string {
 	return Catalog.Format(msgs.locale, "iconColor", nil)
 }
 
-// IconColorNote says "The color of the dot the tab strip marks the profile with."
+// IconColorNote says "The color of the mark, for a profile that wears no shape: the plain terminal mark, or your character, in this color."
 // in the language the app shows.
 func IconColorNote() string { return In(i18n.Locale()).IconColorNote() }
 
-// IconColorNote says "The color of the dot the tab strip marks the profile with."
+// IconColorNote says "The color of the mark, for a profile that wears no shape: the plain terminal mark, or your character, in this color."
 // in the language of msgs.
 func (msgs Messages) IconColorNote() string {
 	return Catalog.Format(msgs.locale, "iconColorNote", nil)

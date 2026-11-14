@@ -8,6 +8,9 @@
 // that draw them, which leaves a button blank or its mark off its box. To add
 // an icon, copy icons/<Category>/<name>.svg from the Remix Icon v4.8.0 tag
 // into svg/ unchanged, and add a variable below with its file name.
+//
+// The tab presets are the exception: presets.go draws them, because the
+// palettes of one shape differ only in color.
 package icons
 
 import (

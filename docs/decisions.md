@@ -79,6 +79,7 @@
 | ADR-73 | ConPTY 一条回复都不发：ADR-58 的拆条作废，过滤面扩到全部答复 | 有效 |
 | ADR-74 | 按住不放只连发「走一步」的动作：新建标签一次按下一次 | 有效 |
 | ADR-75 | 重置为内置：一条内置 profile 按现在这台机器重建 | 有效 |
+| ADR-76 | 标签上的标记跟着配置文件走：12 套内置形状、一个字符，或按命令猜 | 有效 |
 
 ---
 
@@ -1077,6 +1078,9 @@ POSIX 上还能拿到登录 shell 的 `PATH`（`.zprofile` 里的东西不会莫
    `Development/terminal-line.svg`、`System/settings-3-line.svg`），`internal/icons` 的 LICENSE/NOTICE
    不用改。
 
+**后续**：记号不再只有这两种——每条 profile 自己选（4 形状 × 3 配色、一个字符，或按命令猜），
+图形自带配色、形状按 16 DIP 重画；见 ADR-76。
+
 **理由**：全部用现成的 `myui.Box` + `myui.Icon`（`Center()` 居中、`Radius` 圆角、`Size` 定尺寸），
 不写自绘代码；参考实现（sshyard `internal/app/style.go:50` 的 `tile`）也是同一个写法，
 但 `Size(20)` 在 wt-go 32 DIP 的标签里偏高，取 18。
@@ -2055,3 +2059,48 @@ Windows 上同一个目录会被写成 `C:\Users\Foo`（环境变量）与 `c:\u
 参数不与探测结果共用底层数组）；`internal/app/resetprofile_test.go` 的 `TestResetProfile`（写进副本、
 页面的参数跟着换、变脏）与 `TestResetProfileGone`（探测不到就隐藏并说一句）；`internal/ui/settings_test.go`
 的 `TestProfileReset`（内置条目有这个按钮、点它带自己的 id、自己写的没有）。
+
+## ADR-76 标签上的标记跟着配置文件走：12 套内置形状、一个字符，或按命令猜
+
+**背景**：ADR-45 之后，标签前的方块只有两种记号（终端、齿轮），底色是 profile 的颜色。于是颜色成了
+唯一的区分手段：两个都叫 `pwsh` 的标签只差一层色，而默认方案的强调色（Campbell 的 4 号色 `#3b78ff`）
+恰好就是 PowerShell 7 的底色，标签与选中、焦点、滚动条同一个颜色；反过来，想认出「这条是
+PowerShell 7 还是 Windows PowerShell」还得读名字。那些颜色本身也没有来处：`internal/profile` 的内置表
+里 `pwsh7` 是 `#3b78ff`、`powershell` 是 `#2671be`，而 `apps\pwsh\current\pwsh.exe` 的图标里非白最多的
+是 `#2c5591`、`#2d4664`、`#a9c8ff`，`#3b78ff` 不是从它身上取的。
+
+**决定**：
+
+1. `settings.json` 的 profile 加 `icon`（`store.Profile.Icon`），三种取值：空 = 按 `command` 的基名猜
+   （`pwsh`/`pwsh7`/`pwsh-preview` → `pwsh7:official`，`powershell`/`powershell_ise` →
+   `powershell:classic`，`cmd` → `cmd:black`，`bash` → `bash:gnu`，其余画普通终端图标）；`形状:配色`
+   = 内置 12 组之一（`internal/profile` 的 `presets` 表与 `internal/icons/presets.go` 一一对应）；
+   其它值 = 一个字符（emoji 也行），画在 profile 颜色的方块上。
+2. 图形**自带配色**，这时 `color` 不参与：一套图形的三层色（底、记号、高光）是一起调的，让外面的
+   颜色盖掉其中一层只会得到没人调过的配色；而「图形 + 自己的颜色」在页面上就是 12×N 个组合，比现在
+   更难选。`color` 因此只在「普通终端图标」与「一个字符」这两种标记上生效。
+3. 4 形状 × 3 配色 = 12，按 16 DIP 重画。设计稿（128 视图：`pwsh7` 带三个圆点、`powershell` 带边框、
+   `cmd` 带标题栏与三个按钮、`bash` 用 `$` 加光标块）按比例缩到 16 px 会散掉：`r=3` 的圆点 0.375 px、
+   `stroke-width=2` 的边框 0.25 px、标题栏按钮 0.22–0.9 px、`C:\>` 的字号 28 只剩 3.5 px。所以
+   pwsh7 与 powershell 去掉圆点与边框、cmd 去掉标题栏按钮、`C:\>` 收成一个 `>`、bash 的 `$` 走路径。
+4. 一个字符是给「这里只有一种标记读得出来」的人用的：设置页「图标」行的第一格是「跟命令走」，之后
+   12 个形状，最后是只收一个字形的输入框。字符框里有东西时保存写字符；空着时保留已有形状；都没有则写
+   `""`（回到按命令猜）。字形按「第一个字形」取：旗帜是两个 regional indicator、ZWJ 组合、`\ufe0f`
+   变体选择符、`1️⃣` 的键帽都算一个，多打的字符不存。
+5. `IconFor` 只把「整个 `icon` 恰好是一个字形」当成字符，否则回落到按命令猜：漏写冒号的 `pwsh`
+   不该变成字符 `p`。
+
+**理由**：标签要回答「这条是什么」，颜色只能回答「这两条不一样」。图形是眼睛先看到的东西，名字要读；
+「按命令猜」还能让新装的 PowerShell 7 不用配就有形状。图形自带配色则让 12 组成为可预期的整体。
+
+**代价**：`profiles[]` 多一个字段；`locales` 多四个 key（`icon`、`iconNote`、`iconAuto`、`iconGlyph`）；
+`internal/icons` 里多 12 段内联 SVG（每段约 600 B，不进 `svg/` 是因为同一形状的三套配色只差颜色）；
+设置页的「图标」行要换行才放得下（13 个方块加输入框约 446 DIP，卡片只有 324 DIP）；选了图形时
+`color` 成了看不见的字段，页面上用 `iconColorNote` 说明它「只对另外两种标记生效」。
+
+**测试**：`internal/profile/profile_test.go` 的 `TestGuessIcon`（10 组命令）、`TestIconFor`（预设、
+字符、过期 key、漏写冒号的单词）、`TestGlyph`（旗帜、ZWJ、变体选择符、键帽、多字符取一个）、
+`TestPresets`（12 项、key 唯一、四种形状都在）；`internal/ui` 的 `TestMarkIcon`（图形、字符、普通图标、
+有色与无色）与 `TestProfileIcon`（点形状写进 `marks`、点「跟命令走」写 `""`、每个形状都画得出）；
+`internal/app/settings_test.go` 的 `TestProfileIcon`（页面改的是副本、保存才写文件、清空字符框保留形状、
+两个 emoji 只存一个）。

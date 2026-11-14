@@ -1363,3 +1363,74 @@ func BenchmarkUISchemes(b *testing.B) {
 		uiSchemes(s)
 	}
 }
+
+// TestProfileIcon covers the mark the profile page picks: a shape is written
+// to the file as it is, a character typed in the box is written as the one
+// character it is, and an emptied box is a profile that wears no character of
+// its own. The page edits a copy of the profile, so the file changes on save.
+func TestProfileIcon(t *testing.T) {
+	settingsDir(t)
+	a := newApp("")
+	a.settings.Profiles = []store.Profile{{
+		ID:         "pwsh7",
+		Name:       "PowerShell 7",
+		Command:    `C:\Windows\pwsh.exe`,
+		Discovered: true,
+	}}
+	a.profiles = profile.Resolve(a.settings.Profiles, a.found)
+	a.editProfile("pwsh7")
+
+	a.SetProfileIcon("bash:arch")
+	if got := a.editing.Icon; got != "bash:arch" {
+		t.Errorf("icon = %q, want the shape the page picked", got)
+	}
+	if a.editingGlyph != "" {
+		t.Errorf("the character box holds %q, want it cleared by a shape", a.editingGlyph)
+	}
+	if !a.dirty() {
+		t.Error("the page does not know it changed the mark")
+	}
+	a.SaveSettings()
+	if got := a.settings.Profiles[0].Icon; got != "bash:arch" {
+		t.Errorf("saved icon = %q, want the shape the page picked", got)
+	}
+
+	a.editProfile("pwsh7")
+	if a.editingGlyph != "" {
+		t.Error("the character box opens on text, want it empty for a shape")
+	}
+	a.editingGlyph = "\U0001F92C"
+	a.SaveSettings()
+	if got := a.settings.Profiles[0].Icon; got != "\U0001F92C" {
+		t.Errorf("saved icon = %q, want the character the page typed", got)
+	}
+
+	a.editProfile("pwsh7")
+	if a.editingGlyph != "\U0001F92C" {
+		t.Errorf("the box opens on %q, want the character the file holds", a.editingGlyph)
+	}
+	a.editingGlyph = "\U0001F92C\U0001F92C"
+	a.SaveSettings()
+	if got := a.settings.Profiles[0].Icon; got != "\U0001F92C" {
+		t.Errorf("saved icon = %q, want the one character of the two typed", got)
+	}
+
+	// An emptied box is a profile that wears no character: it keeps a shape it
+	// holds, and goes back to its command's mark otherwise.
+	a.SetProfileIcon("cmd:matrix")
+	a.SaveSettings()
+	if got := a.settings.Profiles[0].Icon; got != "cmd:matrix" {
+		t.Errorf("saved icon = %q, want the shape the page picked", got)
+	}
+	a.editProfile("pwsh7")
+	a.editingGlyph = ""
+	a.SaveSettings()
+	if got := a.settings.Profiles[0].Icon; got != "cmd:matrix" {
+		t.Errorf("saved icon = %q, want the shape an empty box keeps", got)
+	}
+	a.SetProfileIcon("")
+	a.SaveSettings()
+	if got := a.settings.Profiles[0].Icon; got != "" {
+		t.Errorf("saved icon = %q, want the command's mark", got)
+	}
+}
