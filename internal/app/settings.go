@@ -844,8 +844,18 @@ func (a *App) apply() {
 		return
 	}
 	s := a.settings
+	// The words the pages speak in, and the desktop's own menus, dialogs and
+	// title bar, are the main loop's to set, and each one a test has no loop
+	// for: what the window itself takes is applyWindow.
 	locale(s.Language)
 	a.appearance()
+	a.applyWindow(s)
+}
+
+// applyWindow gives the window itself what the settings ask for: the keys, the
+// profiles and the marks of the tabs that run them, the terminals' face, and
+// the frame around them.
+func (a *App) applyWindow(s store.Settings) {
 	a.keys = bindings(s.Keybindings)
 	a.profiles = profile.Resolve(s.Profiles, a.found)
 	a.syncTabMarks()

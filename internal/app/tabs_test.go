@@ -452,11 +452,10 @@ func TestTabMarksFollowTheProfile(t *testing.T) {
 	edited.Profiles[0].Icon = "\U0001f44c"
 	edited.Profiles[0].Color = "#ff0000"
 	a.settings = edited
-	// apply() is what saves this: it resolves the profiles and hands the tabs
-	// what they now name. It draws for the desktop too, which a test has none
-	// of, so the two steps it takes for the tabs are taken here.
-	a.profiles = profile.Resolve(edited.Profiles, a.found)
-	a.syncTabMarks()
+	// applyWindow is half of what saving does -- apply gives the desktop's own
+	// menus and the page words to the main loop first, and a test has no loop
+	// -- and the half that reaches the tabs is the one that matters here.
+	a.applyWindow(edited)
 
 	for _, tb := range []*pane.Tab{tab, renamed} {
 		if tb.Icon != "\U0001f44c" || tb.Color != "#ff0000" || tb.ProfileName != "Pwsh" {
