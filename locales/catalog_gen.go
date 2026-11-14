@@ -1764,11 +1764,11 @@ func (msgs Messages) ColorScheme() string {
 	return Catalog.Format(msgs.locale, "colorScheme", nil)
 }
 
-// ColorSchemeNote says "The colors a terminal paints with unless its profile names another."
+// ColorSchemeNote says "The colors a terminal paints with unless its profile names another. A scheme the settings keep says its colors in set…"
 // in the language the app shows.
 func ColorSchemeNote() string { return In(i18n.Locale()).ColorSchemeNote() }
 
-// ColorSchemeNote says "The colors a terminal paints with unless its profile names another."
+// ColorSchemeNote says "The colors a terminal paints with unless its profile names another. A scheme the settings keep says its colors in set…"
 // in the language of msgs.
 func (msgs Messages) ColorSchemeNote() string {
 	return Catalog.Format(msgs.locale, "colorSchemeNote", nil)

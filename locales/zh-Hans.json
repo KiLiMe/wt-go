@@ -221,7 +221,7 @@
   "titleFollowsPane": "标题跟随窗格",
   "titleFollowsPaneNote": "窗口标题跟随有键盘焦点的窗格。",
   "colorScheme": "配色方案",
-  "colorSchemeNote": "终端使用的配色；profile 未另指定时用这套。",
+  "colorSchemeNote": "终端使用的配色；profile 未另指定时用这套。自己保存的方案，颜色写在 settings.json 里，本页不改颜色。",
   "scheme": "方案",
   "schemeCopy": "复制为自定义配色",
   "schemeSearch": "搜索配色方案",

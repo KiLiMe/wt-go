@@ -221,7 +221,7 @@
   "titleFollowsPane": "Title follows the pane",
   "titleFollowsPaneNote": "Name the window after the pane with the keyboard.",
   "colorScheme": "Color scheme",
-  "colorSchemeNote": "The colors a terminal paints with unless its profile names another.",
+  "colorSchemeNote": "The colors a terminal paints with unless its profile names another. A scheme the settings keep says its colors in settings.json, which this page does not edit.",
   "scheme": "Scheme",
   "schemeCopy": "Copy as a custom scheme",
   "schemeSearch": "Search the schemes",
