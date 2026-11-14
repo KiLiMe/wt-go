@@ -13,6 +13,7 @@ import (
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/fault"
+	"wtgo/internal/ui"
 )
 
 // asciiPrintable is what a terminal measures a cell with: the glyphs a shell
@@ -28,6 +29,16 @@ const fallbackFamily = "monospace"
 // still be one cell: a monospace font shapes them all the same, and hinting
 // moves them by a fraction of a pixel at most.
 const advanceSpread = 0.5
+
+// weightOf is the weight a terminal draws at: mygo reads a zero as the regular
+// face and clamps the rest to the weights a family can have, and the settings
+// page offers the same nine.
+func weightOf(weight int) int {
+	if weight <= 0 {
+		return 400
+	}
+	return min(max(weight, 100), 900)
+}
 
 // fontOf is the family and size the terminal would draw with, which is what a
 // measure is about: mygo draws an empty family with the generic one, and a
@@ -52,7 +63,11 @@ type fontCensus struct {
 	// window has asked for them: the list arrives a frame or two after the page
 	// that shows it opens.
 	families []string
-	asked    bool
+	// installed are every family the machine has and whether a terminal can draw
+	// a grid with it: the font setting says which of the names it holds are
+	// missing here, and which of the ones it has are not monospace.
+	installed []ui.InstalledFont
+	asked     bool
 	// mono is what monospace said of a family at a size.
 	mono map[monoKey]bool
 }
@@ -64,7 +79,10 @@ type monoKey struct {
 }
 
 // monospace reports whether family shapes the printable ASCII at one advance
-// at size, which is what a grid of cells needs. A family that is not installed
+// at size, which is what a grid of cells needs. The measure is at the regular
+// face, since that is where a family is a family: the weights of a monospaced
+// one keep the advance of the regular face, and a weight the machine lacks is
+// drawn with the nearest one it has. A family that is not installed
 // answers for the font the terminal would draw with instead: the system picks a
 // proportional one, and every cell then takes the width of its widest glyph,
 // which spreads the letters out and makes the columns drift.
@@ -116,6 +134,19 @@ func (a *App) monospaceFamilies(fs []myui.FontFamily, size float32) []string {
 	return out
 }
 
+// installedFonts are every family the machine has, and whether a terminal can
+// draw a grid of cells with it: the setting says which of the names in it this
+// machine is missing, and a name it has but cannot draw a grid with is one the
+// terminal passes over, which is worth a line under the field.
+func (a *App) installedFonts(fs []myui.FontFamily, size float32) []ui.InstalledFont {
+	out := make([]ui.InstalledFont, 0, len(fs))
+	for _, f := range fs {
+		out = append(out, ui.InstalledFont{Name: f.Name, Mono: f.Monospaced && a.isMonospace(f.Name, size)})
+	}
+	slices.SortFunc(out, func(x, y ui.InstalledFont) int { return strings.Compare(x.Name, y.Name) })
+	return out
+}
+
 // ensureFontFamilies lists the families the font setting offers, which only the
 // page that lists them needs: enumerating the machine's fonts and shaping the
 // ASCII of each monospaced one costs the first frame 23–26 ms for a menu the
@@ -130,6 +161,7 @@ func (a *App) ensureFontFamilies(size float32) {
 		fs := myui.FontFamilies()
 		a.Do(func() {
 			a.fonts.families = a.monospaceFamilies(fs, size)
+			a.fonts.installed = a.installedFonts(fs, size)
 			a.redraw()
 		})
 	}()
@@ -141,7 +173,7 @@ func (a *App) ensureFontFamilies(size float32) {
 // machine does not have leaves a line behind.
 func (a *App) terminalFont() terminal.Font {
 	s := a.settings.Font
-	f := terminal.Font{Family: s.Family, Size: s.Size, LineHeight: s.LineHeight}
+	f := terminal.Font{Family: s.Family, Size: s.Size, LineHeight: s.LineHeight, Weight: weightOf(s.Weight)}
 	if a.isMonospace(f.Family, f.Size) {
 		a.fontWarned = ""
 		return f

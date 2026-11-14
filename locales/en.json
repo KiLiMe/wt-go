@@ -231,10 +231,39 @@
   "schemeCopied": "The scheme is copied; save to keep it.",
   "schemeRemoved": "The scheme is removed; save to keep it.",
   "font": "Font",
+  "fontAdd": "Add a family",
   "fontGeneric": "monospace (the system's)",
-  "fontNote": "The monospaced families this machine has, as the terminal measures them. The first choice is the generic name every system resolves to one.",
+  "fontMissing": "Not on this machine: {names}. The terminal skips them.",
+  "@fontMissing": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "fontNoneUsable": "This machine has none of these families: the terminal draws with monospace.",
+  "fontNote": "The families a terminal tries, in the order the list holds them: the first one this machine has is what it draws with, and the generic monospace stands in when it has none of them.",
   "fontSize": "Font size",
   "fontSizeNote": "How tall the letters of a terminal are, in DIPs.",
+  "fontWeight": "Weight",
+  "fontWeightNote": "How heavy the letters are, of the weights the family has: 400 is the regular face, and a weight the family lacks is drawn with the nearest one. Bold text is 300 heavier than this, and at least 700.",
+  "weightThin": "Thin",
+  "weightExtraLight": "Extra light",
+  "weightLight": "Light",
+  "weightRegular": "Regular",
+  "weightMedium": "Medium",
+  "weightSemiBold": "Semibold",
+  "weightBold": "Bold",
+  "weightExtraBold": "Extra bold",
+  "weightBlack": "Black",
+  "fontWideFirst": "{family} is the first one this machine has, and it is not monospace: the terminal draws with monospace instead, so that the columns line up.",
+  "@fontWideFirst": {
+    "placeholders": {
+      "family": {
+        "type": "String"
+      }
+    }
+  },
   "lineHeight": "Line height",
   "lineHeightNote": "The height of a line of a terminal, as a multiple of the font size.",
   "cursor": "Cursor",

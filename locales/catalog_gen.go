@@ -1864,6 +1864,16 @@ func (msgs Messages) Font() string {
 	return Catalog.Format(msgs.locale, "font", nil)
 }
 
+// FontAdd says "Add a family"
+// in the language the app shows.
+func FontAdd() string { return In(i18n.Locale()).FontAdd() }
+
+// FontAdd says "Add a family"
+// in the language of msgs.
+func (msgs Messages) FontAdd() string {
+	return Catalog.Format(msgs.locale, "fontAdd", nil)
+}
+
 // FontGeneric says "monospace (the system's)"
 // in the language the app shows.
 func FontGeneric() string { return In(i18n.Locale()).FontGeneric() }
@@ -1874,11 +1884,31 @@ func (msgs Messages) FontGeneric() string {
 	return Catalog.Format(msgs.locale, "fontGeneric", nil)
 }
 
-// FontNote says "The monospaced families this machine has, as the terminal measures them. The first choice is the generic name every s…"
+// FontMissing says "Not on this machine: {names}. The terminal skips them."
+// in the language the app shows.
+func FontMissing(names string) string { return In(i18n.Locale()).FontMissing(names) }
+
+// FontMissing says "Not on this machine: {names}. The terminal skips them."
+// in the language of msgs.
+func (msgs Messages) FontMissing(names string) string {
+	return Catalog.Format(msgs.locale, "fontMissing", map[string]any{"names": names})
+}
+
+// FontNoneUsable says "This machine has none of these families: the terminal draws with monospace."
+// in the language the app shows.
+func FontNoneUsable() string { return In(i18n.Locale()).FontNoneUsable() }
+
+// FontNoneUsable says "This machine has none of these families: the terminal draws with monospace."
+// in the language of msgs.
+func (msgs Messages) FontNoneUsable() string {
+	return Catalog.Format(msgs.locale, "fontNoneUsable", nil)
+}
+
+// FontNote says "The families a terminal tries, in the order the list holds them: the first one this machine has is what it draws with…"
 // in the language the app shows.
 func FontNote() string { return In(i18n.Locale()).FontNote() }
 
-// FontNote says "The monospaced families this machine has, as the terminal measures them. The first choice is the generic name every s…"
+// FontNote says "The families a terminal tries, in the order the list holds them: the first one this machine has is what it draws with…"
 // in the language of msgs.
 func (msgs Messages) FontNote() string {
 	return Catalog.Format(msgs.locale, "fontNote", nil)
@@ -1902,6 +1932,126 @@ func FontSizeNote() string { return In(i18n.Locale()).FontSizeNote() }
 // in the language of msgs.
 func (msgs Messages) FontSizeNote() string {
 	return Catalog.Format(msgs.locale, "fontSizeNote", nil)
+}
+
+// FontWeight says "Weight"
+// in the language the app shows.
+func FontWeight() string { return In(i18n.Locale()).FontWeight() }
+
+// FontWeight says "Weight"
+// in the language of msgs.
+func (msgs Messages) FontWeight() string {
+	return Catalog.Format(msgs.locale, "fontWeight", nil)
+}
+
+// FontWeightNote says "How heavy the letters are, of the weights the family has: 400 is the regular face, and a weight the family lacks is d…"
+// in the language the app shows.
+func FontWeightNote() string { return In(i18n.Locale()).FontWeightNote() }
+
+// FontWeightNote says "How heavy the letters are, of the weights the family has: 400 is the regular face, and a weight the family lacks is d…"
+// in the language of msgs.
+func (msgs Messages) FontWeightNote() string {
+	return Catalog.Format(msgs.locale, "fontWeightNote", nil)
+}
+
+// WeightThin says "Thin"
+// in the language the app shows.
+func WeightThin() string { return In(i18n.Locale()).WeightThin() }
+
+// WeightThin says "Thin"
+// in the language of msgs.
+func (msgs Messages) WeightThin() string {
+	return Catalog.Format(msgs.locale, "weightThin", nil)
+}
+
+// WeightExtraLight says "Extra light"
+// in the language the app shows.
+func WeightExtraLight() string { return In(i18n.Locale()).WeightExtraLight() }
+
+// WeightExtraLight says "Extra light"
+// in the language of msgs.
+func (msgs Messages) WeightExtraLight() string {
+	return Catalog.Format(msgs.locale, "weightExtraLight", nil)
+}
+
+// WeightLight says "Light"
+// in the language the app shows.
+func WeightLight() string { return In(i18n.Locale()).WeightLight() }
+
+// WeightLight says "Light"
+// in the language of msgs.
+func (msgs Messages) WeightLight() string {
+	return Catalog.Format(msgs.locale, "weightLight", nil)
+}
+
+// WeightRegular says "Regular"
+// in the language the app shows.
+func WeightRegular() string { return In(i18n.Locale()).WeightRegular() }
+
+// WeightRegular says "Regular"
+// in the language of msgs.
+func (msgs Messages) WeightRegular() string {
+	return Catalog.Format(msgs.locale, "weightRegular", nil)
+}
+
+// WeightMedium says "Medium"
+// in the language the app shows.
+func WeightMedium() string { return In(i18n.Locale()).WeightMedium() }
+
+// WeightMedium says "Medium"
+// in the language of msgs.
+func (msgs Messages) WeightMedium() string {
+	return Catalog.Format(msgs.locale, "weightMedium", nil)
+}
+
+// WeightSemiBold says "Semibold"
+// in the language the app shows.
+func WeightSemiBold() string { return In(i18n.Locale()).WeightSemiBold() }
+
+// WeightSemiBold says "Semibold"
+// in the language of msgs.
+func (msgs Messages) WeightSemiBold() string {
+	return Catalog.Format(msgs.locale, "weightSemiBold", nil)
+}
+
+// WeightBold says "Bold"
+// in the language the app shows.
+func WeightBold() string { return In(i18n.Locale()).WeightBold() }
+
+// WeightBold says "Bold"
+// in the language of msgs.
+func (msgs Messages) WeightBold() string {
+	return Catalog.Format(msgs.locale, "weightBold", nil)
+}
+
+// WeightExtraBold says "Extra bold"
+// in the language the app shows.
+func WeightExtraBold() string { return In(i18n.Locale()).WeightExtraBold() }
+
+// WeightExtraBold says "Extra bold"
+// in the language of msgs.
+func (msgs Messages) WeightExtraBold() string {
+	return Catalog.Format(msgs.locale, "weightExtraBold", nil)
+}
+
+// WeightBlack says "Black"
+// in the language the app shows.
+func WeightBlack() string { return In(i18n.Locale()).WeightBlack() }
+
+// WeightBlack says "Black"
+// in the language of msgs.
+func (msgs Messages) WeightBlack() string {
+	return Catalog.Format(msgs.locale, "weightBlack", nil)
+}
+
+// FontWideFirst says "{family} is the first one this machine has, and it is not monospace: the terminal draws with monospace instead, so th…"
+// in the language the app shows.
+func FontWideFirst(family string) string { return In(i18n.Locale()).FontWideFirst(family) }
+
+// FontWideFirst says "{family} is the first one this machine has, and it is not monospace: the terminal draws with monospace instead, so th…"
+// in the language of msgs.
+func (msgs Messages) FontWideFirst(family string) string {
+	return Catalog.Format(msgs.locale, "fontWideFirst", map[string]any{"family": family})
 }
 
 // LineHeight says "Line height"

@@ -575,8 +575,20 @@ func appearancePage(c *myui.Context, st Settings, act Actions) {
 		})
 	})
 	section(c, locales.AppearanceType(), func() {
-		field(c, locales.Font(), locales.FontNote(), func() {
-			choice(c, &s.Font.Family, fontOptions(st.FontFamilies))
+		fieldBlock(c, locales.Font(), locales.FontNote(), func() {
+			myui.Column(c).Gap(8).MinWidth(0).Children(func() {
+				fontPicker(c, &s.Font.Family, st.FontFamilies)
+				if text, danger := fontNote(s.Font.Family, st.Fonts); text != "" {
+					color := c.Theme().TextMuted
+					if danger {
+						color = c.Theme().Danger
+					}
+					myui.Text(c, text).FontSize(12).TextColor(color).Wrap()
+				}
+			})
+		})
+		field(c, locales.FontWeight(), locales.FontWeightNote(), func() {
+			choiceOf(c, &s.Font.Weight, weightOptions())
 		})
 		field(c, locales.FontSize(), locales.FontSizeNote(), func() {
 			measure(c, &s.Font.Size, 6, 48, 1)
@@ -618,19 +630,6 @@ func appearancePage(c *myui.Context, st Settings, act Actions) {
 	section(c, locales.ColorSchemes(), func() {
 		schemePicker(c, s, st, act)
 	})
-}
-
-// fontOptions are the font setting's choices: the generic family every system
-// resolves to a monospace font, then the families installed, each called by
-// its own name. The generic one is named as the alias it is, so that nobody
-// reads it as a family this machine has and goes looking for it.
-func fontOptions(families []string) []option {
-	out := make([]option, 0, len(families)+1)
-	out = append(out, option{"monospace", locales.FontGeneric()})
-	for _, f := range families {
-		out = append(out, option{f, f})
-	}
-	return out
 }
 
 // profilesPage is the settings a profile starts from, and the profiles: the

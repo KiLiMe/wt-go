@@ -17,6 +17,7 @@ func (s Settings) Validate() error {
 			bad = append(bad, fmt.Sprintf("%s must be %s", name, want))
 		}
 	}
+	check("font.weight", between(float64(s.Font.Weight), 100, 900), "between 100 and 900")
 	check("font.size", between(float64(s.Font.Size), 4, 200), "between 4 and 200")
 	check("font.lineHeight", between(float64(s.Font.LineHeight), 0.5, 4), "between 0.5 and 4")
 	check("padding.x", between(float64(s.Padding.X), 0, 256), "between 0 and 256")
@@ -54,6 +55,15 @@ func (s *Settings) fallbackUnknown() {
 	s.ClipboardWrite = known(s.ClipboardWrite, enumClipboardWrites, d.ClipboardWrite)
 	s.NewTabPosition = known(s.NewTabPosition, enumTabPositions, d.NewTabPosition)
 	s.TabWidth = known(s.TabWidth, enumTabWidths, d.TabWidth)
+	// A family the file leaves empty is the generic one, which is also what the
+	// window draws with: an empty setting would say nothing at all.
+	s.FillEmptyFont()
+	// A weight the file leaves out is the regular one, which is what terminal
+	// text is drawn at: a zero says nothing, and the page has to show the face
+	// the terminal draws with rather than a weight no family has.
+	if s.Font.Weight == 0 {
+		s.Font.Weight = 400
+	}
 	if !s.ConfirmClose.Valid() {
 		s.ConfirmClose = d.ConfirmClose
 	}

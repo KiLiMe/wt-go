@@ -19,6 +19,8 @@ func TestValidate(t *testing.T) {
 	}{
 		{"font size small", func(s *Settings) { s.Font.Size = 2 }, "font.size"},
 		{"font size large", func(s *Settings) { s.Font.Size = 500 }, "font.size"},
+		{"weight light", func(s *Settings) { s.Font.Weight = 50 }, "font.weight"},
+		{"weight heavy", func(s *Settings) { s.Font.Weight = 1000 }, "font.weight"},
 		{"line height", func(s *Settings) { s.Font.LineHeight = 0 }, "font.lineHeight"},
 		{"padding", func(s *Settings) { s.Padding.X = -1 }, "padding.x"},
 		{"opacity", func(s *Settings) { s.BackgroundOpacity = 1.5 }, "backgroundOpacity"},

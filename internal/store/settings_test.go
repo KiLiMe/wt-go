@@ -355,3 +355,52 @@ func TestConfirmJSON(t *testing.T) {
 		t.Errorf("reading 3 = %q, want an error", bad)
 	}
 }
+
+// TestFontWeight covers the weight a terminal draws at: the regular face before
+// the file names one, and the regular face for a file that leaves the key out,
+// which is what a zero says and what mygo reads a zero as.
+func TestFontWeight(t *testing.T) {
+	if got := Default().Font.Weight; got != 400 {
+		t.Errorf("default weight = %d, want 400", got)
+	}
+	read, err := Parse([]byte(`{"font":{"size":14}}`))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+	if read.Font.Weight != 400 {
+		t.Errorf("a file without a weight reads as %d, want 400", read.Font.Weight)
+	}
+	read, err = Parse([]byte(`{"font":{"weight":300}}`))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+	if read.Font.Weight != 300 {
+		t.Errorf("weight = %d, want the one the file names", read.Font.Weight)
+	}
+}
+
+// TestFillEmptyFont covers a family the settings leave empty: an empty family
+// is not a font, and the file says what the window draws with instead of
+// leaving it to be read as the generic one. The window fills it in on save, and
+// a file read from disk that leaves it out is filled the same way.
+func TestFillEmptyFont(t *testing.T) {
+	s := Default()
+	s.Font.Family = "  "
+	s.FillEmptyFont()
+	if s.Font.Family != EmptyFontFamily {
+		t.Errorf("family = %q, want %q", s.Font.Family, EmptyFontFamily)
+	}
+	// A family the file names stays as it is, with the spaces a person wrote.
+	s.Font.Family = " Consolas , monospace "
+	s.FillEmptyFont()
+	if s.Font.Family != " Consolas , monospace " {
+		t.Errorf("a family the file names was rewritten: %q", s.Font.Family)
+	}
+	read, err := Parse([]byte(`{"font":{"family":""}}`))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+	if read.Font.Family != EmptyFontFamily {
+		t.Errorf("a file that leaves the family empty reads as %q, want %q", read.Font.Family, EmptyFontFamily)
+	}
+}

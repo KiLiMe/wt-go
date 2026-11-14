@@ -231,10 +231,39 @@
   "schemeCopied": "配色已复制；保存后才会留下。",
   "schemeRemoved": "配色已删除；保存后才会留下。",
   "font": "字体",
+  "fontAdd": "添加族名",
   "fontGeneric": "monospace（系统等宽）",
-  "fontNote": "这台机器上装了、且量出来是等宽的族名；第一项是通用别名，交给系统去挑等宽字体。",
+  "fontMissing": "这台机器没有：{names}，会跳过。",
+  "@fontMissing": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "fontNoneUsable": "这几个族这台机器都没有：终端会用 monospace。",
+  "fontNote": "终端依次尝试的族名，按列表里的顺序：用第一个在这台机器上装了的；一个都没有时，用通用的 monospace，交给系统去挑等宽字体。",
   "fontSize": "字号",
   "fontSizeNote": "终端文字的大小，单位 DIP。",
+  "fontWeight": "字重",
+  "fontWeightNote": "文字有多粗，取族里最接近的一档：400 是常规。终端里的粗体由它推出。",
+  "weightThin": "细体",
+  "weightExtraLight": "特细",
+  "weightLight": "细",
+  "weightRegular": "常规",
+  "weightMedium": "中等",
+  "weightSemiBold": "半粗",
+  "weightBold": "粗体",
+  "weightExtraBold": "特粗",
+  "weightBlack": "黑体",
+  "fontWideFirst": "{family} 是第一个能用的，但它不是等宽：终端会改用 monospace，格子才不会歪。",
+  "@fontWideFirst": {
+    "placeholders": {
+      "family": {
+        "type": "String"
+      }
+    }
+  },
   "lineHeight": "行高",
   "lineHeightNote": "终端行高，相对字号的倍数。",
   "cursor": "光标",

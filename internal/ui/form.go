@@ -2,6 +2,7 @@ package ui
 
 import (
 	"math"
+	"strconv"
 
 	myui "github.com/egoist/mygo/ui"
 
@@ -185,6 +186,34 @@ func choice[T ~string](c *myui.Context, value *T, options []option) myui.Element
 		}
 	}
 	return el
+}
+
+// choiceOf is choice for a setting the file writes as a number: the choice is
+// shown as the number it stands for, and a weight the file holds but no choice
+// names shows as it is, which is what choice already does for a word.
+func choiceOf(c *myui.Context, value *int, options []option) myui.Element {
+	shown := strconv.Itoa(*value)
+	el := choice(c, &shown, options)
+	if n, err := strconv.Atoi(shown); err == nil {
+		*value = n
+	}
+	return el
+}
+
+// weightOptions are the weights a family may have, as the number and the name
+// of the face: the nine mygo clamps a font to, and no others.
+func weightOptions() []option {
+	names := []string{
+		locales.WeightThin(), locales.WeightExtraLight(), locales.WeightLight(),
+		locales.WeightRegular(), locales.WeightMedium(), locales.WeightSemiBold(),
+		locales.WeightBold(), locales.WeightExtraBold(), locales.WeightBlack(),
+	}
+	out := make([]option, 0, len(names))
+	for i, name := range names {
+		w := strconv.Itoa(100 * (i + 1))
+		out = append(out, option{w, w + " · " + name})
+	}
+	return out
 }
 
 // count is a control that picks a whole number.

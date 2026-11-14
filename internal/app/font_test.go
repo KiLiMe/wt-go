@@ -7,7 +7,30 @@ import (
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/store"
+	"wtgo/internal/ui"
 )
+
+// TestInstalledFonts covers the list the font setting reads its names against:
+// every family this machine has, sorted, saying which of them a terminal can
+// draw a grid of cells with — a family the engine calls monospaced that does not
+// measure as one is no better than a proportional one.
+func TestInstalledFonts(t *testing.T) {
+	fs := []myui.FontFamily{
+		{Name: "monospace", Monospaced: true},
+		{Name: "no-such-font-at-all", Monospaced: true},
+		{Name: "sans-serif", Monospaced: false},
+	}
+	a := &App{}
+	got := a.installedFonts(fs, 13)
+	want := []ui.InstalledFont{
+		{Name: "monospace", Mono: true},
+		{Name: "no-such-font-at-all", Mono: false},
+		{Name: "sans-serif", Mono: false},
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("installedFonts() = %v, want %v", got, want)
+	}
+}
 
 // TestMonospace covers the families a settings file names: a monospace one is
 // drawn as it is, and a proportional one, or a family the machine does not
@@ -70,6 +93,19 @@ func TestIsMonospaceCaches(t *testing.T) {
 
 // TestTerminalFont covers the font the terminals draw with: the settings' one
 // while it is monospace, and the fallback while it is not.
+// TestWeightOf covers what a terminal draws at: a weight of nothing is the
+// regular face, and a weight no family has is the nearest one it does.
+func TestWeightOf(t *testing.T) {
+	tests := []struct{ in, want int }{
+		{0, 400}, {-100, 400}, {100, 100}, {350, 350}, {900, 900}, {1000, 900}, {50, 100},
+	}
+	for _, tt := range tests {
+		if got := weightOf(tt.in); got != tt.want {
+			t.Errorf("weightOf(%d) = %d, want %d", tt.in, got, tt.want)
+		}
+	}
+}
+
 func TestTerminalFont(t *testing.T) {
 	s := store.Default()
 	s.Font.Family, s.Font.Size, s.Font.LineHeight = "no-such-font-at-all", 15, 1.4
@@ -80,6 +116,9 @@ func TestTerminalFont(t *testing.T) {
 	}
 	if f.Size != 15 || f.LineHeight != 1.4 {
 		t.Errorf("font = %+v, want the size and the line height the settings name", f)
+	}
+	if f.Weight != 400 {
+		t.Errorf("weight = %d, want the regular face", f.Weight)
 	}
 
 	s.Font.Family = "monospace"

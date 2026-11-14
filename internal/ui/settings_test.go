@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	myui "github.com/egoist/mygo/ui"
@@ -838,21 +839,64 @@ func TestProfileIcon(t *testing.T) {
 	}
 }
 
-// TestFontOptionsNameTheGeneric covers the first choice of the font setting:
-// it stands for the generic family, and is named as the alias it is rather
+// TestFontChoicesNameTheGeneric covers the last choice of the font setting's
+// menu: it stands for the generic family, and is named as the alias it is rather
 // than as a family this machine is supposed to have.
-func TestFontOptionsNameTheGeneric(t *testing.T) {
-	opts := fontOptions([]string{"Cascadia Mono", "Consolas"})
+// TestWeightOptions covers the weights the page offers: the nine a family may
+// have, each shown as its number and the face it stands for, of the language
+// the window speaks.
+func TestWeightOptions(t *testing.T) {
+	opts := weightOptions()
+	if len(opts) != 9 {
+		t.Fatalf("the page offers %d weights, want 9", len(opts))
+	}
+	for i, o := range opts {
+		want := fmt.Sprintf("%d", 100*(i+1))
+		if o.Value != want {
+			t.Errorf("choice %d stands for %q, want %q", i, o.Value, want)
+		}
+		if o.Label == want || !strings.Contains(o.Label, want) {
+			t.Errorf("choice %d is labelled %q, want the number and the face", i, o.Label)
+		}
+	}
+}
+
+// TestWeightIsKept covers the page's weight setting: a weight the file names
+// but no choice does is drawn as the number it is, and stays that number
+// instead of being read back as a face the terminal would not draw with.
+func TestWeightIsKept(t *testing.T) {
+	for _, in := range []int{400, 350} {
+		s := store.Default()
+		s.Font.Weight = in
+		tt := myui.NewTester(func(c *myui.Context) {
+			fieldBlock(c, locales.FontWeight(), locales.FontWeightNote(), func() {
+				choiceOf(c, &s.Font.Weight, weightOptions())
+			})
+		}, 600, 200)
+		tt.Frame()
+		want := in
+		if s.Font.Weight != want {
+			t.Errorf("weight %d became %d, want %d", in, s.Font.Weight, want)
+		}
+		if _, ok := tt.Find(locales.FontWeight()); !ok {
+			t.Error("the weight setting has no label")
+		}
+	}
+}
+
+func TestFontChoicesNameTheGeneric(t *testing.T) {
+	opts := fontChoices([]string{"Cascadia Mono", "Consolas"})
 	if len(opts) != 3 {
 		t.Fatalf("the font setting offers %d choices, want 3", len(opts))
 	}
-	if opts[0].Value != "monospace" {
-		t.Fatalf("the first choice stands for %q, want \"monospace\"", opts[0].Value)
+	last := opts[len(opts)-1]
+	if last.Value != "monospace" {
+		t.Fatalf("the last choice stands for %q, want \"monospace\"", last.Value)
 	}
-	if opts[0].Label == "monospace" {
-		t.Fatalf("the generic family is named as a family: %q", opts[0].Label)
+	if last.Label == "monospace" {
+		t.Fatalf("the generic family is named as a family: %q", last.Label)
 	}
-	if want := (option{"Cascadia Mono", "Cascadia Mono"}); opts[1] != want {
-		t.Fatalf("the second choice is %+v, want %+v", opts[1], want)
+	if want := (option{"Cascadia Mono", "Cascadia Mono"}); opts[0] != want {
+		t.Fatalf("the first choice is %+v, want %+v", opts[0], want)
 	}
 }

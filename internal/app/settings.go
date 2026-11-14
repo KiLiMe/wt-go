@@ -79,6 +79,7 @@ func (a *App) settingsState() ui.Settings {
 		Device:        a.device.Name,
 		Schemes:       a.schemeList(),
 		FontFamilies:  a.fonts.families,
+		Fonts:         a.fonts.installed,
 	}
 }
 
@@ -298,6 +299,9 @@ func (a *App) SaveSettings() {
 		}
 		a.upsertProfile(*a.editing)
 	}
+	// A family the person emptied is the generic one, which is what the window
+	// draws with: the save says so in the file rather than in the window alone.
+	a.settings.FillEmptyFont()
 	if err := a.settings.Validate(); err != nil {
 		// The draft stays as it is: what is wrong with it is something the
 		// person corrects on the page, frame after frame.

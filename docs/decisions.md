@@ -80,6 +80,10 @@
 | ADR-74 | 按住不放只连发「走一步」的动作：新建标签一次按下一次 | 有效 |
 | ADR-75 | 重置为内置：一条内置 profile 按现在这台机器重建 | 有效 |
 | ADR-76 | 标签上的标记跟着配置文件走：12 套内置形状、一个字符，或按命令猜 | 有效 |
+| ADR-77 | 配色方案只有一个入口：列表自己就是选择器，行首带色板 | 有效 |
+| ADR-78 | 标题栏空白处右键给出窗口菜单：移动与大小不做 | 有效 |
+| ADR-79 | 字体栏是输入框加一个 `＋`，不是只读列表 | 有效 |
+| ADR-80 | 字体只设一个「字重」，粗体由框架派生 | 有效 |
 
 ---
 
@@ -2175,3 +2179,63 @@ Windows Terminal 在自己画的那条标题栏上右键会弹出「还原 / 移
 
 **测试**：`internal/ui/tabs_test.go` 的 `TestTitleBarMenu`（空白处右键弹出五个项目、选「关闭窗口」问
 `CloseWindow`、最大化时选「还原」问 `ToggleMaximizeWindow`）。
+
+## ADR-79 字体栏是输入框加一个 `＋`，不是只读列表
+
+**背景**：`font.family` 一直是字符串列表（`Cascadia Mono,monospace`），`internal/text/engine.go` 按逗号切、
+取第一个装了的。设置页却把它画成一个下拉，里面是「这台机器上装了、量出来是等宽」的族名加一个
+`monospace`：手写过的列表在页面上显示成一串原名，可一旦动一下下拉，整串就被换成一个族名。用户要
+VSCodium 的 `Editor: Font Family` 那种能直接写的地方，又舍不得那个列表（列出的族名都是实测能画格子的）。
+
+**决定**：
+
+1. 字体栏是 `myui.TextInput` 绑草稿的 `Font.Family`（怎么写都行，与文件同一套语法）加一个 `＋`
+   `myui.MenuButton`。菜单项是 `monospaceFamilies`（引擎说是等宽、量出来也等宽，排序）加最后的通用名
+   `monospace`（显示为 `fontGeneric`，不冒充这台机器有的族）。
+2. 选菜单里的一项 = 把那个族名挪到列表最前（已经在列表里就挪、不重复，`pickFamily`），因为终端用的
+   是第一个能用的；已在列表里的项带 `Checked` 勾。
+3. 输入框底下一行说结果（`fontNote`，纯函数）：第一个「能用的」是比例字体 → `Danger` 色，说清终端会
+   改用 `monospace`；有名字没装 → 淡字列出；一个都没有 → `Danger` 色；全都可用 → 不显示。
+4. 空族名补成 `monospace`：`store.EmptyFontFamily` + `Settings.FillEmptyFont()`，`fallbackUnknown`
+   （读盘）与 `App.SaveSettings`（保存前）各调一次；输入框回车（`OnSubmit`）也会补上。
+5. `internal/app` 多记一张全量族名表（`installedFonts` → `ui.InstalledFont{Name, Mono}`），逐项判定
+   要的就是「装了没有」与「装了能不能画格子」两件事——`ui.FontFamilies` 那张表只有等宽的，判不出
+   「没装」。
+
+**理由**：一个字符串字段配一个只读下拉，等于把「用户本来能写的东西」藏起来；而纯输入框会丢掉那个
+列表的实际价值（哪些族真的能画格子是测量出来的，不是名字里带 `Mono` 就算）。输入框 + 菜单 + 一行
+结果是两边的并集，成本是一个纯函数文件。
+
+**代价**：
+
+- 提示文案要随列表变（`fontMissing`/`fontWideFirst`/`fontNoneUsable` 三个新 key，274 条）。
+- 失焦事件 mygo 0.8.3 没有暴露（`Element` 只有 `OnClick`/`OnChange`/`OnSubmit`），所以「删空就补」发生在
+  **回车或保存**时，不是离开输入框那一刻；`OnChange` 里补会跟用户清空重打的手抢。
+- 全量族名表与等宽表来自同一次枚举，两表都由 `ensureFontFamilies` 一次填好（ADR-039 的开销不变）。
+
+**测试**：`internal/ui/fonts_test.go` 的 `TestFontNames`（切名单：空格、成对引号、空项）、
+`TestFontNoteSaysNothingWhenItDraws`/`TestFontNoteSkipsTheNamesTheMachineLacks`/
+`TestFontNoteWarnsAboutAFirstFamilyThatIsNotMonospace`/`TestFontNoteWarnsWhenTheMachineHasNone`、
+`TestFontNoteSpeaksTheLanguage`、`TestPickFamily`、`TestFillFamily`、`TestFontChoices`、
+`TestFontPickerOpensTheMenu`（点 `＋` 出菜单、选中后列表真的变）；`internal/app/font_test.go` 的
+`TestInstalledFonts`；`internal/store/settings_test.go` 的 `TestFillEmptyFont`（含读盘时空族名）。
+
+## ADR-80 字体只设一个「字重」，粗体由框架派生
+
+**决定**：`font.weight`（100–900，缺省 400）是终端普通文字的字重，设置页「外观与排版」给九档下拉
+（`weightOptions`）。终端里的粗体（SGR 1）**不是**另一个设置项，由框架按「+300，至少 700」从这一档推出。
+
+**理由**：`github.com/KiLiMe/mygo` 的 `terminal.Font` 只有 `Weight int`，`fontKey.variant` 里
+`w := k.weight; if i&1 != 0 { w = min(max(w+300, 700), 900) }` —— 粗体是派生的，没有第二个字段。
+要让用户分别设普通/粗体字重，得先改这个 fork 再更新 `go.mod` 的 `replace` 伪版本，代价与收益不成比例。
+一个数既能表达「整体再粗」，也覆盖了绝大多数人真正想要的（`400` → 粗体 700、`600` → 粗体 900）。
+
+**代价**：做不到「普通 400 + 粗体 800」这种搭配。等框架支持第二个字重时再加字段，那时 `font.weight`
+的语义不变、只是多一个键。等宽判定不跟着字重变（`monospace` 量的是常规脸，缓存键也不含字重）：
+等宽族的各档字重前进量相同，字重只影响笔画粗细。
+
+**测试**：`internal/store/settings_test.go` 的 `TestFontWeight`（默认 400、文件缺键读成 400、文件写 300 就
+是 300）、`internal/store/validate_test.go` 的两条越界；`internal/app/font_test.go` 的 `TestWeightOf`
+（0/负数 → 400，越界夹回 100–900）与 `TestTerminalFont` 里对 `Weight` 的断言；
+`internal/ui/settings_test.go` 的 `TestWeightOptions`（九档、每档 Value 是数字、标签带数字）
+与 `TestWeightIsKept`（文件写着 350 时页面显示 350 并原样写回）。

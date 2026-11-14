@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"wtgo/internal/action"
 )
@@ -144,9 +145,28 @@ type Settings struct {
 
 // Font is the font of a terminal's text.
 type Font struct {
-	Family     string  `json:"family"`
+	Family string `json:"family"`
+	// Weight is how heavy the text is, from 100 to 900, of the weights the
+	// family has: 400 is the regular face. Bold text is drawn 300 heavier, and
+	// at least 700, which is what terminal.Font.Weight does.
+	Weight     int     `json:"weight"`
 	Size       float32 `json:"size"`
 	LineHeight float32 `json:"lineHeight"`
+}
+
+// EmptyFontFamily is what a font setting that names no family holds: the
+// generic name every system resolves to a monospace font. An empty family is
+// not a font, and the file says what the window draws with rather than leaving
+// the terminal to read it as the same thing.
+const EmptyFontFamily = "monospace"
+
+// FillEmptyFont names the generic family where the family is empty, which is
+// what a terminal draws with then: the settings page asks for it when a field
+// is submitted, and the window saves nothing without it.
+func (s *Settings) FillEmptyFont() {
+	if strings.TrimSpace(s.Font.Family) == "" {
+		s.Font.Family = EmptyFontFamily
+	}
 }
 
 // Padding is the room around a terminal's grid, in DIPs.
@@ -198,7 +218,7 @@ func Default() Settings {
 		Language:              "",
 		Theme:                 "dark",
 		StartOn:               "default",
-		Font:                  Font{Family: DefaultFontFamily(), Size: 13, LineHeight: 1.2},
+		Font:                  Font{Family: DefaultFontFamily(), Weight: 400, Size: 13, LineHeight: 1.2},
 		ColorScheme:           "Campbell",
 		Padding:               Padding{X: 12, Y: 8},
 		BackgroundOpacity:     1.0,
