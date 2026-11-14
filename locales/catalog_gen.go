@@ -1104,21 +1104,21 @@ func (msgs Messages) SchemesNote() string {
 	return Catalog.Format(msgs.locale, "schemesNote", nil)
 }
 
-// LineOne says "Hello! AaBbZz 001lI8B"
+// LineOne says "英：Hello! AaBbZz 001lI8B"
 // in the language the app shows.
 func LineOne() string { return In(i18n.Locale()).LineOne() }
 
-// LineOne says "Hello! AaBbZz 001lI8B"
+// LineOne says "英：Hello! AaBbZz 001lI8B"
 // in the language of msgs.
 func (msgs Messages) LineOne() string {
 	return Catalog.Format(msgs.locale, "lineOne", nil)
 }
 
-// LineTwo says "1234567890123456 ABCD"
+// LineTwo says "[ABCDEFGHIJKLMNOP]"
 // in the language the app shows.
 func LineTwo() string { return In(i18n.Locale()).LineTwo() }
 
-// LineTwo says "1234567890123456 ABCD"
+// LineTwo says "[ABCDEFGHIJKLMNOP]"
 // in the language of msgs.
 func (msgs Messages) LineTwo() string {
 	return Catalog.Format(msgs.locale, "lineTwo", nil)

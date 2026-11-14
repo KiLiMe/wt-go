@@ -347,8 +347,8 @@ func TestPreviewSpeaksTheLanguage(t *testing.T) {
 		locale string
 		lines  []string
 	}{
-		{"en", []string{"$ Hello! AaBbZz 001lI8B", "  1234567890123456 ABCD", "  0123456789 !@#$%^&*()"}},
-		{"zh-Hans", []string{"$ 你好 AaBbZz 001lI8B", "  一二三四五六七八 中文测试", "  0123456789 !@#$%^&*()"}},
+		{"en", []string{"$ 英：Hello! AaBbZz 001lI8B", "  [ABCDEFGHIJKLMNOP]", "  0123456789 !@#$%^&*()"}},
+		{"zh-Hans", []string{"$ 中：你好 AaBbZz 001lI8B", "  [一二三四五六七八]", "  0123456789 !@#$%^&*()"}},
 	} {
 		t.Run(tc.locale, func(t *testing.T) {
 			speakIn(t, tc.locale)
