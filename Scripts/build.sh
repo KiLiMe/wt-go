@@ -138,8 +138,10 @@ if [ -d /proc ]; then
     pids=''
     for link in /proc/[0-9]*/exe; do
         [ -L "$link" ] || continue
-        target=$(readlink -- "$link" 2>/dev/null) || continue
-        if [ "$target" = "$exe_real" ]; then
+        # target_link, not target: target is the version, and readlink would
+        # overwrite it with a path before the build reports it.
+        target_link=$(readlink -- "$link" 2>/dev/null) || continue
+        if [ "$target_link" = "$exe_real" ]; then
             pid=${link#/proc/}
             pid=${pid%/exe}
             pids="${pids:+$pids, }$pid"
