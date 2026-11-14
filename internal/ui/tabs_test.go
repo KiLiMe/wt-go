@@ -540,30 +540,63 @@ func TestStripDividers(t *testing.T) {
 // another tab comes to the front. Windows Terminal's strip holds them still the
 // same way: with either of two tabs in front its buttons stand in the same
 // place, and only that line comes and goes.
+//
+// The tabs are of different lengths, and one set of them is short enough that
+// the strip gives each tab the width its name asks for rather than an equal
+// share: the tab in front names itself in bold, which is a few DIPs wider, and
+// a strip whose buttons followed the tabs' own width would move them by that
+// much every time the front tab changed.
 func TestStripButtonsStayPut(t *testing.T) {
-	for _, n := range []int{1, 2, 3} {
-		var want [2]float32
-		for active := 0; active < n; active++ {
-			tt, _, _ := stripOf(t, n, active, 900)
-			open, ok := tt.Find(locales.NewTab())
-			if !ok {
-				t.Fatal("the strip draws no button to open a tab")
-			}
-			menu, ok := tt.Find(locales.Profiles())
-			if !ok {
-				t.Fatal("the strip draws no menu of profiles")
-			}
-			got := [2]float32{open.X, menu.X}
-			if active == 0 {
-				want = got
-				continue
-			}
-			if got != want {
-				t.Errorf("with tab %d of %d in front the buttons stand at %v, want %v",
-					active, n, got, want)
+	sets := [][]string{
+		{"PowerShell 7", "PowerShell 7", "PowerShell 7"},
+		{"PowerShell 7"},
+		{"PowerShell 7", "π - wt-go", "长一点的标签名字在这里", "pwsh"},
+	}
+	for _, names := range sets {
+		for _, width := range []int{520, 900, 1200} {
+			for _, buttons := range []bool{false, true} {
+				var want [2]float32
+				for active := range names {
+					tt := stripOfEach(t, names, active, width, buttons)
+					open, ok := tt.Find(locales.NewTab())
+					if !ok {
+						t.Fatal("the strip draws no button to open a tab")
+					}
+					menu, ok := tt.Find(locales.Profiles())
+					if !ok {
+						t.Fatal("the strip draws no menu of profiles")
+					}
+					got := [2]float32{open.X, menu.X}
+					if active == 0 {
+						want = got
+						continue
+					}
+					if got != want {
+						t.Errorf("at %d DIPs with tab %d of %d in front, the buttons stand at %v, want %v",
+							width, active, len(names), got, want)
+					}
+				}
 			}
 		}
 	}
+}
+
+// stripOfEach is a strip of tabs carrying the names given, with the window's
+// own buttons where buttons is set.
+func stripOfEach(t *testing.T, names []string, active int, width int, buttons bool) *myui.Tester {
+	t.Helper()
+	at := &myui.ScrollState{}
+	act := &scrollActions{at: at}
+	st := &State{Tabs: make([]Tab, len(names)), Active: active, TabsScroll: at}
+	if buttons {
+		st.WindowButtons = &WindowButtons{End: []string{"minimize", "maximize", "close"}}
+	}
+	for i := range st.Tabs {
+		st.Tabs[i].Name = names[i]
+	}
+	tt := myui.NewTester(func(c *myui.Context) { strip(c, *st, act) }, width, TitleBarHeight*2)
+	tt.Frame()
+	return tt
 }
 
 // windowActions is the window as the strip's buttons see it: it records what

@@ -501,11 +501,15 @@ func tab(c *myui.Context, st State, act Actions, i int, share float32) myui.Elem
 	// A tab is as wide as the share of the strip it has, but not wider than
 	// its name asks for -- unless the settings make every tab alike -- and not
 	// narrower than the room its parts take: past that the strip scrolls
-	// rather than squeezing the name and the close button away.
-	natural := name + tabChrome
+	// rather than squeezing the name and the close button away. What a name
+	// asks for is its bold measure whichever tab is in front: the front tab
+	// names itself in bold, a few DIPs wider than the rest, and the buttons
+	// that open a tab stand beside the last tab -- so a width that followed
+	// the weight of the moment would move them as the front tab changed.
+	asked := max(name, measuredName(c, tb.Name, nameBold)) + tabChrome
 	w := min(max(share, minTabWidth), maxTabWidth)
 	if !st.EqualTabs {
-		w = min(w, natural)
+		w = min(w, asked)
 	}
 	el = el.Width(w)
 	name = w - tabChrome
