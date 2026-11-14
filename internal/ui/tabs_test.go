@@ -129,6 +129,42 @@ func TestWindowButtons(t *testing.T) {
 	}
 }
 
+// TestTitleBarMenu covers the menu the strip opens on a right press away from
+// the tabs: the window's own menu, which the desktop shows on a right press of
+// the title bar it draws, and Windows Terminal offers on its strip.
+func TestTitleBarMenu(t *testing.T) {
+	act := &windowActions{}
+	st := &State{Tabs: []Tab{{Name: "PowerShell 7"}}}
+	tt := myui.NewTester(func(c *myui.Context) { strip(c, *st, act) }, 900, TitleBarHeight*2)
+	tt.Frame()
+	// The room that moves the window, past the buttons that follow the tabs.
+	tt.RightClickAt(700, TitleBarHeight/2)
+	menu := tt.Menu()
+	for _, label := range []string{locales.Restore(), locales.Minimize(), locales.Maximize(),
+		locales.CloseWindow(), locales.Settings()} {
+		if !slices.Contains(menu, label) {
+			t.Errorf("a right press on the empty strip opens %q, want %q in it", menu, label)
+		}
+	}
+	if err := tt.ChooseMenuItem(locales.CloseWindow()); err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"close"}; !slices.Equal(act.asked, want) {
+		t.Errorf("the menu asked for %q, want %q", act.asked, want)
+	}
+	// A maximized window offers the item that restores it, not the one that
+	// maximizes a window already maximized.
+	st.WindowButtons = &WindowButtons{Maximized: true}
+	tt.Frame()
+	tt.RightClickAt(700, TitleBarHeight/2)
+	if err := tt.ChooseMenuItem(locales.Restore()); err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"close", "maximize"}; !slices.Equal(act.asked, want) {
+		t.Errorf("the menu asked for %q, want %q", act.asked, want)
+	}
+}
+
 // TestTabMenu covers the tab's menu: a right click anywhere on the tab opens
 // it, over the name too, which is most of the tab.
 func TestTabMenu(t *testing.T) {
@@ -425,42 +461,6 @@ func TestStripDividers(t *testing.T) {
 	}
 }
 
-// windowActions is the window as the strip's buttons see it: it records what
-// each button asked for.
-type windowActions struct {
-	Actions
-	asked []string
-}
-
-func (a *windowActions) MinimizeWindow()       { a.asked = append(a.asked, "minimize") }
-func (a *windowActions) ToggleMaximizeWindow() { a.asked = append(a.asked, "maximize") }
-func (a *windowActions) CloseWindow()          { a.asked = append(a.asked, "close") }
-
-// scrollActions is the window as a strip sees it: it keeps where the strip
-// shows the tabs the way the window does, and nothing else answers.
-type scrollActions struct {
-	Actions
-	at    *myui.ScrollState
-	moved []float32
-}
-
-func (a *scrollActions) ScrollTabs(by float32) {
-	a.moved = append(a.moved, by)
-	a.at.X = max(0, min(a.at.X+by, a.at.MaxX))
-}
-
-// stripOf draws the title bar of n tabs named like a shell, in a window of the
-// size it gives.
-func stripOf(t *testing.T, n int, active int, width int) (*myui.Tester, *scrollActions, *myui.ScrollState) {
-	t.Helper()
-	return stripOfNamed(t, n, active, width, "PowerShell 7")
-}
-
-// stripOfNamed is stripOf for tabs that carry the name it gives.
-func stripOfNamed(t *testing.T, n int, active int, width int, name string) (*myui.Tester, *scrollActions, *myui.ScrollState) {
-	t.Helper()
-	at := &myui.ScrollState{}
-	act := &scrollActions{at: at}
 // TestStripButtonsStayPut covers where the buttons after the tabs stand: the
 // line on the left of the button that opens a tab is not drawn beside the tab
 // in front, and keeps its room anyway, so that the buttons do not move as
@@ -493,6 +493,43 @@ func TestStripButtonsStayPut(t *testing.T) {
 	}
 }
 
+// windowActions is the window as the strip's buttons see it: it records what
+// each button asked for.
+type windowActions struct {
+	Actions
+	asked []string
+}
+
+func (a *windowActions) MinimizeWindow()       { a.asked = append(a.asked, "minimize") }
+func (a *windowActions) ToggleMaximizeWindow() { a.asked = append(a.asked, "maximize") }
+func (a *windowActions) CloseWindow()          { a.asked = append(a.asked, "close") }
+func (a *windowActions) OpenSettings()         { a.asked = append(a.asked, "settings") }
+
+// scrollActions is the window as a strip sees it: it keeps where the strip
+// shows the tabs the way the window does, and nothing else answers.
+type scrollActions struct {
+	Actions
+	at    *myui.ScrollState
+	moved []float32
+}
+
+func (a *scrollActions) ScrollTabs(by float32) {
+	a.moved = append(a.moved, by)
+	a.at.X = max(0, min(a.at.X+by, a.at.MaxX))
+}
+
+// stripOf draws the title bar of n tabs named like a shell, in a window of the
+// size it gives.
+func stripOf(t *testing.T, n int, active int, width int) (*myui.Tester, *scrollActions, *myui.ScrollState) {
+	t.Helper()
+	return stripOfNamed(t, n, active, width, "PowerShell 7")
+}
+
+// stripOfNamed is stripOf for tabs that carry the name it gives.
+func stripOfNamed(t *testing.T, n int, active int, width int, name string) (*myui.Tester, *scrollActions, *myui.ScrollState) {
+	t.Helper()
+	at := &myui.ScrollState{}
+	act := &scrollActions{at: at}
 	st := &State{Tabs: make([]Tab, n), Active: active, TabsScroll: at}
 	for i := range st.Tabs {
 		st.Tabs[i].Name = name

@@ -2142,3 +2142,36 @@ PowerShell 7 还是 Windows PowerShell」还得读名字。那些颜色本身也
 `RolePopUpButton`，即没有第二个选择器）、`TestSchemeSearchEnterPicks`（打字不选、回车选第一条、草稿
 不被写穿）、`TestSwatchOf`（列表没带的方案回退到窗口的 `Surface`/`TextMuted`）；
 `internal/app/settings_test.go` 的 `TestSchemeSwatches`（自定义方案的颜色跟着设置变、内置的不变）。
+
+## ADR-78 标题栏空白处右键给出窗口菜单：移动与大小不做
+
+**背景**：本程序自己画标题栏（`TitleBarHeight` 30，整条 `DragWindow`），所以桌面的系统菜单没有入口：
+Windows Terminal 在自己画的那条标题栏上右键会弹出「还原 / 移动 / 大小 / 最小化 / 最大化 / 关闭
+（Alt+F4）/ 设置」，我们这边右键落在标签条的空白处什么都不发生——只有标签自己有菜单，空白处与
+`▾` 右邻那块拖拽区都没有。
+
+**决定**：
+
+1. 在 `strip` 那一行挂 `ContextMenu(titleBarMenu)`。mygo 从最深处往上找第一个带菜单的元素，所以标签
+   自己的菜单照样赢，右击标签不会变成窗口菜单（`TestTabMenu` 仍然守着这一点）。
+2. 菜单项：还原（没最大化时 `Disabled`）、最小化、最大化（最大化时 `Disabled`）、分隔线、关闭（带
+   `Alt+F4` 提示）、设置（带用户当前的键位，经 `shortcut` 从 `action.Settings` 取）。
+3. 标题全用已有的 `locales`：`Restore`/`Minimize`/`Maximize`/`CloseWindow`/`Settings`，与标题栏上那三
+   个按钮同一套字样，不加新 key，也不往 `internal/action` 加「最小化窗口」「最大化窗口」这类动作——
+   那是给键位与命令面板用的目录，窗口按钮本来就不在里面。
+4. 不做「移动」「大小」：mygo 只提供 `DragWindow`（按下拖动），没有程序化移动窗口或进入键盘移动
+   模式的接口。要做得在 `internal/sys` 里调 `SetWindowPos` 再自己写一个模态的移动循环，等于凭空
+   造一套窗口管理的交互；而拖着标题栏就是移动、窗口边缘就是拉大小，两项都没有实际收益。
+
+**理由**：Windows 上标题栏右键是肌肉记忆，空白处给不出东西会像坏了；能做的四项（还原/最小化/
+最大化/关闭）与窗口按钮一一对应，成本是一条函数。
+
+**代价**：
+
+- `Alt+F4` 只写在菜单上、不绑定：那把键由 Windows 自己处理，不经过窗口，绑了也收不到。
+- 窗口按钮区域与拖拽区右键也会弹这个菜单（那两处都没有自己的菜单），与 Windows 一致。
+- 桌面替我们画标题栏的平台（`WindowButtons` 为 nil）上 `Maximized` 无从得知，此时「还原」恒淡、
+  「最大化」恒亮。
+
+**测试**：`internal/ui/tabs_test.go` 的 `TestTitleBarMenu`（空白处右键弹出五个项目、选「关闭窗口」问
+`CloseWindow`、最大化时选「还原」问 `ToggleMaximizeWindow`）。

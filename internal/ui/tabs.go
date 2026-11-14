@@ -118,6 +118,7 @@ func strip(c *myui.Context, st State, act Actions) {
 		Background(t.Surface).
 		Padding(0, bar.Right, 0, bar.Left+stripGutter).
 		DragWindow().
+		ContextMenu(func(m *myui.Menu) { titleBarMenu(m, st, act) }).
 		Children(func() {
 			if b := st.WindowButtons; b != nil && len(b.Start) > 0 {
 				windowButtonGroup(c, b, act, b.Start, false)
@@ -128,6 +129,41 @@ func strip(c *myui.Context, st State, act Actions) {
 				windowButtonGroup(c, b, act, b.End, true)
 			}
 		})
+}
+
+// titleBarMenu is the menu the strip opens on a right press: the window's own
+// menu, which the desktop shows on a right press of the title bar it draws, and
+// Windows Terminal offers on its strip as well. The two items that ask the
+// desktop to move or to size the window are left out: mygo offers no move the
+// pointer is not already dragging, and an item that did nothing would be a
+// worse lie than its absence.
+func titleBarMenu(m *myui.Menu, st State, act Actions) {
+	maximized := st.WindowButtons != nil && st.WindowButtons.Maximized
+	if it := m.Item(locales.Restore()).Disabled(!maximized); it.Chosen() {
+		act.ToggleMaximizeWindow()
+	}
+	if m.Item(locales.Minimize()).Chosen() {
+		act.MinimizeWindow()
+	}
+	if it := m.Item(locales.Maximize()).Disabled(maximized); it.Chosen() {
+		act.ToggleMaximizeWindow()
+	}
+	m.Separator()
+	closer := m.Item(locales.CloseWindow())
+	if mods, key, ok := ParseKey("alt+f4"); ok {
+		// The desktop takes this key before the window ever sees it, and it is
+		// what a person would press anyway: the menu names it rather than
+		// binding it.
+		closer.Shortcut(mods, key)
+	}
+	if closer.Chosen() {
+		act.CloseWindow()
+	}
+	settings := m.Item(locales.Settings())
+	shortcut(settings, st, action.Settings)
+	if settings.Chosen() {
+		act.OpenSettings()
+	}
 }
 
 // windowButtonGroup draws the window's buttons the desktop puts on a side of
@@ -776,6 +812,19 @@ func profilesMenu(c *myui.Context, st State, act Actions) myui.Element {
 	})
 }
 
+// dividerSlot is one of the strip's lines -- the line itself when drawn is set,
+// and the room it would take when it is not. The strip leaves a line out beside
+// the tab in front, and lays itself out around it either way: a strip that moved
+// as another tab came to the front would make the same press land on another
+// button, or a tab change width under the pointer.
+func dividerSlot(c *myui.Context, drawn bool, room float32) {
+	if !drawn {
+		myui.Box(c).Width(room).Height(16)
+		return
+	}
+	stripDivider(c).Margin(0, (room-1)/2)
+}
+
 // stripDivider is the line the strip draws between two tabs, and beside the
 // button that opens one: a DIP wide and as high as a tab's mark, centered in
 // the strip, out of the border color between two surfaces. Windows Terminal
@@ -812,19 +861,6 @@ func shortcut(it *myui.MenuItem, st State, action string) {
 func newTabButton(c *myui.Context, act Actions) myui.Element {
 	base := myui.Box(c).
 		Size(stripButtonSize, stripButtonSize).
-// dividerSlot is one of the strip's lines -- the line itself when drawn is set,
-// and the room it would take when it is not. The strip leaves a line out beside
-// the tab in front, and lays itself out around it either way: a strip that moved
-// as another tab came to the front would make the same press land on another
-// button, or a tab change width under the pointer.
-func dividerSlot(c *myui.Context, drawn bool, room float32) {
-	if !drawn {
-		myui.Box(c).Width(room).Height(16)
-		return
-	}
-	stripDivider(c).Margin(0, (room-1)/2)
-}
-
 		Radius(6).
 		AlignItems(myui.Center).
 		Justify(myui.Center).
