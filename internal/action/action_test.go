@@ -58,6 +58,27 @@ func TestTitle(t *testing.T) {
 	}
 }
 
+// TestRepeats covers the actions a held key keeps firing: the ones that step
+// through the tabs and the panes, and nothing else.
+func TestRepeats(t *testing.T) {
+	want := map[string]bool{
+		action.TabNext:        true,
+		action.TabPrev:        true,
+		action.PaneFocusLeft:  true,
+		action.PaneFocusRight: true,
+		action.PaneFocusUp:    true,
+		action.PaneFocusDown:  true,
+	}
+	for _, a := range action.All() {
+		if got := action.Repeats(a.ID); got != want[a.ID] {
+			t.Errorf("Repeats(%q) = %v, want %v", a.ID, got, want[a.ID])
+		}
+	}
+	if action.Repeats("no.such.action") {
+		t.Error("Repeats of an action the window does not know = true")
+	}
+}
+
 // TestGotoAction covers the tab.goto.n actions.
 func TestGotoAction(t *testing.T) {
 	for n := 1; n <= action.MaxNumber; n++ {

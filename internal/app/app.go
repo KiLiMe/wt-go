@@ -20,6 +20,7 @@ import (
 	"github.com/egoist/mygo/transfer"
 	myui "github.com/egoist/mygo/ui"
 
+	"wtgo/internal/action"
 	"wtgo/internal/cli"
 	"wtgo/internal/fault"
 	"wtgo/internal/i18n"
@@ -171,6 +172,9 @@ type binding struct {
 	mods   myui.Modifiers
 	key    myui.Key
 	action string
+	// repeats says the action takes the key again as the keyboard repeats it
+	// while it stays held, as a key that steps through the tabs does.
+	repeats bool
 }
 
 // Run opens the window and runs until it closes.
@@ -554,7 +558,7 @@ func bindings(keybindings []store.Keybinding) []binding {
 			log.Printf("wt-go: %s", fault.Line(fault.BadKeybinding, fmt.Sprintf("keybinding %q", kb.Key)))
 			continue
 		}
-		out = append(out, binding{mods: mods, key: key, action: kb.Action})
+		out = append(out, binding{mods: mods, key: key, action: kb.Action, repeats: action.Repeats(kb.Action)})
 	}
 	return out
 }
@@ -645,13 +649,21 @@ func (a *App) settingsView(c *myui.Context) myui.Element {
 }
 
 // bind gives the window the keys of the tabs, unless the settings wait for a
-// key of their own or an overlay has the keyboard.
+// key of their own or an overlay has the keyboard. A key the keyboard repeats
+// while it stays held runs an action that steps through something, and is left
+// to the program for the rest: a held Ctrl+T makes one tab, not fifty.
 func (a *App) bind(c *myui.Context) {
 	if a.recording != "" || a.top() != overlayNone {
 		return
 	}
 	for _, b := range a.keys {
-		c.OnShortcut(b.mods, b.key, func() { a.run(b.action) })
+		b := b
+		c.OnShortcut(b.mods, b.key, func() {
+			if c.ShortcutRepeated() && !b.repeats {
+				return
+			}
+			a.run(b.action)
+		})
 	}
 }
 

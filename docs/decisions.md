@@ -77,6 +77,7 @@
 | ADR-71 | 隐藏跟着配置文件走：字段里设，列表照样列出并标「已隐藏」，探测到的条目只给隐藏 | 有效 |
 | ADR-72 | ConPTY 剥掉 OSC 回复的头：ADR-58 的病因改写，决定不变 | 有效 |
 | ADR-73 | ConPTY 一条回复都不发：ADR-58 的拆条作废，过滤面扩到全部答复 | 有效 |
+| ADR-74 | 按住不放只连发「走一步」的动作：新建标签一次按下一次 | 有效 |
 
 ---
 
@@ -1992,3 +1993,29 @@ Windows 上同一个目录会被写成 `C:\Users\Foo`（环境变量）与 `c:\u
 
 **测试**：fork 的 `plugins/terminal/reply_conpty_test.go`——`TestWriteReply` 在 `conpty()` 下队列为空、
 有 `Conn` 时整批一次写入（非 Windows 跳过）。
+
+
+## ADR-74 按住不放只连发「走一步」的动作：新建标签一次按下一次
+
+**背景**：按住 `Ctrl+T` 不放，几秒内开出几十个标签，每个标签各起一个 shell 加一个 ConPTY，窗口卡住。
+
+**查到的事实**：绑定这条路的代码从不看「这是不是按住不放的连发」——`internal/app/app.go` 的 `bind` 把每个
+动作原样挂到 `c.OnShortcut`。mygo 一直给得出这个信息：Windows 后端按 `lp&(1<<30)` 判定重复并填进
+`platform.SurfaceEvent.Repeat`（`internal/windows/surface.go`），UIKit 用 `Context.ShortcutRepeated()`
+暴露它，文档里的例子也正是「开关只认按下、走步每一下都认」。
+
+**决定**：动作目录加一个字段 `Action.Repeats`，只有「走一步」的六个打开它——`tab.next`、`tab.prev`、
+`pane.focus.left/right/up/down`。其余动作（新建/关闭/复制标签、切分、关窗格、查找、命令面板、设置、
+关于、`tab.goto.N`、`profile.N`）按住只执行第一次。实现上 `binding` 带一个 `repeats`，`bind` 在
+`c.ShortcutRepeated() && !b.repeats` 时直接返回；查表仍只有一份，在 `internal/action`。
+
+**理由**：①系统的连发速度与节奏是键盘的事，不是用户的意图，一个动作按一次就该发生一次；②「这个动作
+值得连发吗」是动作自己的性质，放在动作目录里，菜单、命令面板与设置页读的仍是同一份；③不写死在 `app`，
+以后加动作不会漏。
+
+**代价**：按住 `Ctrl+Shift+T` 也不再连发——想开多个标签得一次次按，这是要的。文件里给不认识的 id
+（`GroupOther`）绑的键一律不连发。
+
+**测试**：`internal/action/action_test.go` 的 `TestRepeats`（连发集合正好是那六个，未知 id 为假）与
+`internal/app/bind_test.go` 的 `TestHeldKeys`（`store.DefaultKeybindings()` 编成的键位里，默认键绑到的
+动作各自该不该连发）。

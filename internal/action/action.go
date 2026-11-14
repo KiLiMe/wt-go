@@ -75,24 +75,29 @@ type Action struct {
 	// Keys are the keys the action starts on, the first the one the menus
 	// show. A keybinding the file holds replaces them.
 	Keys []string
+	// Repeats says the action takes the key again and again while it stays
+	// held. Only the ones that step through something set it: a new tab per
+	// press is what a held Ctrl+T must not make, and a keyboard repeats in
+	// whatever time the system set.
+	Repeats bool
 }
 
 // fixed are the actions that are not numbered, in the order the settings list
 // them, and the keys they start on.
 var fixed = []Action{
 	{ID: TabNew, TitleKey: "newTab", GroupKey: GroupTab, Keys: []string{"ctrl+shift+t", "ctrl+t"}},
-	{ID: TabNext, TitleKey: "nextTab", GroupKey: GroupTab, Keys: []string{"ctrl+tab"}},
-	{ID: TabPrev, TitleKey: "previousTab", GroupKey: GroupTab, Keys: []string{"ctrl+shift+tab"}},
+	{ID: TabNext, TitleKey: "nextTab", GroupKey: GroupTab, Keys: []string{"ctrl+tab"}, Repeats: true},
+	{ID: TabPrev, TitleKey: "previousTab", GroupKey: GroupTab, Keys: []string{"ctrl+shift+tab"}, Repeats: true},
 	{ID: TabDuplicate, TitleKey: "duplicateTab", GroupKey: GroupTab, Keys: []string{"ctrl+shift+d"}},
 	{ID: TabClose, TitleKey: "closeTab", GroupKey: GroupTab},
 
 	{ID: PaneSplitAuto, TitleKey: "splitPane", GroupKey: GroupPane, Keys: []string{"alt+shift+d"}},
 	{ID: PaneSplitRight, TitleKey: "splitRight", GroupKey: GroupPane, Keys: []string{"alt+shift+right"}},
 	{ID: PaneSplitDown, TitleKey: "splitDown", GroupKey: GroupPane, Keys: []string{"alt+shift+down"}},
-	{ID: PaneFocusLeft, TitleKey: "focusLeftPane", GroupKey: GroupPane, Keys: []string{"alt+left"}},
-	{ID: PaneFocusRight, TitleKey: "focusRightPane", GroupKey: GroupPane, Keys: []string{"alt+right"}},
-	{ID: PaneFocusUp, TitleKey: "focusUpPane", GroupKey: GroupPane, Keys: []string{"alt+up"}},
-	{ID: PaneFocusDown, TitleKey: "focusDownPane", GroupKey: GroupPane, Keys: []string{"alt+down"}},
+	{ID: PaneFocusLeft, TitleKey: "focusLeftPane", GroupKey: GroupPane, Keys: []string{"alt+left"}, Repeats: true},
+	{ID: PaneFocusRight, TitleKey: "focusRightPane", GroupKey: GroupPane, Keys: []string{"alt+right"}, Repeats: true},
+	{ID: PaneFocusUp, TitleKey: "focusUpPane", GroupKey: GroupPane, Keys: []string{"alt+up"}, Repeats: true},
+	{ID: PaneFocusDown, TitleKey: "focusDownPane", GroupKey: GroupPane, Keys: []string{"alt+down"}, Repeats: true},
 	{ID: PaneClose, TitleKey: "closePane", GroupKey: GroupPane, Keys: []string{"ctrl+shift+w"}},
 	{ID: PaneCloseOthers, TitleKey: "closeOtherPanes", GroupKey: GroupPane, Keys: []string{"alt+shift+w"}},
 
@@ -151,6 +156,14 @@ func Title(id string) string {
 		return i18n.F(a.TitleKey, map[string]any{"n": n})
 	}
 	return i18n.T(a.TitleKey)
+}
+
+// Repeats reports whether the action takes its key again and again while it
+// stays held, and false for an action the window does not know: a keybinding
+// the file names a stranger's id for runs on the press alone.
+func Repeats(id string) bool {
+	a, ok := Lookup(id)
+	return ok && a.Repeats
 }
 
 // Group is the key of what the settings page lists an action under, and ""
