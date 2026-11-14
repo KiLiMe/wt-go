@@ -13,9 +13,11 @@ import (
 	"wtgo/locales"
 )
 
-// schemesPage lists the color schemes, and shows the one in front.
-func schemesPage(c *myui.Context, st Settings, act Actions) {
-	s := st.Draft
+// schemePicker is the color schemes of the appearance page: the scheme in
+// force, the button that copies it as one of the settings' own, the search box,
+// and the list to pick from or remove. It is the page the settings had of its
+// own, drawn as a card of the page that previews what the schemes look like.
+func schemePicker(c *myui.Context, s *store.Settings, st Settings, act Actions) {
 	// A page drawn without a window to keep its cache for it keeps none: it
 	// derives the options and the rows again for each frame, as it did before
 	// there was a cache, rather than share one with the frame before it.
@@ -23,12 +25,6 @@ func schemesPage(c *myui.Context, st Settings, act Actions) {
 	if st.SchemesCache != nil {
 		cache = st.SchemesCache
 	}
-	schemesPageFrom(c, s, st, act, cache)
-}
-
-// schemesPageFrom lists the schemes a page is handed. The cache is the one the
-// window keeps for the page, nil for a page drawn without one.
-func schemesPageFrom(c *myui.Context, s *store.Settings, st Settings, act Actions, cache *SchemesCache) {
 	t := c.Theme()
 	card(c, cardFace(t), cardLine(t), func() {
 		field(c, locales.Scheme(), locales.ColorSchemeNote(), func() {
@@ -39,12 +35,7 @@ func schemesPageFrom(c *myui.Context, s *store.Settings, st Settings, act Action
 				myui.Button(c, locales.SchemeCopy()).OnClick(act.CopyScheme)
 			})
 		})
-	})
-	names := searchSchemes(cache, st.Schemes, filter(st))
-	// Not a card: the preview is as wide as its swatches, and a card's padding
-	// is what it would have to take that width from.
-	myui.Row(c).AlignItems(myui.Start).Gap(24).Children(func() {
-		myui.Column(c).Width(320).Gap(6).Children(func() {
+		myui.Column(c).Padding(10, 16).Gap(6).Children(func() {
 			// A text input edits the string it is handed, so that string has to
 			// outlive the frame. Handing it a fresh one every frame would throw
 			// away what the user typed on the next frame: with no field to hold
@@ -53,6 +44,7 @@ func schemesPageFrom(c *myui.Context, s *store.Settings, st Settings, act Action
 			if st.Filter != nil {
 				myui.TextInput(c, st.Filter).Placeholder(locales.SchemeSearch())
 			}
+			names := searchSchemes(cache, st.Schemes, filter(st))
 			if len(names) == 0 {
 				myui.Text(c, locales.SchemeNone()).FontSize(11).TextColor(t.TextMuted)
 			}
@@ -62,12 +54,6 @@ func schemesPageFrom(c *myui.Context, s *store.Settings, st Settings, act Action
 				}
 			})
 		})
-		if th, ok := theme.Scheme(*s, s.ColorScheme); ok {
-			myui.Column(c).Grow(1).Gap(8).Children(func() {
-				myui.Text(c, locales.SchemePreview()).FontSize(11).TextColor(t.TextMuted)
-				preview(c, th)
-			})
-		}
 	})
 }
 
@@ -222,24 +208,87 @@ func sameSchemes(a, b []Scheme) bool {
 	return true
 }
 
-// preview shows the colors of a scheme: its background, foreground, cursor and
-// selection, and the sixteen colors programs ask for.
-func preview(c *myui.Context, th *terminal.Theme) {
+// preview is the preview at the head of the appearance page: a terminal drawn
+// as the draft would draw it, so that a change to the face, the typesetting,
+// the cursor or the scheme shows as it is made rather than after a save.
+func preview(c *myui.Context, s *store.Settings) {
+	th := theme.Terminal(*s)
 	t := c.Theme()
-	myui.Column(c).Gap(8).Children(func() {
-		myui.Box(c).Padding(8).Radius(6).Background(th.Background).Children(func() {
-			myui.Text(c, "The quick brown fox").TextColor(th.Foreground).SingleLine()
-			myui.Text(c, "jumps over the lazy dog").TextColor(th.Foreground).SingleLine()
+	// The window is translucent over what is behind it, which the preview has
+	// no window behind: the scheme's own background at the same share of the
+	// face the page paints on is what a person sees of it.
+	bg := th.Background.MixOklab(t.Background, 1-float32(clampOpacity(s.BackgroundOpacity)))
+	myui.Box(c).BorderWidth(1).BorderColor(cardLine(t)).Radius(8).Background(bg).
+		Padding(previewPadX(s), previewPadY(s)).Children(func() {
+		myui.Row(c).AlignItems(myui.Center).Gap(6).Children(func() {
+			myui.Text(c, locales.LineOne()).TextColor(th.Foreground).Font(textFont(s)).FontSize(previewFontSize(s))
+			cursorBlock(c, s, th)
 		})
-		myui.Row(c).Gap(6).Wrap().Children(func() {
-			for _, col := range []myui.Color{th.Background, th.Foreground, th.Cursor, th.Selection} {
-				myui.Box(c).Size(26, 26).Radius(4).Background(col).BorderWidth(1).BorderColor(t.Border)
-			}
-		})
+		myui.Text(c, locales.LineTwo()).TextColor(th.Foreground).Font(textFont(s)).FontSize(previewFontSize(s)).
+			LineHeight(previewLineHeight(s))
 		myui.Row(c).Gap(4).Wrap().Children(func() {
 			for _, col := range th.Palette {
-				myui.Box(c).Size(22, 22).Radius(3).Background(col)
+				myui.Box(c).Size(16, 16).Radius(3).Background(col)
 			}
 		})
 	})
+}
+
+// clampOpacity holds a share to what the window can show, since the draft is
+// drawn while it is typed and may name one the file would refuse.
+func clampOpacity(v float64) float64 {
+	return min(max(v, 0), 1)
+}
+
+// previewFontSize is the size the preview draws the terminal's lines with: the
+// draft's own, held to a range that leaves the preview its room, so that a size
+// typed into the file does not make the preview a card of lines alone.
+func previewFontSize(s *store.Settings) float32 {
+	return min(max(s.Font.Size, previewFontMin), previewFontMax)
+}
+
+// previewFontMin and previewFontMax are how small and how large the preview
+// draws a line.
+const (
+	previewFontMin float32 = 9
+	previewFontMax float32 = 20
+)
+
+// previewLineHeight is the draft's line height, held to what the control that
+// sets it offers.
+func previewLineHeight(s *store.Settings) float32 {
+	return min(max(s.Font.LineHeight, 0.8), 2.4)
+}
+
+// textFont is the family the preview draws with: the draft's, unless it names
+// a family this machine has not been asked for yet, which is none.
+func textFont(s *store.Settings) string {
+	if s.Font.Family == "" {
+		return "monospace"
+	}
+	return s.Font.Family
+}
+
+// previewPadX and previewPadY are the room the preview keeps around its lines,
+// held to what the preview has to give: a terminal's padding is measured for a
+// window, and the preview is a card of one.
+func previewPadX(s *store.Settings) float32 { return min(max(s.Padding.X, 0), 48) }
+func previewPadY(s *store.Settings) float32 { return min(max(s.Padding.Y, 0), 24) }
+
+// cursorBlock is the cursor of the draft, in its shape and the scheme's cursor
+// color, beside the text it would sit after.
+func cursorBlock(c *myui.Context, s *store.Settings, th *terminal.Theme) {
+	// The line is as tall as the letters of the preview, so the cursor is too.
+	h := previewFontSize(s) + 4
+	shape := myui.Box(c).Height(h).Background(th.Cursor)
+	switch s.CursorShape {
+	case "block":
+		shape.Width(previewFontSize(s))
+	case "underline":
+		shape.Width(previewFontSize(s)).Height(2)
+	default:
+		shape.Width(2)
+	}
+	// A blink is a moment, and the preview is a frame: the cursor is drawn
+	// either way, so the switch says what is drawn and only the shape shows.
 }

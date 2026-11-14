@@ -100,8 +100,12 @@
   "newProfile": "新配置文件",
   "addProfile": "添加新配置文件",
   "showHiddenProfiles": "显示隐藏的配置文件",
-  "showHiddenProfilesNote": "隐藏的配置文件也列在这里（灰字），每个带一个把它显示回来的按钮。",
+  "showHiddenProfilesNote": "隐藏的配置文件也列在这里（灰字）。",
   "selectProfile": "选择一个配置文件。",
+  "profileSearch": "搜索配置文件",
+  "profileNone": "没有匹配的配置文件。",
+  "searchSettings": "搜索设置",
+  "noMatchingSettings": "没有匹配的设置。",
   "restoreDefaults": "恢复默认",
   "pressKey": "按一个键…",
   "keySearch": "搜索操作名或快捷键",
@@ -134,14 +138,27 @@
   },
   "hideNumbered": "收起",
   "noActions": "没有匹配的操作",
-  "startup": "启动",
-  "startupNote": "窗口打开时做什么。",
-  "interaction": "交互",
-  "interactionNote": "终端如何回应鼠标与剪贴板。",
-  "appearance": "外观",
-  "appearanceNote": "窗口长什么样，标签放在哪。",
+  "general": "常规与启动",
+  "generalNote": "窗口打开时用什么、标签怎么摆，以及关闭前问不问。",
+  "interaction": "终端与交互",
+  "interactionNote": "终端如何回应鼠标与剪贴板，以及保留多少回滚内容。",
+  "generalStartup": "语言与启动",
+  "generalWindow": "窗口与标签页",
+  "generalClose": "关闭行为",
+  "interactionMouse": "鼠标与滚动",
+  "interactionClipboard": "剪贴板与安全",
+  "interactionBuffer": "缓冲区",
+  "appearance": "外观与排版",
+  "appearanceNote": "窗口与终端长什么样：窗口的底色、字体排版、光标与对比度，以及配色方案，改动会立刻显示在上方的预览里。",
+  "appearancePreview": "预览",
+  "appearanceFace": "应用外观",
+  "appearanceType": "字体与排版",
+  "appearanceCursor": "光标与对比度",
   "colorSchemes": "配色方案",
   "schemesNote": "终端用什么颜色，以及设置里保存了哪些方案。",
+  "lineOne": "$ wt-go --version",
+  "lineTwo": "wt-go v0.3.0",
+  "cursorSample": "光标",
   "actions": "操作",
   "actionsNote": "窗口能做什么、用什么键做，以及文件里写了哪些键位。",
   "advanced": "高级",
@@ -159,6 +176,7 @@
   "unsavedChanges": "有未保存的更改",
   "saved": "已保存",
   "openSettingsFolder": "打开设置目录",
+  "openSettingsFile": "打开设置文件",
   "defaultProfile": "默认配置文件",
   "defaultProfileNote": "新标签默认运行的配置文件；没选时跑这台机器上的 shell。",
   "startDirectory": "起始目录",
@@ -219,6 +237,7 @@
   "lineHeight": "行高",
   "lineHeightNote": "终端行高，相对字号的倍数。",
   "cursor": "光标",
+  "cursorNote": "光标的形状，以及它是否闪烁。",
   "padding": "内边距",
   "paddingNote": "终端边缘内侧的空白，单位 DIP。",
   "paddingColor": "内边距颜色",
@@ -330,6 +349,14 @@
   },
   "errOpenLink": "打不开链接：{error}",
   "@errOpenLink": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errOpenFile": "打不开设置文件：{error}",
+  "@errOpenFile": {
     "placeholders": {
       "error": {
         "type": "String"

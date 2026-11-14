@@ -24,7 +24,7 @@ func (a *App) OpenSettings() {
 	a.closeOverlays()
 	if a.settingsTab == nil {
 		a.settingsTab = &pane.Tab{Name: locales.Settings()}
-		a.settingsPage = ui.PageStartup
+		a.settingsPage = ui.PageGeneral
 		a.recording = ""
 		a.insertTab(a.settingsTab)
 	}
@@ -49,8 +49,9 @@ func (a *App) insertTab(tab *pane.Tab) {
 // settingsState is the settings tab as the window draws it.
 func (a *App) settingsState() ui.Settings {
 	// The list is a menu of the machine's fonts, so it is asked for when the
-	// page that shows it opens, not before the window does.
-	if a.settingsPage == ui.PageProfiles {
+	// page that shows it opens, not before the window does. The appearance
+	// page shows it too, since the font setting is part of how the window looks.
+	if a.settingsPage == ui.PageProfiles || a.settingsPage == ui.PageAppearance {
 		a.ensureFontFamilies(a.settings.Font.Size)
 	}
 	return ui.Settings{
@@ -68,8 +69,10 @@ func (a *App) settingsState() ui.Settings {
 		KeysExpanded: a.numberedKeys,
 		Profile:      a.editing,
 		Args:         &a.editingArgs,
-		Profiles:     fileProfiles(a.settings, a.showHidden),
-		Hidden:       a.showHidden,
+		Profiles:      fileProfiles(a.settings, a.showHidden),
+		ProfileFilter: &a.profileSearch,
+		Search:        &a.settingsSearch,
+		Hidden:        a.showHidden,
 		Known:        knownProfiles(a.profiles),
 		Device:       a.device.Name,
 		Schemes:      a.schemeList(),
@@ -128,17 +131,49 @@ func knownProfiles(profiles []profile.Profile) []ui.Profile {
 	return out
 }
 
-// SelectSettingsPage shows a page of the settings.
+// SelectSettingsPage shows a page of the settings. The profiles are one page
+// with the profile in front beside its list, so opening it with none in front
+// opens the first one there is: the page is never a list with nothing to edit.
 func (a *App) SelectSettingsPage(page string) {
 	if a.settingsTab == nil {
 		return
 	}
 	a.settingsPage = page
+	a.settingsSearch = ""
 	a.recording = ""
-	a.note = ""
 	a.editNone()
 	if id, ok := ui.ProfileID(page); ok {
 		a.editProfile(id)
+		a.profilePageOpened()
+		return
+	}
+	if page == ui.PageProfiles {
+		a.openFirstProfile()
+	}
+	a.redraw()
+}
+
+// openFirstProfile opens the first profile the page lists, which is what the
+// profiles page shows when it opens with none in front.
+func (a *App) openFirstProfile() {
+	for _, p := range fileProfiles(a.settings, a.showHidden) {
+		a.editProfile(p.ID)
+		if a.editing != nil {
+			a.settingsPage = ui.ProfilePage(p.ID)
+		}
+		return
+	}
+}
+
+// profilePageOpened shows the page of the profile in front, or the list alone
+// when the window has no such profile: a page that names a profile the file
+// does not hold edits nothing.
+func (a *App) profilePageOpened() {
+	if a.editing == nil {
+		a.settingsPage = ui.PageProfiles
+		// A profile the list holds while none can be edited, such as one the
+		// search box keeps, is not the page's to open.
+		a.openFirstProfile()
 	}
 	a.redraw()
 }
@@ -552,10 +587,12 @@ func (a *App) ResetKeybindings() {
 	a.redraw()
 }
 
-// AddProfile adds a profile to the file's list, and shows its page.
+// AddProfile adds a profile to the file's list, opens it in the fields of the
+// profiles page, and keeps the search box of that page from hiding it.
 func (a *App) AddProfile() {
 	p := store.Profile{ID: a.newProfileID(), Name: locales.NewProfile()}
 	a.settings.Profiles = append(a.settings.Profiles, p)
+	a.profileSearch = ""
 	a.settingsPage = ui.ProfilePage(p.ID)
 	a.editing, a.editingFrom = &p, p
 	// The page shows the arguments it holds, so a line left from the profile
@@ -583,6 +620,7 @@ func (a *App) RemoveProfile(id string) {
 		a.upsertProfile(p)
 		a.settingsPage = ui.PageProfiles
 		a.editNone()
+		a.nextProfile(id)
 		a.recording = ""
 		a.redraw()
 		return
@@ -596,8 +634,21 @@ func (a *App) RemoveProfile(id string) {
 	a.settings.Profiles = out
 	a.settingsPage = ui.PageProfiles
 	a.editNone()
+	a.nextProfile(id)
 	a.recording = ""
 	a.redraw()
+}
+
+// nextProfile opens the profile the list now starts at, once the one that was
+// in front is gone or hidden from the list: the fields beside the list show
+// another profile rather than go empty. A profile that moved out of a list
+// the search box keeps is the box's to need, not the page's.
+func (a *App) nextProfile(gone string) {
+	a.openFirstProfile()
+	if a.editing != nil && a.editing.ID == gone {
+		a.editNone()
+		a.settingsPage = ui.PageProfiles
+	}
 }
 
 // ShowHiddenProfiles lists the profiles the profiles page hides, or hides
@@ -631,6 +682,7 @@ func (a *App) DuplicateProfile(id string) {
 	// profile it copies, and the page's edits would write both.
 	p.Args = append([]string(nil), p.Args...)
 	a.settings.Profiles = append(a.settings.Profiles, p)
+	a.profileSearch = ""
 	a.settingsPage = ui.ProfilePage(p.ID)
 	a.editing, a.editingFrom = &p, p
 	a.editingArgs = strings.Join(p.Args, "\n")

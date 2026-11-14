@@ -92,6 +92,46 @@ func TestAdoptAgainHidesAndShows(t *testing.T) {
 	}
 }
 
+// TestOpenSettingsFileWritesTheFileFirst covers the foot's button: a window
+// that never wrote settings.json writes the settings it holds before opening
+// it, so that the file the desktop opens is there to edit.
+func TestOpenSettingsFileWritesTheFileFirst(t *testing.T) {
+	settingsDir(t)
+	s := store.Default()
+	s.Theme = "light"
+	a := &App{settings: s.Clone(), saved: s.Clone()}
+	if err := a.ensureSettingsFile(); err != nil {
+		t.Fatal(err)
+	}
+	data, ok, err := sys.ReadSettings()
+	if err != nil || !ok {
+		t.Fatalf("the file is not there: %v, %v", err, ok)
+	}
+	got, err := store.Parse(data)
+	if err != nil {
+		t.Fatalf("the file it wrote is not settings: %v", err)
+	}
+	if got.Theme != "light" {
+		t.Fatalf("the file holds theme %q, want the draft's", got.Theme)
+	}
+	// What it wrote is what the window has: a file it wrote itself is not a
+	// draft to save again.
+	if !bytes.Equal(a.savedData, data) {
+		t.Fatal("the window did not take the file it wrote as saved")
+	}
+	// A file that is there is left alone.
+	other := []byte(`{"theme":"dark"}`)
+	if err := sys.WriteSettings(other); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.ensureSettingsFile(); err != nil {
+		t.Fatal(err)
+	}
+	if data, _, err := sys.ReadSettings(); err != nil || !bytes.Equal(data, other) {
+		t.Fatalf("the file the person edited was overwritten: %q, %v", data, err)
+	}
+}
+
 // TestResetDeletesTheFileAndRestarts covers the reset: the file goes, the
 // program starts again, and the window closes so that there are not two.
 func TestResetDeletesTheFileAndRestarts(t *testing.T) {

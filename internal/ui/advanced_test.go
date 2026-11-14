@@ -19,6 +19,7 @@ type advancedActions struct {
 
 func (a *advancedActions) AskAdvanced(kind string) { a.asked = append(a.asked, kind) }
 func (a *advancedActions) OpenSettingsFolder()     { a.opened = append(a.opened, "settings") }
+func (a *advancedActions) OpenSettingsFile()       { a.opened = append(a.opened, "file") }
 func (a *advancedActions) OpenProgramFolder()      { a.opened = append(a.opened, "program") }
 
 // TestAdvancedPage covers the page: both buttons that change the file ask

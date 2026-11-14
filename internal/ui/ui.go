@@ -61,6 +61,9 @@ type Actions interface {
 	DiscardSettings()
 	// OpenSettingsFolder opens the folder settings.json lives in.
 	OpenSettingsFolder()
+	// OpenSettingsFile opens settings.json itself, writing it first when the
+	// window has none to show.
+	OpenSettingsFile()
 	// OpenProgramFolder opens the folder the program runs from.
 	OpenProgramFolder()
 	// OpenAbout shows the dialog that says what the program is.
@@ -227,6 +230,10 @@ type Settings struct {
 	Hidden bool
 	// Profiles are the profiles the file holds, which the column lists.
 	Profiles []Profile
+	// ProfileFilter is what the profiles page searches its list of profiles
+	// for. A page drawn without it leaves the box out rather than give it
+	// nowhere to write what is typed.
+	ProfileFilter *string
 	// Known are the profiles a setting may name, the file's and the ones
 	// the window found.
 	Known []Profile
@@ -243,6 +250,10 @@ type Settings struct {
 	// FontFamilies are the installed families the terminal can draw with,
 	// which the font setting lists.
 	FontFamilies []string
+	// Search is what the box over the column of pages searches the settings
+	// for. A page drawn without it lists the pages alone rather than give the
+	// box nowhere to write what is typed.
+	Search *string
 }
 
 // About is the dialog that says what the program is: the version it runs, what

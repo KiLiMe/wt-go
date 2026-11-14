@@ -360,7 +360,7 @@ func TestBadFileNoteSurvivesPageSwitchAndDiscard(t *testing.T) {
 	}
 
 	a.settingsTab = &pane.Tab{Name: "Settings"}
-	a.SelectSettingsPage(ui.PageStartup)
+	a.SelectSettingsPage(ui.PageGeneral)
 	if !strings.Contains(a.settingsNote(), "settings.json") {
 		t.Errorf("note after a page switch = %q, want the bad file", a.settingsNote())
 	}

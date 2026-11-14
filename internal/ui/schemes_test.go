@@ -22,19 +22,23 @@ type schemeActions struct {
 func (a *schemeActions) RemoveScheme(name string) { a.removed = append(a.removed, name) }
 func (a *schemeActions) PickScheme(name string)   { a.picked = append(a.picked, name) }
 
-// schemesOf draws the page over the settings and schemes it gives.
+// schemesOf draws the color schemes of the appearance page over the settings
+// and schemes it gives.
 func schemesOf(t *testing.T, s *store.Settings, schemes []Scheme) (*myui.Tester, *schemeActions) {
 	t.Helper()
 	return schemesOfFilter(t, s, schemes, nil)
 }
 
-// schemesOfFilter draws the page over the settings and schemes it gives, with
-// filter as the words the search box edits and writes back into.
+// schemesOfFilter draws the color schemes of the appearance page over the
+// settings and schemes it gives, with filter as the words the search box edits
+// and writes back into. The page is the appearance page, since the schemes are
+// its last section: it is drawn tall enough to show that section without
+// scrolling.
 func schemesOfFilter(t *testing.T, s *store.Settings, schemes []Scheme, filter *string) (*myui.Tester, *schemeActions) {
 	t.Helper()
 	act := &schemeActions{}
 	tt := myui.NewTester(func(c *myui.Context) {
-		schemesPage(c, Settings{Draft: s, Schemes: schemes, Filter: filter}, act)
+		schemePicker(c, s, Settings{Draft: s, Schemes: schemes, Filter: filter}, act)
 	}, 900, 700)
 	tt.Frame()
 	return tt, act

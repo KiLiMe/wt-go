@@ -146,9 +146,13 @@ type App struct {
 	relaunch  func() error
 	configErr string
 	// filter is what the color schemes page searches for, and actionSearch
-	// what the actions page does.
-	filter       string
-	actionSearch string
+	// what the actions page does, and profileSearch what the profiles page
+	// searches its list of profiles for. settingsSearch is what the box over
+	// the column of pages searches the settings for.
+	filter         string
+	actionSearch   string
+	profileSearch  string
+	settingsSearch string
 	// onlyChangedKeys is whether the actions page lists the actions the file
 	// binds on keys of its own alone, and numberedKeys whether it shows the
 	// numbered actions it folds away.

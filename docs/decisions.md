@@ -1830,3 +1830,35 @@ Windows 上同一个目录会被写成 `C:\Users\Foo`（环境变量）与 `c:\u
 
 **代价**：Windows/macOS 上 `replacePath` 每个匹配位置多一次 `strings.ToLower` 的扫描，报告只有几十条
 路径，代价可忽略。`foldCase` 是包级变量，测试用 `withFold` 临时改它；按真实 GOOS 运行时它不会变。
+
+## ADR-69 设置页按用户心智分页：General 收拢启动、标签页与关闭，Terminal & Input 收拢鼠标、剪贴板与缓冲
+
+**背景**：原来的设置左栏把「启动」「交互」「外观」平铺，「关闭确认」与「每标签窗格上限」在「交互」页，
+「新标签位置」「标签宽度」「窗口置顶」「标题跟随窗格」在只画主题与透明度的「外观」页，而「回滚缓冲」在
+「默认值」页——同一件事（标签页怎么开、窗口怎么关）散在三个页面上，找到它得先猜它被归给了哪一页。
+
+**决定**：
+1. 页面 id `general` 取代 `startup`：`internal/ui` 的 `PageGeneral = "general"`，`PageStartup` 保留为它的
+   别名常量（同一个值，不是两个分支），`page`/`pageIntro` 的 `switch` 只认 `PageGeneral`，
+   `internal/app.OpenSettings` 的默认页改为 `ui.PageGeneral`。别名而不是双分支，是因为两个名字指的是同一张
+   页面，留一份 `case` 就不会出现只改一处的分裂。
+2. 「常规与启动」分三张卡片：**语言与启动**（`DefaultProfile`、`Language`、`StartDirectory`）、
+   **窗口与标签页**（`NewTabPosition`、`TabWidth`、`TitleFromActiveTerminal`、`AlwaysOnTop`、`MaxPanes`）、
+   **关闭行为**（`CloseOnLastTab`、`ConfirmClose`、`ConfirmCloseWindow`）。`ConfirmCloseWindow` 仍紧跟
+   `CloseOnLastTab`：后者关掉时前者没有窗口关闭可问。
+3. 「终端与交互」分三张卡片：**鼠标与滚动**（`CopyOnSelect`、`RightClick`、`ScrollMultiplier`）、
+   **剪贴板与安全**（`ClipboardRead`、`ClipboardWrite`、`PasteMultilineConfirm`）、
+   **缓冲区**（`ScrollbackMB`）。`ScrollbackMB` 从「默认值」页移出：它是终端的会话设置，与该页的字体、
+   光标不同——后者是 profile 的默认值，前者不问 profile。
+4. 分组标题与页名只加在 `locales/en.json` / `locales/zh-Hans.json`（`general`、`generalNote`、
+   `generalStartup`、`generalWindow`、`generalClose`、`interactionMouse`、`interactionClipboard`、
+   `interactionBuffer`），`interaction` 的文案改成「Terminal & Input / 终端与交互」。
+
+**理由**：左栏的一页应当回答一个问句。「窗口怎么开、标签怎么摆、关之前问不问」是同一个问句；
+「终端怎么答鼠标与剪贴板、留多少历史」是另一个。按归属摆位之后，`NewTabPosition` 与它管的那排标签在同一页，
+`ConfirmCloseWindow` 与它跟随的那只开关相邻，两个「关闭前问一句」也终于挨在一起。
+
+**代价**：`settings_test.go` 与 `internal/app/settings_test.go` 里 `PageStartup` 的引用改成 `PageGeneral`；
+`TestGeneralPageAsksBeforeTheWindowCloses` 的两只开关从同一张卡片挪到了第一张卡片与第三张卡片，
+900×700 的测试窗口里第三张卡片要滚动才进入视野，所以这条测试先断言「提问在关标签开关之下」，
+再 `tt.Scroll` 到底后取开关坐标点击——与 `TestNavAddsProfiles` 已经用的做法一致。

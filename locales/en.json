@@ -100,8 +100,12 @@
   "newProfile": "New profile",
   "addProfile": "Add profile",
   "showHiddenProfiles": "Show hidden profiles",
-  "showHiddenProfilesNote": "List the profiles this page hides too, greyed out, each with a button that shows it again.",
+  "showHiddenProfilesNote": "List the profiles this page hides too, greyed out.",
   "selectProfile": "Select a profile.",
+  "profileSearch": "Search profiles",
+  "profileNone": "No profile matches.",
+  "searchSettings": "Search settings",
+  "noMatchingSettings": "No matching settings.",
   "restoreDefaults": "Restore the defaults",
   "pressKey": "Press a key…",
   "keySearch": "Search actions or keys",
@@ -134,14 +138,27 @@
   },
   "hideNumbered": "Collapse",
   "noActions": "No action matches",
-  "startup": "Startup",
-  "startupNote": "What the window does when it opens.",
-  "interaction": "Interaction",
-  "interactionNote": "How the terminal answers the mouse and the clipboard.",
+  "general": "General",
+  "generalNote": "What the window starts with, how its tabs behave, and what it asks before it closes.",
+  "interaction": "Terminal & Input",
+  "interactionNote": "How the terminal answers the mouse and the clipboard, and how much it keeps.",
+  "generalStartup": "Language and startup",
+  "generalWindow": "Window and tabs",
+  "generalClose": "Closing",
+  "interactionMouse": "Mouse and scrolling",
+  "interactionClipboard": "Clipboard and safety",
+  "interactionBuffer": "Scrollback",
   "appearance": "Appearance",
-  "appearanceNote": "How the window looks, and where its tabs go.",
+  "appearanceNote": "How the window and the terminals look: the face of the window, the typesetting, the cursor, and the colors, over a preview that follows every change.",
+  "appearancePreview": "Preview",
+  "appearanceFace": "The window",
+  "appearanceType": "Font and typesetting",
+  "appearanceCursor": "Cursor and contrast",
   "colorSchemes": "Color schemes",
   "schemesNote": "The colors the terminals paint with, and the schemes the settings keep.",
+  "lineOne": "$ wt-go --version",
+  "lineTwo": "wt-go v0.3.0",
+  "cursorSample": "cursor",
   "actions": "Actions",
   "actionsNote": "What the window does, the keys it does it on, and which keys the file binds.",
   "advanced": "Advanced",
@@ -159,6 +176,7 @@
   "unsavedChanges": "Unsaved changes",
   "saved": "Saved",
   "openSettingsFolder": "Open settings folder",
+  "openSettingsFile": "Open settings file",
   "defaultProfile": "Default profile",
   "defaultProfileNote": "The profile a new tab runs unless it picks one; with none picked a new tab runs this machine's own shell.",
   "startDirectory": "Start directory",
@@ -219,6 +237,7 @@
   "lineHeight": "Line height",
   "lineHeightNote": "The height of a line of a terminal, as a multiple of the font size.",
   "cursor": "Cursor",
+  "cursorNote": "The shape the cursor has, and whether it blinks.",
   "padding": "Padding",
   "paddingNote": "The space inside the edges of a terminal, in DIPs.",
   "paddingColor": "Padding color",
@@ -330,6 +349,14 @@
   },
   "errOpenLink": "The link could not be opened: {error}",
   "@errOpenLink": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errOpenFile": "The settings file could not be opened: {error}",
+  "@errOpenFile": {
     "placeholders": {
       "error": {
         "type": "String"

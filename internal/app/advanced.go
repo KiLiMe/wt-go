@@ -84,6 +84,49 @@ func (a *App) OpenSettingsFolder() {
 	a.openFolder(dir)
 }
 
+// OpenSettingsFile opens settings.json itself, which is what a person wants to
+// edit rather than to look at the folder. A window that never wrote the file
+// writes it first: a button that opens nothing would be a dead end, and the
+// draft on the page is the best answer to what the file should hold.
+func (a *App) OpenSettingsFile() {
+	path, err := sys.SettingsPath()
+	if err != nil {
+		a.setNote(err.Error())
+		return
+	}
+	if err := a.ensureSettingsFile(); err != nil {
+		log.Printf("wt-go: %s", fault.Line(fault.SettingsWrite, err.Error()))
+		a.setNote(locales.ErrSettings(fault.Line(fault.SettingsWrite, err.Error())))
+		return
+	}
+	if err := sys.OpenPath(path); err != nil {
+		log.Printf("wt-go: %s", fault.Line(fault.OpenFile, err.Error()))
+		a.setNote(locales.ErrOpenFile(fault.Line(fault.OpenFile, err.Error())))
+		a.redraw()
+	}
+}
+
+// ensureSettingsFile writes the draft to settings.json when the window has no
+// file yet, and leaves a file that is there alone: what the person opens is
+// what the window shows, and a save is what writes changes.
+func (a *App) ensureSettingsFile() error {
+	if _, ok, err := sys.ReadSettings(); err != nil {
+		return err
+	} else if ok {
+		return nil
+	}
+	data, err := store.Marshal(a.settings)
+	if err != nil {
+		return err
+	}
+	if err := sys.WriteSettings(data); err != nil {
+		return err
+	}
+	a.saved, a.savedData = a.settings.Clone(), data
+	a.file.markSeen(data)
+	return nil
+}
+
 // OpenProgramFolder opens the directory this program runs from.
 func (a *App) OpenProgramFolder() {
 	path, err := sys.Executable()
