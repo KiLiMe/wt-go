@@ -1,11 +1,7 @@
 package ui
 
 import (
-	"sync"
-
 	myui "github.com/egoist/mygo/ui"
-
-	"wtgo/internal/action"
 	"wtgo/internal/icons"
 	"wtgo/locales"
 )
@@ -73,10 +69,6 @@ const (
 	windowButtonRoom  float32 = 6
 )
 
-// windowIcon is how wide the icon of a window button is: a square that fills
-// the icon area of the desktop's own buttons.
-const windowIcon float32 = 10
-
 // tabStep is how far the buttons beside the tabs move what the strip shows:
 // about one tab, so that a press brings the next tabs into view.
 const tabStep float32 = 176
@@ -89,6 +81,7 @@ const tabStep float32 = 176
 // this the strip shows no tab at all, only the buttons that move tabs that are
 // not there. It is a variable because stripButtonsWidth is a function.
 var MinWindowWidth = stripGutter + minTabWidth + dragRoom +
+
 	stripButtonsWidth() + 2*stepWidth + 3*46
 
 // tabDrag is a tab on its way to another place in the strip.
@@ -129,143 +122,6 @@ func strip(c *myui.Context, st State, act Actions) {
 				windowButtonGroup(c, b, act, b.End, true)
 			}
 		})
-}
-
-// titleBarMenu is the menu the strip opens on a right press: the window's own
-// menu, which the desktop shows on a right press of the title bar it draws, and
-// Windows Terminal offers on its strip as well. The two items that ask the
-// desktop to move or to size the window are left out: mygo offers no move the
-// pointer is not already dragging, and an item that did nothing would be a
-// worse lie than its absence.
-func titleBarMenu(m *myui.Menu, st State, act Actions) {
-	maximized := st.WindowButtons != nil && st.WindowButtons.Maximized
-	if it := m.Item(locales.Restore()).Disabled(!maximized); it.Chosen() {
-		act.ToggleMaximizeWindow()
-	}
-	if m.Item(locales.Minimize()).Chosen() {
-		act.MinimizeWindow()
-	}
-	if it := m.Item(locales.Maximize()).Disabled(maximized); it.Chosen() {
-		act.ToggleMaximizeWindow()
-	}
-	m.Separator()
-	closer := m.Item(locales.CloseWindow())
-	if mods, key, ok := ParseKey("alt+f4"); ok {
-		// The desktop takes this key before the window ever sees it, and it is
-		// what a person would press anyway: the menu names it rather than
-		// binding it.
-		closer.Shortcut(mods, key)
-	}
-	if closer.Chosen() {
-		act.CloseWindow()
-	}
-	settings := m.Item(locales.Settings())
-	shortcut(settings, st, action.Settings)
-	if settings.Chosen() {
-		act.OpenSettings()
-	}
-}
-
-// windowButtonGroup draws the window's buttons the desktop puts on a side of
-// the title bar, at the end of it when end is set, and nothing where it puts
-// none: a desktop may name some, and a tiling window manager names none.
-func windowButtonGroup(c *myui.Context, b *WindowButtons, act Actions, names []string, end bool) myui.Element {
-	row := myui.Row(c).
-		Height(TitleBarHeight).
-		Gap(windowButtonGap).
-		AlignItems(myui.Center)
-	if end {
-		row = row.Padding(0, windowButtonRoom, 0, 0)
-	} else {
-		row = row.Padding(0, 0, 0, windowButtonRoom)
-	}
-	return row.Children(func() {
-		for _, name := range names {
-			windowButton(c, b, act, name)
-		}
-	})
-}
-
-// windowButton is one of the window's buttons. It draws each mark itself, in
-// 1px lines at the size the title bar asks: the glyphs for these are missing
-// from some fonts, or wide in the fonts that draw them, and the strokes of an
-// icon set come out bold at this size.
-func windowButton(c *myui.Context, b *WindowButtons, act Actions, name string) {
-	t := c.Theme()
-	label := ""
-	var icon func(color myui.Color, bg myui.Color)
-	switch name {
-	case "minimize":
-		label = locales.Minimize()
-		icon = func(color myui.Color, bg myui.Color) {
-			myui.Box(c).Width(windowIcon).Height(1).Background(color)
-		}
-	case "maximize":
-		label = locales.Maximize()
-		if b.Maximized {
-			label = locales.Restore()
-			icon = func(color myui.Color, bg myui.Color) {
-				myui.Box(c).Size(windowIcon+1, windowIcon+1).Children(func() {
-					myui.Box(c).Absolute().Left(4).Top(0).Size(windowIcon-3, windowIcon-3).Radius(1).Border(1, color)
-					myui.Box(c).Absolute().Left(0).Top(4).Size(windowIcon-3, windowIcon-3).Radius(1).Border(1, color).Background(bg)
-				})
-			}
-		} else {
-			icon = func(color myui.Color, bg myui.Color) {
-				myui.Box(c).Size(windowIcon-1, windowIcon-1).Radius(1).Border(1, color)
-			}
-		}
-	case "close":
-		label = locales.CloseWindow()
-		icon = func(color myui.Color, bg myui.Color) {
-			// A cross of 1px lines, as Windows draws it: the icon set's close
-			// is a 2-unit stroke on a 24 grid, which comes out bold beside a
-			// 1px minus and box.
-			myui.Box(c).Size(windowIcon, windowIcon).Draw(func(p *myui.Painter, r myui.Rect) {
-				const in = 0.5
-				// Painter.Line paints only horizontal or vertical lines: given a
-				// slant it paints the top edge of the box between the points, which
-				// showed this cross as a second minus. StrokePolyline draws the slant.
-				p.StrokePolyline([][2]float32{{r.X + in, r.Y + in}, {r.X + r.W - in, r.Y + r.H - in}}, 1, color)
-				p.StrokePolyline([][2]float32{{r.X + r.W - in, r.Y + in}, {r.X + in, r.Y + r.H - in}}, 1, color)
-			})
-		}
-	default:
-		return
-	}
-	bg := t.Surface
-	color := t.TextMuted
-	el := myui.Box(c).
-		Size(windowButtonWidth, 28).
-		Radius(6).
-		AlignItems(myui.Center).
-		Justify(myui.Center).
-		Cursor(myui.CursorPointer).
-		Label(label).
-		Tooltip(label)
-	if el.Hovered() {
-		bg = t.SurfaceHover
-		color = t.Text
-		if name == "close" {
-			// The button that takes the window away turns the red Windows
-			// gives it: the one button of the three that does something the
-			// others do not is the one worth a color of its own.
-			bg = t.Danger
-		}
-		el = el.Background(bg)
-	}
-	el.OnClick(func() {
-		switch name {
-		case "minimize":
-			act.MinimizeWindow()
-		case "maximize":
-			act.ToggleMaximizeWindow()
-		case "close":
-			act.CloseWindow()
-		}
-	}).Children(func() {
-		icon(color, bg)
-	})
 }
 
 // stripTabs is the room the tabs take: the buttons that move them, and the
@@ -328,14 +184,6 @@ func tabsRoom(c *myui.Context, st State, scrolls bool) float32 {
 // only that line comes and goes.
 func stripButtonsWidth() float32 {
 	return 2*stripButtonSize + 2*stripDividerRoom + 3*stripButtonsGap
-}
-
-// windowGroupWidth is the room a group of n window's buttons takes.
-func windowGroupWidth(n int) float32 {
-	if n <= 0 {
-		return 0
-	}
-	return float32(n)*windowButtonWidth + float32(n-1)*windowButtonGap + windowButtonRoom
 }
 
 // viewport is what the strip shows of the tabs: it scrolls them sideways when
@@ -570,168 +418,6 @@ func tab(c *myui.Context, st State, act Actions, i int, share float32) myui.Elem
 	return el
 }
 
-// nameMeasures is bounded so that a window that has opened many tabs over a
-// day does not keep a measurement for each of them: a name is stable, so the
-// cache is dropped whole rather than aged out one at a time.
-const nameMeasures = 256
-
-// nameMeasure is a key of the tab-name cache: what the width of a name
-// depends on, since the same name is a different width in another font.
-type nameMeasure struct {
-	name, font string
-	size       float32
-	weight     int
-}
-
-// nameMeasureCache keeps the widths of tab names. A window draws its strip
-// on frames it did not build anew, as the pointer moves over it, so a name
-// measured every frame costs a layout each frame; the names of the tabs
-// change far less often. The mutex is for the window that draws on another
-// goroutine than the one that reads the settings: the window is the only
-// writer of its names either way.
-var nameMeasureCache = struct {
-	sync.Mutex
-	widths map[nameMeasure]float32
-}{widths: map[nameMeasure]float32{}}
-
-// forTest, called for its side effects, empties the caches this package keeps
-// across frames, so that a test draws what a window draws and sees nothing of
-// the frame before it. Those caches are kept by the frame a window builds it
-// view from, and a test builds its own views, so a cache that did not empty
-// would answer a test with the answer of another one.
-var forTest = func() {}
-
-// resetCaches empties every cache the package keeps across frames.
-func resetCaches() {
-	nameMeasureCache.Lock()
-	clear(nameMeasureCache.widths)
-	nameMeasureCache.Unlock()
-}
-
-// measuredName is how wide a tab draws its name: as wide as the name takes
-// in the theme's font, within the room a tab may take. Weight is the weight
-// the name is drawn in, so that a bold name is measured bold: a regular
-// width would ellipsize it in the tab it is widest in.
-func measuredName(c *myui.Context, name string, weight int) float32 {
-	t := c.Theme()
-	key := nameMeasure{name: name, font: t.Font, size: t.FontSize, weight: weight}
-	nameMeasureCache.Lock()
-	w, ok := nameMeasureCache.widths[key]
-	nameMeasureCache.Unlock()
-	if !ok {
-		w, _ = c.MeasureText(0, myui.Span{Text: name, Font: t.Font, Size: t.FontSize, Weight: weight})
-		nameMeasureCache.Lock()
-		// A full cache is dropped rather than aged: 256 names is nothing to
-		// measure again, and an eviction order would cost more than that.
-		if len(nameMeasureCache.widths) >= nameMeasures {
-			clear(nameMeasureCache.widths)
-		}
-		nameMeasureCache.widths[key] = w
-		nameMeasureCache.Unlock()
-	}
-	return nameWidth(w)
-}
-
-// nameWidth keeps a measured name inside the room a tab may take.
-func nameWidth(w float32) float32 {
-	return min(max(w, minTabName), maxTabName)
-}
-
-// tabMenu is the tab's context menu. The tab that is not a terminal, the
-// settings, has no name of its own to keep and nothing to open a second time:
-// its menu offers only closing it, so it opens without the line that would
-// separate what it does not offer.
-func tabMenu(m *myui.Menu, st State, act Actions, i int) {
-	if i >= 0 && i < len(st.Tabs) && st.Tabs[i].Page == nil {
-		if m.Item(locales.Rename()).Chosen() {
-			act.BeginRename(i)
-		}
-		if m.Item(locales.DuplicateTab()).Chosen() {
-			act.DuplicateTab(i)
-		}
-		m.Separator()
-	}
-	if m.Item(locales.CloseTab()).Chosen() {
-		act.CloseTab(i)
-	}
-	if m.Item(locales.CloseOtherTabs()).Disabled(len(st.Tabs) < 2).Chosen() {
-		act.CloseOtherTabs(i)
-	}
-}
-
-// tabIcon is the mark before a tab's name: the mark of the profile it runs, or
-// a gear for the tab that holds the settings.
-func tabIcon(c *myui.Context, tb Tab, active bool) {
-	t := c.Theme()
-	if tb.Page != nil {
-		iconTile(c, icons.Settings, t.Accent, inkOn(t.Accent), active)
-		return
-	}
-	markIcon(c, tb.Icon, tb.Color, 16, active)
-}
-
-// markIcon is the mark of a profile at the size of the room it has: a preset
-// draws its own face and its own mark, a character is drawn in the square the
-// terminal mark would have taken, and a profile that names neither wears the
-// terminal mark on a square of its color.
-//
-// A profile without a color gets the quiet square, since a color the user never
-// chose should not be the loudest thing in the strip. The quiet square still
-// needs a mark that reads on it: TextMuted on Border is a smudge at this size,
-// and a profile without a color is the one every tab of a fresh install wears.
-func markIcon(c *myui.Context, icon, color string, size float32, active bool) {
-	t := c.Theme()
-	if preset := icons.Preset(icon); preset != nil {
-		// The face is the preset's, not the profile's color, so only the
-		// brightness says whether the tab is in front of the window.
-		el := myui.Box(c).Size(size, size).Shrink(0).Center().Children(func() {
-			// Image, not Icon: a preset is a picture with its own colors,
-			// and Icon paints every shape it draws in one color.
-			myui.Image(c, preset.SVG).Size(size, size)
-		})
-		if !active {
-			el.Opacity(0.85)
-		}
-		return
-	}
-	face := colorOf(color)
-	switch {
-	case icon != "" && face.A > 0:
-		glyphTile(c, icon, face, inkOn(face), active, size)
-	case icon != "":
-		glyphTile(c, icon, t.Border, t.Text, active, size)
-	case face.A > 0:
-		iconTile(c, icons.Terminal, face, inkOn(face), active)
-	default:
-		iconTile(c, icons.Terminal, t.Border, t.Text, active)
-	}
-}
-
-// iconTile is a square of a profile's color with a mark on it, for the marks
-// that are drawn rather than written: the plain terminal, and the gear of the
-// settings tab.
-func iconTile(c *myui.Context, ic *icons.Icon, face, mark myui.Color, active bool) {
-	const size float32 = 16
-	if !active {
-		face = face.Alpha(0.85)
-	}
-	myui.Box(c).Size(size, size).Shrink(0).Radius(size * 0.3).Background(face).Center().Children(func() {
-		myui.Icon(c, ic.SVG).Size(size*0.62, size*0.62).TextColor(mark)
-	})
-}
-
-// glyphTile is the square a character mark is drawn on: the character in place
-// of the terminal mark, on the face of the profile's color. A color glyph, as
-// an emoji is, keeps the colors it has.
-func glyphTile(c *myui.Context, glyph string, face, mark myui.Color, active bool, size float32) {
-	if !active {
-		face = face.Alpha(0.85)
-	}
-	myui.Box(c).Size(size, size).Shrink(0).Radius(size * 0.3).Background(face).Center().Children(func() {
-		myui.Text(c, glyph).FontSize(size * 0.72).SingleLine().TextColor(mark)
-	})
-}
-
 // closeButton closes a tab. It takes the surface under the pointer, so that
 // it reads as the button it is rather than as a mark on the tab, and it keeps
 // the text color of the tab it sits on: Windows Terminal's close button is as
@@ -760,59 +446,6 @@ func closeButton(c *myui.Context, act Actions, i int, active bool, face Face) my
 	}
 	return el.Children(func() {
 		myui.Icon(c, icons.Close.SVG).Size(14, 14).TextColor(text)
-	})
-}
-
-// stripProfiles are what the menu of the strip lists. With every profile
-// deleted or hidden it lists one entry, following the device, which is the
-// shell the window runs then anyway: a menu with nothing to open a tab on
-// reads as a window that cannot open one. That entry names the device the way
-// the settings page does, so the menu says which shell it opens.
-func stripProfiles(st State) []Profile {
-	if len(st.Profiles) > 0 {
-		return st.Profiles
-	}
-	return []Profile{{Name: deviceLabel(st.Device)}}
-}
-
-// profilesMenu opens a tab that runs one of the profiles.
-func profilesMenu(c *myui.Context, st State, act Actions) myui.Element {
-	base := myui.Box(c).
-		Size(stripButtonSize, stripButtonSize).
-		Radius(6).
-		AlignItems(myui.Center).
-		Justify(myui.Center).
-		Cursor(myui.CursorPointer).
-		Label(locales.Profiles()).
-		Tooltip(locales.Profiles()).Menu(func(m *myui.Menu) {
-		for i, p := range stripProfiles(st) {
-			it := m.Item(p.Name)
-			if p.ID == "" {
-				// Following the device is no numbered profile of the file.
-				if it.Chosen() {
-					act.NewSystemTab()
-				}
-				continue
-			}
-			if i < 9 {
-				shortcut(it, st, action.ProfileAction(i+1))
-			}
-			if it.Chosen() {
-				act.NewTab(p.ID)
-			}
-		}
-		m.Separator()
-		it := m.Item(locales.Settings())
-		shortcut(it, st, action.Settings)
-		if it.Chosen() {
-			act.OpenSettings()
-		}
-		if about := m.Item(locales.About()); about.Chosen() {
-			act.OpenAbout()
-		}
-	})
-	return stripButton(c, base).Children(func() {
-		myui.Icon(c, icons.Chevron.SVG).Size(14, 14).TextColor(c.Theme().Text)
 	})
 }
 
@@ -847,18 +480,6 @@ func stripButton(c *myui.Context, el myui.Element) myui.Element {
 		return el.Background(c.Theme().SurfaceHover)
 	}
 	return el
-}
-
-// shortcut shows an action's key by a menu item, when the window knows one.
-func shortcut(it *myui.MenuItem, st State, action string) {
-	if st.Shortcut == nil {
-		return
-	}
-	mods, key, ok := ParseKey(st.Shortcut(action))
-	if !ok {
-		return
-	}
-	it.Shortcut(mods, key)
 }
 
 // newTabButton opens a tab that runs the default profile.

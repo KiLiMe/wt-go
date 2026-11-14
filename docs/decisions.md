@@ -706,7 +706,7 @@ Windows 的默认值也随之改成 `Cascadia Mono,monospace`：没装 Cascadia 
 
 **背景**：标签条上的 `+`、`▾`、标签的 `×`、滚动标签的 `❮`/`❯`、查找栏的 `▲`/`▼`/`×`
 原本都是 `myui.Text` 画的字形。字形不可靠：有些字体没有这些码位，按钮就空白；有的字体把它们
-画得很宽，记号会顶出按钮的框（`internal/ui/tabs.go` 里 `windowButton` 的注释早为此写过，
+画得很宽，记号会顶出按钮的框（`internal/ui/window_buttons.go` 里 `windowButton` 的注释早为此写过，
 最小化/最大化/还原才改用盒子画）。`+` 在不同字体里宽窄差一倍，`▾` 在等宽字体里常被拉扁。
 十个参考项目里 sshyard 的做法是：把图标做成 SVG 打进二进制，用 `ui.Icon` 画（`ui.MustParseSVG`
 在启动时解析，`fill` 取当前色，颜色因此跟随周围文字），一个字形都不用。
@@ -727,7 +727,7 @@ v4.8.0 是最后一个 **Apache-2.0** 版本，与 wt-go 的许可证相容；`s
 （加图标 = 拷一个 SVG + 加一行）。最小化/最大化/还原/关闭**四个窗口按钮仍用线画**：
 它们要的是 1px 直线，与系统画法一致；24 网格的图标笔画在小尺寸上会被抗锯齿磨成灰糊、
 还比旁边的 1px 横线粗一倍（先试过 `icons.Close`，截图里那一个叉明显发胖），所以关闭按钮
-用 `Painter.Line` 画两道 1px 斜线（`internal/ui/tabs.go` 的 `windowButton`）。
+用 `Painter.Line` 画两道 1px 斜线（`internal/ui/window_buttons.go` 的 `windowButton`）。
 
 ---
 
@@ -969,7 +969,7 @@ breeze、WinTray）里 5 个用 catalog、1 个用 struct 字面量，主流是�
 **背景**：Linux 上把系统的终端（`/usr/bin/rminal`）换成 wt-go 后，在文件管理器里「在此打开终端」，
 第一个 shell 总落在用户家目录。实机抓取（2026-11-12）：wt-go 进程 cmdline 零参数、进程 cwd 是
 `/home/<user>/Applications`，而它拉起的 `/bin/bash` 的 cwd 是 `/home/<user>`。链路是
-`internal/app/app.go` 的 `openTab`：profile 的 `dir` 与 `settings.json` 的 `startDirectory` 都是 `""`
+`internal/app/open.go` 的 `openTab`：profile 的 `dir` 与 `settings.json` 的 `startDirectory` 都是 `""`
 时 `Dir: ""` 交给 mygo，`plugins/terminal/terminal.go` 的 `if dir == "" { dir, _ = os.UserHomeDir() }`
 把 pty 开到家里。桌面与文件管理器只能用「chdir 后 exec」表达「开在这里」，进程 cwd 是它唯一的传递通道。
 `PWD` 虽然也是继承来的（实测值正是目标目录），但它由 shell 维护、可能与真实 cwd 不符，Windows 上也没有。
@@ -1053,7 +1053,7 @@ POSIX 上还能拿到登录 shell 的 `PATH`（`.zprofile` 里的东西不会莫
 `%COMSPEC%`/`cmd.exe`；反过来，期待「跟随系统＝cmd」的人要在下拉里显式选 Command Prompt。
 老文件里写着 `"defaultProfile": ""` 的语义不变，写着具体 id 的照旧。
 零值 profile 没有名字可显示，标签名因此多了一级回落：标题是程序路径就取文件名去 `.exe`
-（`pwsh`、`cmd`、`zsh`），连标题都没有才写「跟随系统」（ADR-44 补丁，`internal/app/app.go` 的
+（`pwsh`、`cmd`、`zsh`），连标题都没有才写「跟随系统」（ADR-44 补丁，`internal/app/title.go` 的
 `label`/`programName`）。
 
 **测试**：`internal/profile/profile_test.go` 的 `TestDefault` 覆盖空、未知、隐藏三种 id 都回零值；
@@ -1339,7 +1339,7 @@ OSC 0/2，标签就一直写着「跟随系统」，而设置页里同一个词�
 
 **背景**：`settings.json` 写着 `"defaultProfile": "zsh"` 时，启动的首个标签是 zsh，但 `Ctrl+T` 开的标签
 跑 bash。根因是 `internal/app/tabs.go` 的 `NewTab("")` 把空串一路传到 `profile.Default`，空 id 得到零值
-profile 即「跟随系统」——`defaultProfile` 只被 `internal/app/app.go` 的 `openFirst()` 读过（ADR-44 之后
+profile 即「跟随系统」——`defaultProfile` 只被 `internal/app/open.go` 的 `openFirst()` 读过（ADR-44 之后
 这里是全仓库仅有的读取处）。文案本来也不是这么写的：`locales/zh-Hans.json` 的 `defaultProfileNote`
 早就说「新标签默认运行的配置文件」，代码没照它做。
 
@@ -1891,7 +1891,7 @@ Windows 上同一个目录会被写成 `C:\Users\Foo`（环境变量）与 `c:\u
 字段时，预览已经出了视口，改一行往上滚一次，等于没有预览。
 
 **决定**：预览那一节用 mygo 的 `Sticky().Top(0)` 吸在滚动区顶上（`internal/ui/form.go` 的
-`pinnedSection`），往下滚时字段从它下面穿过。`internal/ui/settings.go` 的 `appearancePage` 用它画
+`pinnedSection`），往下滚时字段从它下面穿过。`internal/ui/settings_appearance.go` 的 `appearancePage` 用它画
 `locales.AppearancePreview()` 那一节；`PageSchemes`（旧的「配色方案」页名）走同一个函数，行为一样。
 
 **吸顶的那一条要自己铺页面底色**：`Sticky` 的元素画在同级之上，而卡片与它的小标题之间是透明的，
