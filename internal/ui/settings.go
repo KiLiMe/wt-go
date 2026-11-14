@@ -883,7 +883,7 @@ func iconField(c *myui.Context, st Settings, act Actions, p *store.Profile) {
 			chip(pr.Key, pr.Shape+" \u00b7 "+pr.Name, icons.Preset(pr.Key), true)
 		}
 		if st.Glyph != nil {
-			myui.TextInput(c, st.Glyph).Width(56).Placeholder(locales.IconGlyph())
+			myui.TextInput(c, st.Glyph).Width(88).Placeholder(locales.IconGlyph())
 		}
 	})
 }

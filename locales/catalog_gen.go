@@ -2144,11 +2144,11 @@ func (msgs Messages) IconAuto() string {
 	return Catalog.Format(msgs.locale, "iconAuto", nil)
 }
 
-// IconGlyph says "One character"
+// IconGlyph says "Char"
 // in the language the app shows.
 func IconGlyph() string { return In(i18n.Locale()).IconGlyph() }
 
-// IconGlyph says "One character"
+// IconGlyph says "Char"
 // in the language of msgs.
 func (msgs Messages) IconGlyph() string {
 	return Catalog.Format(msgs.locale, "iconGlyph", nil)

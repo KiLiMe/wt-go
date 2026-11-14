@@ -266,7 +266,7 @@
   "icon": "Icon",
   "iconNote": "The mark the tab wears: one of the built-in shapes, or one character of your own (an emoji works). A shape paints its own colors, so the color below only holds for the other two.",
   "iconAuto": "From the command",
-  "iconGlyph": "One character",
+  "iconGlyph": "Char",
   "iconColor": "Icon color",
   "iconColorNote": "The color of the mark, for a profile that wears no shape: the plain terminal mark, or your character, in this color.",
   "hidden": "Hidden",
