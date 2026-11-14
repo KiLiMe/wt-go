@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	mygoi18n "github.com/egoist/mygo/i18n"
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/action"
@@ -163,6 +164,78 @@ func TestTitleBarMenu(t *testing.T) {
 	if want := []string{"close", "maximize"}; !slices.Equal(act.asked, want) {
 		t.Errorf("the menu asked for %q, want %q", act.asked, want)
 	}
+}
+
+// TestStripSpeaksEachLanguage covers the words the strip's menus say in every
+// language the catalogs ship, the source language and the one translated from
+// it: they are the catalogs' own words, so a window in English says them in
+// English on a machine that speaks Chinese, and one in Chinese says them in
+// Chinese. A language that has no word for one says the source language's,
+// which is why the source language is the one every key is filed under.
+func TestStripSpeaksEachLanguage(t *testing.T) {
+	for _, tc := range []struct {
+		locale string
+		window []string
+		close  string
+		tab    []string
+	}{
+		{
+			locale: "en",
+			window: []string{"Restore", "Minimize", "Maximize", "-", "Close Window", "Settings"},
+			close:  "Close Window",
+			tab:    []string{"Rename", "Duplicate Tab", "Close Tab"},
+		},
+		{
+			locale: "zh-Hans",
+			window: []string{"还原", "最小化", "最大化", "-", "关闭窗口", "设置"},
+			close:  "关闭窗口",
+			tab:    []string{"重命名", "复制标签", "关闭标签"},
+		},
+	} {
+		t.Run(tc.locale, func(t *testing.T) {
+			speakIn(t, tc.locale)
+			act := &windowActions{}
+			st := &State{Tabs: []Tab{{Name: "PowerShell 7"}}}
+			tt := myui.NewTester(func(c *myui.Context) { strip(c, *st, act) }, 900, TitleBarHeight*2)
+			tt.Frame()
+			tt.RightClickAt(700, TitleBarHeight/2)
+			if menu := tt.Menu(); !slices.Equal(menu, tc.window) {
+				t.Errorf("a right press on the empty strip opens %q, want %q", menu, tc.window)
+			}
+			// The menu is worked through the words the language says, not
+			// through the keys behind them.
+			if err := tt.ChooseMenuItem(tc.close); err != nil {
+				t.Fatal(err)
+			}
+			if want := []string{"close"}; !slices.Equal(act.asked, want) {
+				t.Errorf("the menu asked for %q, want %q", act.asked, want)
+			}
+
+			tt.Frame()
+			name, ok := tt.Find("PowerShell 7")
+			if !ok {
+				t.Fatalf("the strip does not draw the tab: %q", tt.Texts())
+			}
+			tt.RightClickAt(name.X+name.W/2, name.Y+name.H/2)
+			menu := tt.Menu()
+			tt.CloseMenu()
+			for _, label := range tc.tab {
+				if !slices.Contains(menu, label) {
+					t.Errorf("a right press on the tab opens %q, want %q in it", menu, label)
+				}
+			}
+		})
+	}
+}
+
+// speakIn draws the rest of the test in the language of tag and puts the
+// language back afterwards: the message functions say the language the app
+// sets, and no test in this package sets one, so they say the source language
+// unless a test says otherwise.
+func speakIn(t *testing.T, tag string) {
+	t.Helper()
+	mygoi18n.SetLocaleFunc(func() string { return tag })
+	t.Cleanup(func() { mygoi18n.SetLocaleFunc(nil) })
 }
 
 // TestTabMenu covers the tab's menu: a right click anywhere on the tab opens
