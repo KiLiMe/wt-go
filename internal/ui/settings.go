@@ -850,14 +850,23 @@ func iconField(c *myui.Context, st Settings, act Actions, p *store.Profile) {
 	// Which square is lit: a character in the box is a mark of its own, so
 	// none of them is.
 	chosen := func(key string) bool { return glyph == "" && profile.IconKey(p.Icon) == key }
-	chip := func(key, label string, ic *icons.Icon) {
+	chip := func(key, label string, ic *icons.Icon, picture bool) {
 		el := myui.Box(c).Size(24, 24).Shrink(0).Radius(6).Center().
 			BorderWidth(1).BorderColor(t.Border).Cursor(myui.CursorPointer).
 			Label(label).Tooltip(label).OnClick(func() { act.SetProfileIcon(key) })
 		if chosen(key) {
 			el.BorderWidth(2).BorderColor(t.Accent)
 		}
-		el.Children(func() { myui.Icon(c, ic.SVG).Size(16, 16) })
+		el.Children(func() {
+			if picture {
+				// A preset brings its own colors; Icon would flatten them
+				// into the text color, which is how a row of white squares
+				// shipped once (ADR-76).
+				myui.Image(c, ic.SVG).Size(16, 16)
+				return
+			}
+			myui.Icon(c, ic.SVG).Size(16, 16).TextColor(t.TextMuted)
+		})
 	}
 	// Wrapped, because twelve shapes and a box are wider than the column
 	// the field is written in, and a row of chips that runs past the card
@@ -865,12 +874,13 @@ func iconField(c *myui.Context, st Settings, act Actions, p *store.Profile) {
 	myui.Row(c).Wrap().Gap(6).AlignItems(myui.Center).Children(func() {
 		auto := profile.GuessIcon(p.Command)
 		ic := icons.Preset(auto)
+		picture := ic != nil
 		if ic == nil {
 			ic = icons.Terminal
 		}
-		chip("", locales.IconAuto(), ic)
+		chip("", locales.IconAuto(), ic, picture)
 		for _, pr := range profile.Presets() {
-			chip(pr.Key, pr.Shape+" \u00b7 "+pr.Name, icons.Preset(pr.Key))
+			chip(pr.Key, pr.Shape+" \u00b7 "+pr.Name, icons.Preset(pr.Key), true)
 		}
 		if st.Glyph != nil {
 			myui.TextInput(c, st.Glyph).Width(56).Placeholder(locales.IconGlyph())

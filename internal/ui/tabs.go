@@ -642,7 +642,9 @@ func markIcon(c *myui.Context, icon, color string, size float32, active bool) {
 		// The face is the preset's, not the profile's color, so only the
 		// brightness says whether the tab is in front of the window.
 		el := myui.Box(c).Size(size, size).Shrink(0).Center().Children(func() {
-			myui.Icon(c, preset.SVG).Size(size, size)
+			// Image, not Icon: a preset is a picture with its own colors,
+			// and Icon paints every shape it draws in one color.
+			myui.Image(c, preset.SVG).Size(size, size)
 		})
 		if !active {
 			el.Opacity(0.85)

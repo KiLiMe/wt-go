@@ -609,3 +609,23 @@ func TestMarkIcon(t *testing.T) {
 		t.Fatalf("the character is drawn %d times, want 2: %q", got, tt.Texts())
 	}
 }
+
+// TestMarkIconPreset paints a preset on its own: it is a picture, so the frame
+// holds the tones it was drawn with, not the one flat color a glyph would be.
+func TestMarkIconPreset(t *testing.T) {
+	tt := myui.NewTester(func(c *myui.Context) {
+		markIcon(c, "bash:ubuntu", "", 32, true)
+	}, 32, 32)
+	tt.Frame()
+	tones := map[color.RGBA]struct{}{}
+	img := tt.Image()
+	for y := img.Bounds().Min.Y; y < img.Bounds().Max.Y; y++ {
+		for x := img.Bounds().Min.X; x < img.Bounds().Max.X; x++ {
+			r, g, b, _ := img.At(x, y).RGBA()
+			tones[color.RGBA{uint8(r >> 8), uint8(g >> 8), uint8(b >> 8), 255}] = struct{}{}
+		}
+	}
+	if len(tones) < 4 {
+		t.Fatalf("the preset drew %d colors, want its own", len(tones))
+	}
+}
