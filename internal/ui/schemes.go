@@ -242,16 +242,27 @@ func preview(c *myui.Context, s *store.Settings) {
 	// face the page paints on is what a person sees of it.
 	bg := th.Background.MixOklab(t.Background, 1-float32(clampOpacity(s.BackgroundOpacity)))
 	myui.Box(c).BorderWidth(1).BorderColor(cardLine(t)).Radius(8).Background(bg).
-		Padding(previewPadX(s), previewPadY(s)).Children(func() {
+		Padding(previewPadY(s), previewPadX(s)).Children(func() {
 		myui.Row(c).AlignItems(myui.Center).Gap(6).Children(func() {
 			myui.Text(c, locales.LineOne()).TextColor(th.Foreground).Font(textFont(s)).FontSize(previewFontSize(s))
 			cursorBlock(c, s, th)
 		})
 		myui.Text(c, locales.LineTwo()).TextColor(th.Foreground).Font(textFont(s)).FontSize(previewFontSize(s)).
 			LineHeight(previewLineHeight(s))
-		myui.Row(c).Gap(4).Wrap().Children(func() {
-			for _, col := range th.Palette {
-				myui.Box(c).Size(16, 16).Radius(3).Background(col)
+		// The sixteen colors a program names, in the two rows a terminal keeps
+		// them in: the eight it names, and the bright eight below them, so that a
+		// color stands over its bright twin. The room between them keeps two
+		// neighbors from reading as one band, and the line around each keeps the
+		// black of a scheme, which is its background's own color, from vanishing
+		// into the page it is drawn on.
+		myui.Column(c).Padding(8, 0, 0, 0).Gap(6).Children(func() {
+			for _, row := range [][]myui.Color{th.Palette[:8], th.Palette[8:]} {
+				myui.Row(c).Gap(6).Children(func() {
+					for _, col := range row {
+						myui.Box(c).Size(16, 16).Radius(3).Background(col).
+							BorderWidth(1).BorderColor(cardLine(t))
+					}
+				})
 			}
 		})
 	})

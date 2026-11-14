@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"image"
+	"image/color"
 	"slices"
 	"strings"
 	"testing"
@@ -8,6 +10,7 @@ import (
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/store"
+	"wtgo/internal/theme"
 	"wtgo/locales"
 )
 
@@ -268,5 +271,180 @@ func TestSchemeRowPicks(t *testing.T) {
 	}
 	if len(act.removed) != 0 {
 		t.Errorf("removed %v, want none", act.removed)
+	}
+}
+
+// TestPreviewPalette covers the colors at the foot of the preview: the sixteen
+// a program names, in the two rows a terminal keeps them in, the bright eight
+// under the eight they brighten. A person reads a scheme's colors off this, so
+// two colors that run into one another, and a color that runs into the page it
+// is drawn on, are what it catches.
+func TestPreviewPalette(t *testing.T) {
+	s := store.Default()
+	// A window that shows the scheme's background as it is: that is where the
+	// black of a scheme and the page are one color.
+	s.BackgroundOpacity = 1
+	th := theme.Terminal(s)
+	tt := myui.NewTester(func(c *myui.Context) { preview(c, &s) }, 400, 240)
+	tt.Frame()
+	img := tt.Image()
+	px := func(x, y int) color.RGBA { return img.RGBAAt(x, y) }
+	rgb := func(col myui.Color) color.RGBA { return color.RGBA{R: col.R, G: col.G, B: col.B, A: 0xff} }
+	inside := boxesOf(img)
+
+	// A chip's colors fill a box 16 DIP square with a line around it, so what
+	// one color fills is 14 by 14.
+	const chipSize, chipGap = 16, 6
+	const pitch = chipSize + chipGap
+	// A row is read from its second box, since its first is the scheme's black
+	// and the page is black too: where the row starts is one box and one gap to
+	// the left of it.
+	seat, ok := inside[rgb(th.Palette[1])]
+	if !ok {
+		t.Fatalf("the preview draws no box of color 1")
+	}
+	origin := image.Pt(seat.Min.X-pitch, seat.Min.Y)
+	// The colors sit in the order a terminal holds them: the eight a program
+	// names, then the bright eight below them, a box and a gap apart, so that a
+	// color stands over its bright twin.
+	for i := 1; i < 16; i++ {
+		want := image.Pt(origin.X+i%8*pitch, origin.Y+i/8*pitch)
+		box, ok := inside[rgb(th.Palette[i])]
+		if !ok {
+			t.Errorf("the preview draws no box of color %d", i)
+			continue
+		}
+		if box.Dx() != chipSize-2 || box.Dy() != chipSize-2 {
+			t.Errorf("color %d fills %v by %v DIP, want %v inside a %v box", i, box.Dx(), box.Dy(), chipSize-2, chipSize)
+		}
+		if box.Min != want {
+			t.Errorf("color %d sits at %v, want %v", i, box.Min, want)
+		}
+		if got := px(box.Min.X+(chipSize-2)/2, box.Min.Y+(chipSize-2)/2); got != rgb(th.Palette[i]) {
+			t.Errorf("color %d is drawn %v, want %v", i, got, rgb(th.Palette[i]))
+		}
+	}
+
+	// The black of a scheme is the page's own color, so the line around its box
+	// is all there is of it: a box with no line is a chip a person cannot see.
+	middle := origin.X + chipSize/2
+	fill := px(middle, origin.Y+chipSize/2)
+	if want := rgb(th.Palette[0]); fill != want {
+		t.Errorf("the box of the scheme's black is drawn %v, want the scheme's own %v", fill, want)
+	}
+	if got := px(middle, origin.Y-1); got == fill {
+		t.Errorf("the box of the scheme's black draws %v along its edge, its own color, so the chip is not there", got)
+	}
+}
+
+// boxesOf is where each color of the picture fills a box: the runs of one color
+// 14 DIP square, which is a chip's inside a 16 DIP box with a line around it.
+func boxesOf(img *image.RGBA) map[color.RGBA]image.Rectangle {
+	b := img.Bounds()
+	seen := make(map[image.Point]bool, b.Dx()*b.Dy())
+	out := map[color.RGBA]image.Rectangle{}
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			start := image.Pt(x, y)
+			if seen[start] {
+				continue
+			}
+			col := img.RGBAAt(x, y)
+			box := image.Rect(x, y, x+1, y+1)
+			stack := []image.Point{start}
+			seen[start] = true
+			for len(stack) > 0 {
+				p := stack[len(stack)-1]
+				stack = stack[:len(stack)-1]
+				box = box.Union(image.Rect(p.X, p.Y, p.X+1, p.Y+1))
+				for _, d := range []image.Point{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
+					q := p.Add(d)
+					if !q.In(b) || seen[q] || img.RGBAAt(q.X, q.Y) != col {
+						continue
+					}
+					seen[q] = true
+					stack = append(stack, q)
+				}
+			}
+			if box.Dx() == chipDot && box.Dy() == chipDot {
+				out[col] = box
+			}
+		}
+	}
+	return out
+}
+
+// chipDot is how wide a chip's inside is: its box, less the line around it.
+const chipDot = 14
+
+// TestSchemesCacheKeepsTheRows covers the rows the page keeps from frame to
+// frame: the same list and the same words are answered with the rows already
+// found, and a list the window built again counts as the same while it names
+// the same schemes, since moving the pointer is what draws the frames.
+func TestSchemesCacheKeepsTheRows(t *testing.T) {
+	all := []Scheme{{Name: "Paper"}, {Name: "Campbell"}}
+	cache := &SchemesCache{}
+	rows := searchSchemes(cache, all, "")
+	if !slices.Equal(rows, all) {
+		t.Fatalf("the rows of an empty search are %v, want %v", rows, all)
+	}
+	rebuilt := []Scheme{{Name: "Paper"}, {Name: "Campbell"}}
+	if again := searchSchemes(cache, rebuilt, ""); &again[0] != &rows[0] {
+		t.Error("the list was searched again for a list that names the same schemes")
+	}
+	typed := searchSchemes(cache, all, "pap")
+	if len(typed) != 1 || typed[0].Name != "Paper" {
+		t.Fatalf("the rows of \"pap\" are %v, want Paper alone", typed)
+	}
+	if again := searchSchemes(cache, all, "pap"); &again[0] != &typed[0] {
+		t.Error("the words were searched again for the words they were searched for")
+	}
+	// A list that names another scheme is another list, and the rows kept for
+	// the one before it are not its answer.
+	renamed := []Scheme{{Name: "Paper"}, {Name: "Campbells"}}
+	if again := searchSchemes(cache, renamed, ""); !slices.Equal(again, renamed) || &again[0] == &typed[0] {
+		t.Error("a list that names another scheme was answered with the rows of the one before it")
+	}
+	// A page drawn without a window to keep a cache for it keeps none: it asks
+	// the list again each time.
+	if a, b := searchSchemes(nil, all, ""), searchSchemes(nil, all, ""); &a[0] == &b[0] {
+		t.Error("a search with no cache to keep it in kept the rows anyway")
+	}
+}
+
+// TestSchemesCacheReset covers emptying the cache: what it kept is the answer to
+// no search after it.
+func TestSchemesCacheReset(t *testing.T) {
+	all := []Scheme{{Name: "Paper"}, {Name: "Campbell"}}
+	cache := &SchemesCache{}
+	rows := searchSchemes(cache, all, "")
+	cache.reset()
+	if cache.All != nil || cache.Rows != nil || cache.Key != "" {
+		t.Errorf("the cache keeps %v, %q, %v after it was emptied", cache.All, cache.Key, cache.Rows)
+	}
+	if again := searchSchemes(cache, all, ""); &again[0] == &rows[0] {
+		t.Error("the rows emptied out of the cache are the answer still")
+	}
+}
+
+// TestSameSchemes covers telling one list of schemes from another: the length,
+// each name and each pair of colors count; the slice the window built is not
+// what is compared.
+func TestSameSchemes(t *testing.T) {
+	paper := Scheme{Name: "Paper", Bg: myui.RGB(1, 2, 3)}
+	for _, tc := range []struct {
+		name string
+		a, b []Scheme
+		want bool
+	}{
+		{"none", nil, nil, true},
+		{"one", []Scheme{paper}, []Scheme{paper}, true},
+		{"another name", []Scheme{paper}, []Scheme{{Name: "Campbell", Bg: paper.Bg}}, false},
+		{"another color", []Scheme{paper}, []Scheme{{Name: "Paper", Bg: myui.RGB(9, 9, 9)}}, false},
+		{"one more", []Scheme{paper}, []Scheme{paper, {Name: "Campbell"}}, false},
+	} {
+		if got := sameSchemes(tc.a, tc.b); got != tc.want {
+			t.Errorf("%s: sameSchemes = %v, want %v", tc.name, got, tc.want)
+		}
 	}
 }
