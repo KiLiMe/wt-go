@@ -62,7 +62,7 @@
 | ADR-55 | 「操作」页：一个动作一个键，改没改看得见 | 有效 |
 | ADR-56 | 没有可用 profile 就是「跟随系统」，不在菜单里留空位 | 有效 |
 | ADR-57 | ConPTY 载不动的键位，在 mygo 的编码器里换成老式字节 | 有效 |
-| ADR-58 | fork mygo：一条回复一次写，ConPTY 载不动的颜色回复不发 | 有效 |
+| ADR-58 | fork mygo：一条回复一次写，ConPTY 载不动的颜色回复不发 | 已被 ADR-72 修订（病因） |
 | ADR-59 | 程序自己 fork 的剪贴板工具不归 wt-go 管，装 `xclip` 即可 | 有效 |
 | ADR-60 | 设置页整页一个底色，左栏与底栏不铺 `Surface` | 有效 |
 | ADR-61 | 「显示隐藏的配置文件」是页上的一行开关，默认开着，左栏始终只列没隐藏的 | 已被 ADR-71 取代 |
@@ -75,6 +75,7 @@
 | ADR-69 | 设置页按用户心智分页：General 收拢启动与标签，Terminal & Input 收拢鼠标与缓冲 | 有效 |
 | ADR-70 | 「外观与排版」的预览吸在页面顶上，不随字段滚走 | 有效 |
 | ADR-71 | 隐藏跟着配置文件走：字段里设，列表照样列出并标「已隐藏」，探测到的条目只给隐藏 | 有效 |
+| ADR-72 | ConPTY 剥掉 OSC 回复的头：ADR-58 的病因改写，决定不变 | 有效 |
 
 ---
 
@@ -1478,7 +1479,7 @@ Kitty 分支与 ConPTY 判断都没动，上游 `main` 也一样（git issue #12
 **否决的方案**：① 只拆条不跳过——ConPTY 仍会把整批丢进输入框（实测 orig 的 511 字节就是漏进来的）；
 ② 不答 `OSC 4/10/11` 之外的也一并砍掉（DA1 仍要答，程序靠它认能力，ConPTY 自己也答）；
 ③ 手改本地 `pi-tui/dist` —— bun 一升级就被覆盖，且不解决问题本身；④ 用 `Options.Conn` 自管 pty ——
-等于换掉 mygo 的终端。**待办**：把「ConPTY 丢 OSC、pi 读块匹配」写成 upstream issue 给 pi（与 mygo 无关）。
+等于换掉 mygo 的终端。**待办**：已提交 `earendil-works/pi#12126`（2026-11-13）；上游回复否掉了「读块匹配」这个病因，见 ADR-72。
 
 **代价**：多一个要跟着上游走的依赖。升级流程＝从新 tag 起把 `wtgo` 分支 rebase 上去，改 pseudo-version；
 本地差异是 `terminal.go` 与 `view.go` 的三处（约 180 行）加四个测试文件。ConPTY 的输入解析在 Windows 上无法绕开，
@@ -1915,3 +1916,33 @@ Windows 上同一个目录会被写成 `C:\Users\Foo`（环境变量）与 `c:\u
 `showHidden` 的断言换成 `HideProfile` 的，`TestProfileListLeavesHiddenProfilesOut` 改名为
 `TestProfileListKeepsHiddenProfiles`、断言反过来。列表里混着隐藏项之后，「在不在列表里」不再等于「能不能
 开新标签」，这件事由徽标与本条 ADR 说。
+
+## ADR-72 ConPTY 剥掉 OSC 回复的头：ADR-58 的病因改写，决定不变
+
+**背景**：ADR-58 把病因写成「pi 按读块整块匹配」（`pi-tui` 的两条正则对每个读块整体匹配），据此定性为
+上游的健壮性缺陷，待办是「把 ConPTY 丢 OSC、pi 读块匹配写成 upstream issue」。issue 已提交：
+`earendil-works/pi#12126`（2026-11-13，标签 `no-action`，自动关闭后由维护者回复）。
+
+**上游的结论**（维护者 davidbrai 的回复，注明 AI 起草、经人审）：
+
+1. **不是读块问题**。pi 的 `StdinBuffer` 按 BEL/ST/CSI 终止符把一批读拆成单条回复；当前 `main` 上一次写
+   含 `OSC 10`、`OSC 11`、16 条 `OSC 4` 加 DA1 也能干净消费，同一条回复被切成两次读同样干净，编辑器
+   两种情况都保持空。
+2. **真因是头被剥掉**。漏进输入框的 `b:7676/7676/7676…`、`gb:e7e7/…` 从回复**中间**开始、没有
+   `ESC ]4;N;` 头——Windows 的 conhost（内置或较旧的捆绑版）剥掉或切断了 OSC 回复的头，尾巴作为普通
+   文本进 pi。由 `#10256`（open，25 条评论）跟踪；pi 侧「丢掉无头尾巴」的缓解在 `#11642`（open，
+   零评论，未合）。
+3. **出路**：用 Windows Terminal，或自带当前 conhost/OpenConsole 的终端；模拟器自带
+   `conpty.dll`/`OpenConsole.exe` 而不走系统 conhost 也能避开（WezTerm nightly 在 #10256 里就是这样好的）。
+
+**对决定的影响**：没有。ADR-58 的两处改动分开看——`splitReplies`（拆条）只是让「送得到的」一条一条到；
+`skipReply`（`Options.Conn == nil` 且 Windows 时不答 `OSC 4/10/11/12`）才是关键：既然 conhost 会剥头，
+分条也救不回尾巴，只有「不发」能让输入框干净。ADR-58 的「代价」段照旧成立——Windows 上程序问不到终端
+配色是这条路的固有代价；`PSEUDOCONSOLE_PASSTHROUGH_MODE`（0x8）无效的实测也与上游结论相容。
+
+**保留的分歧**：ADR-58 把这件事定性为 pi 的健壮性缺陷，上游不接受，他们的落点是 pi 侧丢弃无头尾巴
+（#11642）。#11642 合进去之后残片在 pi 侧也会消失，但 `skipReply` 仍要留——它防的不是残片，是
+「答了但送不到」的假装回复。
+
+**留待评估**：自带 `conpty.dll`/`OpenConsole.exe` 是 ADR-58 从未评估过的分支（能让 Windows 上的程序
+重新问到配色），记在 `docs/plan.md` 的「待评估」，不与本条一起决定。
