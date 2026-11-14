@@ -731,7 +731,7 @@ func TestAppearancePreviewKeepsTheHead(t *testing.T) {
 		SettingsTab(c, Settings{Draft: &s, Page: PageAppearance}, &navActions{})
 	}, 900, 700)
 	tt.Frame()
-	line, ok := tt.Find(locales.LineTwo())
+	line, ok := tt.Find(sampleLines()[1])
 	if !ok {
 		t.Fatalf("the appearance page draws no preview: %q", tt.Texts())
 	}
@@ -742,7 +742,7 @@ func TestAppearancePreviewKeepsTheHead(t *testing.T) {
 	// The wheel turns over the fields, which is where a person's pointer is.
 	tt.Scroll(600, 400, 0, 400)
 	tt.Frame()
-	held, ok := tt.Find(locales.LineTwo())
+	held, ok := tt.Find(sampleLines()[1])
 	if !ok {
 		t.Fatalf("the preview is gone once the page scrolls: %q", tt.Texts())
 	}
@@ -759,7 +759,7 @@ func TestAppearancePreviewKeepsTheHead(t *testing.T) {
 	}
 	// It paints above the fields that roll under it, and the pointer finds it
 	// there rather than the field behind it.
-	if err := tt.Click(locales.LineTwo()); err != nil {
+	if err := tt.Click(sampleLines()[1]); err != nil {
 		t.Fatalf("the preview cannot be clicked where it holds the head: %v", err)
 	}
 }

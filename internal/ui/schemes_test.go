@@ -337,6 +337,33 @@ func TestPreviewPalette(t *testing.T) {
 	}
 }
 
+// TestPreviewSpeaksTheLanguage covers the sample the preview is drawn with: it
+// is the language's own sample, the one in its catalog, so the terminal the
+// preview shows shows the words the window is in. That is what a person wants
+// the face and the typesetting read off: their own words, in their own script,
+// rather than an English one that says nothing about either.
+func TestPreviewSpeaksTheLanguage(t *testing.T) {
+	for _, tc := range []struct {
+		locale string
+		lines  []string
+	}{
+		{"en", []string{"$ Hello! AaBbZz 001lI8B", "  1234567890123456 ABCD", "  0123456789 !@#$%^&*()"}},
+		{"zh-Hans", []string{"$ 你好 AaBbZz 001lI8B", "  一二三四五六七八 中文测试", "  0123456789 !@#$%^&*()"}},
+	} {
+		t.Run(tc.locale, func(t *testing.T) {
+			speakIn(t, tc.locale)
+			s := store.Default()
+			tt := myui.NewTester(func(c *myui.Context) { preview(c, &s) }, 400, 240)
+			tt.Frame()
+			// The two lines are all the preview says: the colors below them are
+			// boxes, not words.
+			if got := tt.Texts(); !slices.Equal(got, tc.lines) {
+				t.Errorf("the preview says %q, want %q", got, tc.lines)
+			}
+		})
+	}
+}
+
 // boxesOf is where each color of the picture fills a box: the runs of one color
 // 14 DIP square, which is a chip's inside a 16 DIP box with a line around it.
 func boxesOf(img *image.RGBA) map[color.RGBA]image.Rectangle {

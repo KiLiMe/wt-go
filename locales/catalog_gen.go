@@ -1104,24 +1104,34 @@ func (msgs Messages) SchemesNote() string {
 	return Catalog.Format(msgs.locale, "schemesNote", nil)
 }
 
-// LineOne says "$ wt-go --version"
+// LineOne says "Hello! AaBbZz 001lI8B"
 // in the language the app shows.
 func LineOne() string { return In(i18n.Locale()).LineOne() }
 
-// LineOne says "$ wt-go --version"
+// LineOne says "Hello! AaBbZz 001lI8B"
 // in the language of msgs.
 func (msgs Messages) LineOne() string {
 	return Catalog.Format(msgs.locale, "lineOne", nil)
 }
 
-// LineTwo says "wt-go v0.3.0"
+// LineTwo says "1234567890123456 ABCD"
 // in the language the app shows.
 func LineTwo() string { return In(i18n.Locale()).LineTwo() }
 
-// LineTwo says "wt-go v0.3.0"
+// LineTwo says "1234567890123456 ABCD"
 // in the language of msgs.
 func (msgs Messages) LineTwo() string {
 	return Catalog.Format(msgs.locale, "lineTwo", nil)
+}
+
+// LineThree says "0123456789 !@#$%^&*()"
+// in the language the app shows.
+func LineThree() string { return In(i18n.Locale()).LineThree() }
+
+// LineThree says "0123456789 !@#$%^&*()"
+// in the language of msgs.
+func (msgs Messages) LineThree() string {
+	return Catalog.Format(msgs.locale, "lineThree", nil)
 }
 
 // CursorSample says "cursor"

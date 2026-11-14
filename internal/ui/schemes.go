@@ -243,12 +243,22 @@ func preview(c *myui.Context, s *store.Settings) {
 	bg := th.Background.MixOklab(t.Background, 1-float32(clampOpacity(s.BackgroundOpacity)))
 	myui.Box(c).BorderWidth(1).BorderColor(cardLine(t)).Radius(8).Background(bg).
 		Padding(previewPadY(s), previewPadX(s)).Children(func() {
-		myui.Row(c).AlignItems(myui.Center).Gap(6).Children(func() {
-			myui.Text(c, locales.LineOne()).TextColor(th.Foreground).Font(textFont(s)).FontSize(previewFontSize(s))
-			cursorBlock(c, s, th)
-		})
-		myui.Text(c, locales.LineTwo()).TextColor(th.Foreground).Font(textFont(s)).FontSize(previewFontSize(s)).
-			LineHeight(previewLineHeight(s))
+		// The sample the preview is read off: the prompt with the cursor on it,
+		// and the lines under it, which start where the prompt leaves the words.
+		// A monospace face puts a letter, a digit and a symbol on the same
+		// advance, so the columns of the three lines line up; a face that is not
+		// monospace, or a fallback that draws the letters of a script at another
+		// width, shows as the columns that do not, which is what the sample is
+		// for. The words are the language's own, from its catalog.
+		for i, line := range sampleLines() {
+			myui.Row(c).AlignItems(myui.Center).Gap(6).Children(func() {
+				myui.Text(c, line).TextColor(th.Foreground).Font(textFont(s)).
+					FontSize(previewFontSize(s)).LineHeight(previewLineHeight(s))
+				if i == 0 {
+					cursorBlock(c, s, th)
+				}
+			})
+		}
 		// The sixteen colors a program names, in the two rows a terminal keeps
 		// them in: the eight it names, and the bright eight below them, so that a
 		// color stands over its bright twin. The room between them keeps two
@@ -266,6 +276,19 @@ func preview(c *myui.Context, s *store.Settings) {
 			}
 		})
 	})
+}
+
+// sampleLines is what the preview says a terminal says: the prompt with the
+// language's first line, and the two lines under it, drawn with the room the
+// prompt takes so that the columns of the three line up. That is what the
+// sample is for: a face that is not monospace, or a fallback that draws a
+// script at another advance, puts them out of line where a person can see it.
+func sampleLines() []string {
+	return []string{
+		"$ " + locales.LineOne(),
+		"  " + locales.LineTwo(),
+		"  " + locales.LineThree(),
+	}
 }
 
 // clampOpacity holds a share to what the window can show, since the draft is
