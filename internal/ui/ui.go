@@ -115,6 +115,10 @@ type Actions interface {
 	HideProfile(id string)
 	// DuplicateProfile copies the profile with an id, and shows its page.
 	DuplicateProfile(id string)
+	// ResetProfile puts the profile with an id back the way this machine has
+	// it now: the shell the probe finds, and the name and dot of the
+	// built-in table.
+	ResetProfile(id string)
 	// Run does the action with an id, as the palette picked it.
 	Run(action string)
 	// Find searches the terminal in front for text, as it is typed.

@@ -17,6 +17,7 @@ type navActions struct {
 	Actions
 	added    int
 	hidden   []string
+	reset    []string
 	toggled  int
 	page     string
 	defaults []string
@@ -24,6 +25,7 @@ type navActions struct {
 
 func (a *navActions) AddProfile()                    { a.added++ }
 func (a *navActions) HideProfile(id string)          { a.hidden = append(a.hidden, id) }
+func (a *navActions) ResetProfile(id string)         { a.reset = append(a.reset, id) }
 func (a *navActions) ToggleChangedKeys()             { a.toggled++ }
 func (a *navActions) SelectSettingsPage(page string) { a.page = page }
 func (a *navActions) SetDefaultProfile(id string)    { a.defaults = append(a.defaults, id) }
@@ -752,5 +754,39 @@ func TestAppearancePreviewKeepsTheHead(t *testing.T) {
 	// there rather than the field behind it.
 	if err := tt.Click(locales.LineTwo()); err != nil {
 		t.Fatalf("the preview cannot be clicked where it holds the head: %v", err)
+	}
+}
+
+// TestProfileReset covers the button a built-in profile gets: a click asks the
+// window to reset that profile, and a profile a person wrote has no such
+// button, since there is nothing on this machine to build it from.
+func TestProfileReset(t *testing.T) {
+	draw := func(p store.Profile) (*myui.Tester, *navActions) {
+		s := store.Default()
+		args := ""
+		act := &navActions{}
+		listed := []Profile{{ID: p.ID, Name: p.Name, Discovered: p.Discovered}}
+		tt := myui.NewTester(func(c *myui.Context) {
+			SettingsTab(c, Settings{
+				Draft: &s, Page: ProfilePage(p.ID), Profile: &p, Args: &args, Profiles: listed,
+			}, act)
+		}, 1100, 1700)
+		tt.Frame()
+		return tt, act
+	}
+
+	found := store.Profile{ID: "pwsh7", Name: "PowerShell 7", Command: `C:\pwsh.exe`, Discovered: true}
+	tt, act := draw(found)
+	if err := tt.Click(locales.ResetProfile()); err != nil {
+		t.Fatalf("clicking reset: %v", err)
+	}
+	if len(act.reset) != 1 || act.reset[0] != "pwsh7" {
+		t.Errorf("reset = %v, want the profile in front", act.reset)
+	}
+
+	mine := store.Profile{ID: "mine", Name: "我的", Command: "cmd.exe"}
+	tt, _ = draw(mine)
+	if _, ok := tt.Find(locales.ResetProfile()); ok {
+		t.Error("a profile the person wrote has a reset button")
 	}
 }

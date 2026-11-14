@@ -809,6 +809,12 @@ func profilePage(c *myui.Context, st Settings, act Actions, id string) {
 	t := c.Theme()
 	myui.Row(c).Padding(12, 16).Gap(8).BorderWidth(1, 0, 0, 0).BorderColor(cardLine(t)).Children(func() {
 		myui.Button(c, locales.Duplicate()).OnClick(func() { act.DuplicateProfile(p.ID) })
+		if p.Discovered {
+			// The machine is the one thing that can say what this profile is now,
+			// so the button that asks it sits here rather than on a page about
+			// every profile at once (the advanced page's probe).
+			myui.Button(c, locales.ResetProfile()).OnClick(func() { act.ResetProfile(p.ID) })
+		}
 		// Hiding is the whole of what a removal can do to a shell the window
 		// finds again on the next start, so that profile is offered the hiding
 		// alone rather than a delete that would not hold.

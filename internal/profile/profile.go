@@ -173,3 +173,15 @@ func (p Profile) CommandLine() []string {
 	}
 	return append([]string{p.Command}, p.Args...)
 }
+
+// Reset is a profile the window found, as the machine has it now: the program
+// and its arguments from the probe, the name and the dot from the table, and
+// not hidden, because the shell is there. The start directory stays: where a
+// tab begins is a choice the person made, and the machine knows nothing about
+// it.
+func Reset(p store.Profile, f Found) store.Profile {
+	p.Command, p.Args = f.Command, append([]string(nil), f.Args...)
+	p.Name, p.Color = Name(f.ID, f.Command), Color(f.ID)
+	p.Hidden, p.Discovered = false, true
+	return p
+}

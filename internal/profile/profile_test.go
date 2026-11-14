@@ -136,3 +136,40 @@ func TestName(t *testing.T) {
 		}
 	}
 }
+
+// TestReset covers a profile the window found, put back the way this machine
+// has it: the probe's program and arguments, the table's name and dot, and on
+// the menu again. What the table does not own, the start directory, stays.
+func TestReset(t *testing.T) {
+	p := store.Profile{
+		ID:         "pwsh7",
+		Name:       "我的 pwsh",
+		Command:    `C:\gone\pwsh.exe`,
+		Args:       []string{"-NoLogo"},
+		Dir:        `D:\work`,
+		Color:      "#123456",
+		Hidden:     true,
+		Discovered: true,
+	}
+	found := Found{ID: "pwsh7", Command: `C:\pwsh.exe`, Args: []string{"-NoLogo", "-NoProfile"}}
+	got := Reset(p, found)
+
+	if got.Name != "PowerShell 7" || got.Color != "#3b78ff" {
+		t.Errorf("name, color = %q, %q, want the table's", got.Name, got.Color)
+	}
+	if got.Command != `C:\pwsh.exe` || len(got.Args) != 2 || got.Args[1] != "-NoProfile" {
+		t.Errorf("command line = %q %q, want the one the probe found", got.Command, got.Args)
+	}
+	if got.Hidden || !got.Discovered {
+		t.Errorf("hidden, discovered = %v, %v, want a found shell on the menu", got.Hidden, got.Discovered)
+	}
+	if got.Dir != `D:\work` {
+		t.Errorf("dir = %q, want the directory the person chose", got.Dir)
+	}
+	// The arguments belong to the profile, not to the found shell the caller
+	// keeps: a change to one must not reach the other.
+	got.Args[0] = "-Changed"
+	if found.Args[0] != "-NoLogo" {
+		t.Errorf("found args = %q, want the caller's own", found.Args)
+	}
+}

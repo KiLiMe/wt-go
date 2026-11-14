@@ -267,6 +267,23 @@
   "iconColorNote": "标签栏用来标记这个配置文件的圆点颜色。",
   "hidden": "隐藏",
   "hiddenNote": "在新建标签的菜单里隐藏这个配置文件。",
+  "resetProfile": "重置为内置",
+  "resetProfileDone": "「{name}」已按这台机器现在的程序、名字与颜色重建。",
+  "@resetProfileDone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "resetProfileGone": "这台机器上已经没有「{name}」要跑的程序了，配置文件已隐藏。",
+  "@resetProfileGone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "shells": "Shell",
   "probe": "探测",
   "probeAgain": "重新探测 Shell",

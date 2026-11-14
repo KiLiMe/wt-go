@@ -2154,6 +2154,36 @@ func (msgs Messages) HiddenNote() string {
 	return Catalog.Format(msgs.locale, "hiddenNote", nil)
 }
 
+// ResetProfile says "Reset to built-in"
+// in the language the app shows.
+func ResetProfile() string { return In(i18n.Locale()).ResetProfile() }
+
+// ResetProfile says "Reset to built-in"
+// in the language of msgs.
+func (msgs Messages) ResetProfile() string {
+	return Catalog.Format(msgs.locale, "resetProfile", nil)
+}
+
+// ResetProfileDone says "Gave {name} the program, the name and the color this machine has now."
+// in the language the app shows.
+func ResetProfileDone(name string) string { return In(i18n.Locale()).ResetProfileDone(name) }
+
+// ResetProfileDone says "Gave {name} the program, the name and the color this machine has now."
+// in the language of msgs.
+func (msgs Messages) ResetProfileDone(name string) string {
+	return Catalog.Format(msgs.locale, "resetProfileDone", map[string]any{"name": name})
+}
+
+// ResetProfileGone says "This machine no longer has the program {name} runs, so the profile is hidden."
+// in the language the app shows.
+func ResetProfileGone(name string) string { return In(i18n.Locale()).ResetProfileGone(name) }
+
+// ResetProfileGone says "This machine no longer has the program {name} runs, so the profile is hidden."
+// in the language of msgs.
+func (msgs Messages) ResetProfileGone(name string) string {
+	return Catalog.Format(msgs.locale, "resetProfileGone", map[string]any{"name": name})
+}
+
 // Shells says "Shells"
 // in the language the app shows.
 func Shells() string { return In(i18n.Locale()).Shells() }

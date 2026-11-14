@@ -267,6 +267,23 @@
   "iconColorNote": "The color of the dot the tab strip marks the profile with.",
   "hidden": "Hidden",
   "hiddenNote": "Leave the profile out of the menu that opens tabs.",
+  "resetProfile": "Reset to built-in",
+  "resetProfileDone": "Gave {name} the program, the name and the color this machine has now.",
+  "@resetProfileDone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "resetProfileGone": "This machine no longer has the program {name} runs, so the profile is hidden.",
+  "@resetProfileGone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "shells": "Shells",
   "probe": "Probe",
   "probeAgain": "Probe the shells again",

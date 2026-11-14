@@ -78,6 +78,7 @@
 | ADR-72 | ConPTY 剥掉 OSC 回复的头：ADR-58 的病因改写，决定不变 | 有效 |
 | ADR-73 | ConPTY 一条回复都不发：ADR-58 的拆条作废，过滤面扩到全部答复 | 有效 |
 | ADR-74 | 按住不放只连发「走一步」的动作：新建标签一次按下一次 | 有效 |
+| ADR-75 | 重置为内置：一条内置 profile 按现在这台机器重建 | 有效 |
 
 ---
 
@@ -2024,3 +2025,33 @@ Windows 上同一个目录会被写成 `C:\Users\Foo`（环境变量）与 `c:\u
 **测试**：`internal/action/action_test.go` 的 `TestRepeats`（连发集合正好是那六个，未知 id 为假）与
 `internal/app/bind_test.go` 的 `TestHeldKeys`（`store.DefaultKeybindings()` 编成的键位里，默认键绑到的
 动作各自该不该连发）。
+
+## ADR-75 重置为内置：一条内置 profile 按现在这台机器重建
+
+**背景**：内置 profile 的命令行只有「重新探测」（高级页）会换，而那一次换的是**全部**探测到的条目：
+想修好一条，得连带重写别条的命令行，并且名字与颜色仍然是你改过的，看不出「原样是什么」。ADR-71 之后
+隐藏的条目留在列表里，但让它「回到刚装上的样子」只有删掉 `settings.json` 重来这一条路。
+
+**决定**：
+
+1. 「配置文件」页的卡片底部，探测到的条目多一个**重置为内置**（`Actions.ResetProfile`，`locales.resetProfile`），
+   自己写的条目没有：它们不是这台机器给的，没有「内置」可回。
+2. 它只探这一次（`found()`），只改这一条：程序与参数取探测到的，名字与圆点颜色取自
+   `internal/profile` 的内置表（`profile.Reset`），`hidden` 置回 `false`。**目录保留**——那是这台机器
+   不知道的选择。
+3. 写的是页面正在编辑的那份副本（与「隐藏」同一路），于是立刻标出「未保存」，点保存才落到文件。
+4. 探测不到这条的程序：把它 `hidden` 置上，页脚说「这台机器上已经没有它要跑的程序了」。文件里不删它，
+   因为下次探测还会找到同一个 id（ADR-25、ADR-71 的理由一样）。
+5. 页脚用 `resetProfileDone` / `resetProfileGone` 说结果，两条都点名是哪条 profile。
+
+**理由**：①一台机器的事实只有探测说得准，那么「回到内置」就得现探，而不是背诵启动时那次的结果；
+②一条一条地修，是条目自己的属性，所以按钮在条目上，而「全部重来」仍留在高级页；③名字与颜色属于内置表，
+重置要把它们也还回去，否则「重置」只改了半条 profile，人还得自己去回忆原来的颜色。
+
+**代价**：一次点击就探一遍机器（与高级页的「重新探测」同价，几十到几百毫秒）；`locales` 多三个 key
+（`resetProfile`、`resetProfileDone`、`resetProfileGone`，后两个带 `name` 占位符）。
+
+**测试**：`internal/profile/profile_test.go` 的 `TestReset`（程序、参数、名字、颜色、`hidden`，目录不变，
+参数不与探测结果共用底层数组）；`internal/app/resetprofile_test.go` 的 `TestResetProfile`（写进副本、
+页面的参数跟着换、变脏）与 `TestResetProfileGone`（探测不到就隐藏并说一句）；`internal/ui/settings_test.go`
+的 `TestProfileReset`（内置条目有这个按钮、点它带自己的 id、自己写的没有）。
