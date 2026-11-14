@@ -659,3 +659,46 @@ func TestProfileListLeavesHiddenProfilesOut(t *testing.T) {
 		t.Fatalf("the list does not show a hidden profile the switch asked for: %q", tt.Texts())
 	}
 }
+
+// TestAppearancePreviewKeepsTheHead covers the preview the appearance page
+// draws: the setting that changes it is often just under it, so the preview
+// keeps the head of the page while the fields scroll past, rather than leaving
+// a person to scroll up after every change.
+func TestAppearancePreviewKeepsTheHead(t *testing.T) {
+	s := store.Default()
+	tt := myui.NewTester(func(c *myui.Context) {
+		SettingsTab(c, Settings{Draft: &s, Page: PageAppearance}, &navActions{})
+	}, 900, 700)
+	tt.Frame()
+	line, ok := tt.Find(locales.LineTwo())
+	if !ok {
+		t.Fatalf("the appearance page draws no preview: %q", tt.Texts())
+	}
+	size, ok := tt.Find(locales.FontSize())
+	if !ok {
+		t.Fatalf("the appearance page lists no font size: %q", tt.Texts())
+	}
+	// The wheel turns over the fields, which is where a person's pointer is.
+	tt.Scroll(600, 400, 0, 400)
+	tt.Frame()
+	held, ok := tt.Find(locales.LineTwo())
+	if !ok {
+		t.Fatalf("the preview is gone once the page scrolls: %q", tt.Texts())
+	}
+	if held.Y < 0 {
+		t.Fatalf("the preview line at %v is above the page it should hold", held.Y)
+	}
+	if held.Y >= line.Y {
+		t.Fatalf("the preview line went from %v to %v: it scrolled with the fields", line.Y, held.Y)
+	}
+	// The fields under it did scroll, so what held the preview is not the page
+	// having nothing to scroll.
+	if moved, ok := tt.Find(locales.FontSize()); ok && moved.Y >= size.Y {
+		t.Fatalf("the font size went from %v to %v: the page did not scroll", size.Y, moved.Y)
+	}
+	// It paints above the fields that roll under it, and the pointer finds it
+	// there rather than the field behind it.
+	if err := tt.Click(locales.LineTwo()); err != nil {
+		t.Fatalf("the preview cannot be clicked where it holds the head: %v", err)
+	}
+}

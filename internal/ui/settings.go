@@ -549,11 +549,11 @@ func interactionPage(c *myui.Context, st Settings, act Actions) {
 }
 
 // appearancePage is how the window and the terminals look: a terminal drawn as
-// the draft draws it, above the face, the typesetting, the cursor, and the
-// colors it is drawn with.
+// the draft draws it, held at the head of the page while the face, the
+// typesetting, the cursor, and the colors it is drawn with scroll under it.
 func appearancePage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
-	section(c, locales.AppearancePreview(), func() {
+	pinnedSection(c, locales.AppearancePreview(), func() {
 		preview(c, s)
 	})
 	section(c, locales.AppearanceFace(), func() {

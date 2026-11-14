@@ -80,6 +80,21 @@ func dangerSection(c *myui.Context, title string, fields func()) {
 	cardSection(c, title, true, fields)
 }
 
+// pinnedSection is a section that keeps the head of the page while the fields
+// under it scroll: the appearance page draws the terminal the settings make,
+// and the setting that changes it is often under the thumb, so the preview is
+// worth more at the top than wherever the scroll leaves it. The band paints
+// the page's own background, since a sticky element draws above its siblings
+// and what rolls behind it would otherwise show through the gap between its
+// heading and its card.
+func pinnedSection(c *myui.Context, title string, fields func()) {
+	t := c.Theme()
+	myui.Column(c).Sticky().Top(0).Background(t.Background).
+		Padding(10, 0, 12, 0).BorderWidth(0, 0, 1, 0).BorderColor(cardLine(t)).Children(func() {
+		section(c, title, fields)
+	})
+}
+
 // cardSection is section and dangerSection: a heading, and a card of rows.
 func cardSection(c *myui.Context, title string, danger bool, fields func()) {
 	t := c.Theme()
