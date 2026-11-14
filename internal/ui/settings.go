@@ -815,8 +815,10 @@ func profilePage(c *myui.Context, st Settings, act Actions, id string) {
 			myui.Switch(c, &p.Hidden)
 		})
 	})
-	t := c.Theme()
-	myui.Row(c).Padding(12, 16).Gap(8).BorderWidth(1, 0, 0, 0).BorderColor(cardLine(t)).Children(func() {
+	// No line over this row: it stands under the card of fields rather than
+	// inside it, and a hairline there draws a second edge a few pixels under
+	// the card's own, one that runs past the card's rounded corner.
+	myui.Row(c).Padding(12, 16).Gap(8).Children(func() {
 		myui.Button(c, locales.Duplicate()).OnClick(func() { act.DuplicateProfile(p.ID) })
 		if p.Discovered {
 			// The machine is the one thing that can say what this profile is now,
