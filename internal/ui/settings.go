@@ -740,9 +740,14 @@ func profileRow(c *myui.Context, st Settings, act Actions, p Profile) {
 		} else {
 			name.FontWeight(500)
 		}
+		if !p.Discovered && !p.Hidden {
+			return
+		}
+		// The badges sit at the end of the row rather than behind the name: a
+		// column of them reads as a column, and a long name does not push the
+		// word it is marked with out of the row.
+		myui.Spacer(c)
 		if p.Discovered {
-			// The badge says the window found this shell, so it sits beside the
-			// name it describes.
 			myui.Text(c, locales.BuiltIn()).FontSize(10).TextColor(t.TextMuted).
 				Background(t.Surface).Padding(0, 5).Radius(4).Shrink(0)
 		}
