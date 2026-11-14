@@ -815,6 +815,27 @@ func (a *App) dirty() bool {
 	return !store.EqualProfile(*a.editing, a.editingFrom)
 }
 
+// syncTabMarks gives the tabs already open the marks their profiles now name.
+// A tab copies its profile's name, color and mark when it opens, and the
+// settings page edits the profiles under the tabs that run them: without this a
+// person saves a new icon and every tab but the one in front keeps the old one.
+// A profile the settings no longer offer -- removed, or hidden, which is not one
+// of the window's -- leaves its tab with the mark it opened with, so that a
+// window running a shell that is gone does not turn into a plain one.
+func (a *App) syncTabMarks() {
+	for _, tab := range a.panes.Tabs {
+		if tab.ProfileID == "" {
+			continue
+		}
+		for _, p := range a.profiles {
+			if p.ID == tab.ProfileID {
+				tab.ProfileName, tab.Color, tab.Icon = p.Name, p.Color, p.Icon
+				break
+			}
+		}
+	}
+}
+
 // apply gives the window what the settings ask for, and does nothing while
 // they are what it gave it last time: the settings tab edits the settings the
 // window shows, so that a change shows as it is made.
@@ -827,6 +848,7 @@ func (a *App) apply() {
 	a.appearance()
 	a.keys = bindings(s.Keybindings)
 	a.profiles = profile.Resolve(s.Profiles, a.found)
+	a.syncTabMarks()
 	font := a.terminalFont()
 	colors := theme.Terminal(s)
 	a.pane = ui.Face{Background: colors.Background, Foreground: colors.Foreground}

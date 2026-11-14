@@ -423,6 +423,57 @@ func TestWindowAsksBeforeItCloses(t *testing.T) {
 	}
 }
 
+// TestTabMarksFollowTheProfile covers the mark of a tab that is already open:
+// saving a profile's icon, color or name reaches the tab that runs it, without
+// restarting the shell in it. The settings tab runs no profile and keeps what
+// it has, and so does a tab whose profile the settings no longer offer.
+func TestTabMarksFollowTheProfile(t *testing.T) {
+	settingsDir(t)
+	a := newApp("")
+	a.settings.Profiles = []store.Profile{{
+		ID:      "pwsh7",
+		Name:    "PowerShell 7",
+		Command: `C:\Windows\pwsh.exe`,
+		Color:   "#3b78ff",
+		Icon:    "pwsh7:official",
+	}}
+	a.profiles = profile.Resolve(a.settings.Profiles, a.found)
+	tab := &pane.Tab{ProfileID: "pwsh7", ProfileName: "PowerShell 7", Color: "#3b78ff", Icon: "pwsh7:official"}
+	renamed := &pane.Tab{Name: "build", ProfileID: "pwsh7", ProfileName: "PowerShell 7", Color: "#3b78ff", Icon: "pwsh7:official"}
+	gone := &pane.Tab{ProfileID: "nope", ProfileName: "Gone", Color: "#111111", Icon: "cmd:classic"}
+	settings := &pane.Tab{Name: locales.Settings()}
+	a.panes.Add(tab)
+	a.panes.Add(renamed)
+	a.panes.Add(gone)
+	a.panes.Add(settings)
+
+	edited := a.settings.Clone()
+	edited.Profiles[0].Name = "Pwsh"
+	edited.Profiles[0].Icon = "\U0001f44c"
+	edited.Profiles[0].Color = "#ff0000"
+	a.settings = edited
+	// apply() is what saves this: it resolves the profiles and hands the tabs
+	// what they now name. It draws for the desktop too, which a test has none
+	// of, so the two steps it takes for the tabs are taken here.
+	a.profiles = profile.Resolve(edited.Profiles, a.found)
+	a.syncTabMarks()
+
+	for _, tb := range []*pane.Tab{tab, renamed} {
+		if tb.Icon != "\U0001f44c" || tb.Color != "#ff0000" || tb.ProfileName != "Pwsh" {
+			t.Errorf("tab %q = %q, %q, %q, want the profile's new mark", tb.Name, tb.Icon, tb.Color, tb.ProfileName)
+		}
+	}
+	if renamed.Name != "build" {
+		t.Errorf("the name a person gave the tab became %q, want it left alone", renamed.Name)
+	}
+	if gone.Icon != "cmd:classic" || gone.Color != "#111111" {
+		t.Errorf("a tab whose profile is gone = %q, %q, want the mark it opened with", gone.Icon, gone.Color)
+	}
+	if settings.Name != locales.Settings() || settings.Icon != "" || settings.Color != "" {
+		t.Errorf("the settings tab = %q, %q, %q, want it left alone", settings.Name, settings.Icon, settings.Color)
+	}
+}
+
 // TestWindowDoesNotAskWhenTheSettingsDoNot covers the same close with the
 // settings off: the window goes without a word.
 func TestWindowDoesNotAskWhenTheSettingsDoNot(t *testing.T) {
