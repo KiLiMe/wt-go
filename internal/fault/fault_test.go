@@ -39,10 +39,13 @@ func TestKnown(t *testing.T) {
 
 func TestLine(t *testing.T) {
 	got := Line(BadField, "font.size must be between 4 and 200")
-	for _, want := range []string{"E202", "font.size", "between 4 and 200", doc} {
+	for _, want := range []string{"E202", "font.size", "between 4 and 200"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("Line() = %q, want it to hold %q", got, want)
 		}
+	}
+	if strings.Contains(got, doc) {
+		t.Errorf("Line() = %q, want the code and what it means only", got)
 	}
 	if plain := Line(NoShell, ""); strings.Contains(plain, "()") {
 		t.Errorf("Line() = %q, want no empty detail", plain)
@@ -52,7 +55,7 @@ func TestLine(t *testing.T) {
 func TestFind(t *testing.T) {
 	lines := []string{
 		"2026-11-10T23:00:00+08:00",
-		"wt-go: E203 a keybinding names a key wt-go cannot read (keybinding \"ctrl++\"), see docs/故障排查.md",
+		"wt-go: E203 a keybinding names a key wt-go cannot read (keybinding \"ctrl++\")",
 		"goroutine 1 [running]:",
 	}
 	got, ok := Find(lines)
@@ -62,7 +65,7 @@ func TestFind(t *testing.T) {
 	if _, ok := Find([]string{"wt-go: nothing is wrong"}); ok {
 		t.Error("Find() found a fault in a line that has none")
 	}
-	if _, ok := In("panic: boom\nwt-go: E302 the window stopped with a panic, see docs/故障排查.md\n"); !ok {
+	if _, ok := In("panic: boom\nwt-go: E302 the window stopped with a panic\n"); !ok {
 		t.Error("In() did not find the fault in a crash log")
 	}
 }

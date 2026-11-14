@@ -217,13 +217,17 @@ func (r Report) Text(w io.Writer) {
 }
 
 // Explain is the report as one block of text for an agent: the lines, then
-// each failed check with what its code means and where the details are
-// written.
+// each failed check with what its code means, then where the details are
+// written — once for the report, not once per line.
 func (r Report) Explain() string {
 	var b strings.Builder
 	r.Text(&b)
-	for _, c := range r.Failed() {
+	failed := r.Failed()
+	for _, c := range failed {
 		fmt.Fprintf(&b, "\n%s\n", fault.Line(c.Code, c.Detail))
+	}
+	if len(failed) > 0 {
+		fmt.Fprintf(&b, "\nsee %s\n", fault.Doc())
 	}
 	return b.String()
 }

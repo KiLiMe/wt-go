@@ -64,6 +64,10 @@ var about = map[Code]string{
 // doc is where the details for a code are kept, from the project root.
 const doc = "docs/故障排查.md"
 
+// Doc is where the details for a code are kept, from the project root: for
+// the places that point there once instead of on every line.
+func Doc() string { return doc }
+
 // String makes a code print as itself.
 func (c Code) String() string { return string(c) }
 
@@ -87,15 +91,17 @@ func All() []Code {
 	return out
 }
 
-// Line is what the program prints for a fault: the code, what it means, and
-// where the rest is written. detail carries what only this run knows (a field
-// name, an error) and is left out when empty.
+// Line is what the program prints for a fault: the code and what it means.
+// detail carries what only this run knows (a field name, an error) and is
+// left out when empty. The doc is not named here: a log line stays one
+// sentence of the messages' language, and a path of this repository is not
+// part of what the user reads; `wt-go diag` says it once for the whole report.
 func Line(c Code, detail string) string {
 	s := string(c) + " " + c.Short()
 	if detail != "" {
 		s += " (" + detail + ")"
 	}
-	return s + ", see " + doc
+	return s
 }
 
 // Find picks the fault line out of what a log holds, so that a window that
