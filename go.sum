@@ -1,5 +1,5 @@
-github.com/KiLiMe/mygo v0.9.1-0.20261115004314-2c04786e3426 h1:YIjT0lk2gl9RMl6BXwtcHe/X/IvNqRvo6IM7XGnftNI=
-github.com/KiLiMe/mygo v0.9.1-0.20261115004314-2c04786e3426/go.mod h1:Hw9sxdSQ4tHuehHw5Q6alR1qTS8kgv3oSFxEejg+7qo=
+github.com/KiLiMe/mygo v0.9.1-0.20261115021321-e1a31175156c h1:7wfS06nHgTpeB5CI3wuG9rrkFLPghBrRmuwsOC5PQ5s=
+github.com/KiLiMe/mygo v0.9.1-0.20261115021321-e1a31175156c/go.mod h1:Hw9sxdSQ4tHuehHw5Q6alR1qTS8kgv3oSFxEejg+7qo=
 github.com/ProtonMail/go-crypto v1.4.1 h1:9RfcZHqEQUvP8RzecWEUafnZVtEvrBVL9BiF67IQOfM=
 github.com/ProtonMail/go-crypto v1.4.1/go.mod h1:e1OaTyu5SYVrO9gKOEhTc+5UcXtTUa+P3uLudwcgPqo=
 github.com/cloudflare/circl v1.6.2 h1:hL7VBpHHKzrV5WTfHCaBsgx/HGbBYlgrwvNXEVDYYsQ=

@@ -2256,8 +2256,9 @@ VSCodium 的 `Editor: Font Family` 那种能直接写的地方，又舍不得那
 1. 修在 fork 的 pty 层：`plugins/terminal/internal/pty/pty_windows.go` 的 `start()` 在 `spawn` 之后调
    `setVTInput()`——`FreeConsole` → `AttachConsole(pid)`（控制台还在起，头两次会拒，40 次 × 5ms 重试）→
    打开 `CONIN$` → `GetConsoleMode` → 不在 VT 输入模式就 `SetConsoleMode(mode|0x200)` → `FreeConsole`。
-   失败静默，`start()` 不因此失败。
-2. `go.mod` 的 `replace` 升到 `v0.9.1-0.20261114173155-7bbb59156315`（fork 的 `wtgo` 分支）。
+   失败静默，`start()` 不因此失败。**ADR-82 之后这条只对 Windows 自己的 conhost 生效**：随包那份
+   ConPTY 本来就转发，不再需要补位。
+2. `go.mod` 的 `replace` 升到 `v0.9.1-0.20261115021321-e1a31175156c`（fork 的 `wtgo` 分支）。
 3. wt-go 侧一行没改：`termOptions` 仍然不设 `OnScroll`，滚轮的三路分流不动。
 
 **理由**：症状在 wt-go 的分流，病因在更下一层——终端根本没被告知程序要了鼠标，任何判据都无解。改在
@@ -2276,3 +2277,48 @@ pty 层才对每个程序都成立：自己会开 VT 输入模式的（vim、hto
 （子进程就是测试二进制自己，`MYGO_PTY_HELPER=mouse` 时写 `?1049h?1000h?1002h?1006h`；把这个修去掉时
 等满 1 分钟失败，带着时 0.04s 过），`go test ./plugins/terminal/...` 全过；wt-go 侧 `go vet ./...`、
 `go test ./...` 全过。真 pi 对照：修前滚两次 `changed=false`，修后 `changed=true`。
+## ADR-82 随包一份 Windows Terminal 的 ConPTY：程序问的话才有人答
+
+**背景**：第二个症状是 pi 的工具卡片没有底色。Windows Terminal 里同一段对话，`PS> …` 那张卡片铺着一块
+墨绿底（取像素是 `#1d2e1c`），在 wt-go 里文字照旧、底色与页面同为 `#0c0c0c`，看着像「被吞」。取证分两半：
+
+- pi（`system` 主题）把 `toolSuccessBg` 这类 token 解析成「终端背景色」的派生值：终端颜色只能靠 OSC
+  10/11/4 的回复得知，拿不到就退回 `GUESSED_DEFAULT_COLORS`（暗色 `#000000`）。实测 `theme.bg`：没有
+  终端颜色时给 `"\x1b[49mX\x1b[49m"`（等于没画），喂进 Campbell 调色板再 `setTheme("system")` 后给
+  `rgb(30,46,28)` = `#1e2e1c`，正是 Windows Terminal 那栏的颜色。
+- wt-go 这一侧根本没在答：`terminal.writeReply` 在 ConPTY 下直接返回（ADR-72 时代的结论）。三条注入
+  路线全试过、全失败：写 `inW`（24 字节进了、子进程收 0）、`AttachConsole(pid)` + `WriteConsoleInputW`
+  25 条 KEY_EVENT（同样收 0）、`CreatePseudoConsole` 的 passthrough 标志（本机 conhost 起不来子进程）。
+  把 kero 随包的 `conpty.dll` + `OpenConsole.exe` 换进同一段 pty 代码，同一个子进程立刻收到
+  `in "\x1b]11;rgb:0c0c/0c0c/0c0c\a"` ⇒ **吞字节的是操作系统的 conhost，不是 wt-go**。
+
+**决定**：
+
+1. fork 的 pty 层带一份 Windows Terminal 的 ConPTY（`Microsoft.Windows.Console.ConPTY` 1.25.260930003，
+   MIT，amd64 与 arm64 各一份），用 `//go:embed` 打进二进制，首次使用时解到
+   `<用户缓存>/mygo/conpty/<版本>/` 再 `LoadLibrary`；`conpty.dll` 与 `OpenConsole.exe` 必须同目录。
+2. 选择顺序：`MYGO_CONPTY`（目录，或字面量 `system` 强制用 Windows 自己的）→ exe 同目录 → 随包解出的
+   → 系统 conhost。随包那份 `CreatePseudoConsole` 失败时退回系统 conhost 再试一次，`start()` 不因此失败。
+3. 因为控制台现在会转发，`writeReply` 只在「控制台会把回复留下」时才闭嘴：pty 新增
+   `KeepsReplies()`（就是「用的是不是系统 conhost」），`terminal.writeReply` 判
+   `t.conpty() && pty.KeepsReplies()`。ADR-72 的「ConPTY 下什么都不写」收窄为「Windows 自己的 ConPTY
+   下什么都不写」。
+4. ADR-81 的 `enableVTInput` 只对系统 conhost 用（随包那份本来就转发）。`ClearScreen` 有
+   `ClearPseudoConsole` 就用它，系统 conhost 仍走 `PTY_SIGNAL_CLEAR_WINDOW`（24H2 之前没有）。
+
+**理由**：这两件事（程序要鼠标、终端答问题）都是 conhost 的实现细节，客户端补不齐——`AttachConsole` 能
+补上输入模式让鼠标过去（ADR-81），但回复怎么都进不去。Windows Terminal 自己的 ConPTY 正是为此重写的，
+且 MIT、可随包分发。
+
+**代价**：
+
+- 二进制多 2.4MB（运行时解到缓存，不占安装目录）；缓存目录不可写时退回系统 conhost，回复又回到没有。
+- 随包那份的 `ClearPseudoConsole` 实测不清屏也不重画（探针：清屏后 0 字节；系统 conhost 会重画
+  `\x1b[HPS …`）。所以清屏之后屏幕由 wt-go 自己的 vt 重画，控制台的行账目可能与终端不同步——与 kero
+  同样的取舍，写在这里备查。
+
+**测试**：fork 的 `TestConPTYPassesTheReply`（子进程写 `\x1b]11;?\x07`，父进程写应答，子进程读到
+`heard:"…\a"`；系统 conhost 下 skip）、`TestConPTYForwardsMouse`（随包那份不需要 `enableVTInput` 就过）、
+`TestConPTYClearScreen`（强制 `MYGO_CONPTY=system` 才断言重画）、`TestWriteReply`（按 `KeepsReplies()`
+断言两种行为）；`go test ./plugins/terminal/...` 全过。真机验收：新构建里重放一段带工具卡片的会话，
+截图里卡片底色是 `#1e2e1c`、错误卡片 `#3d201d`，与 Windows Terminal 一致；修前整屏只有 `#0c0c0c`。
