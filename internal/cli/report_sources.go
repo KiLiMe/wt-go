@@ -64,12 +64,11 @@ func nativeReport() NativeReport {
 // terminals run, and programs that ask for the colors and the mouse hear
 // nothing back.
 func conptyReport() ConPTYReport {
-	named := strings.TrimSpace(sys.Getenv("MYGO_CONPTY"))
-	path, err := sys.ConPTYLibrary()
+	path, fromEnv, err := sys.ConPTYLibrary()
 	if err != nil {
 		return ConPTYReport{}
 	}
-	return ConPTYReport{Path: path, Env: named != "" && named != "system", Found: true}
+	return ConPTYReport{Path: path, Env: fromEnv, Found: true}
 }
 
 func shells() []ShellReport {
