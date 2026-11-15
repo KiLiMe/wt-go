@@ -28,4 +28,4 @@ tool github.com/egoist/mygo/cmd/mygo
 // program (ADR-82), Windows' own console keeping both until its input reads as
 // VT, which ADR-81 covers where the fork falls back to it; keys go as the plain
 // forms while a program has CSI u on (ADR-57).
-replace github.com/egoist/mygo => github.com/KiLiMe/mygo v0.9.1-0.20261115021321-e1a31175156c
+replace github.com/egoist/mygo => github.com/KiLiMe/mygo v0.9.1-0.20261115024025-b53c471dd46e
