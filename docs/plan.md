@@ -213,9 +213,9 @@ Linux 上冷启动的 150 MB RSS 里 Go 代码只占约 9 MB，大头是 MyGo �
 - **多窗口**：独立进程还是单进程多窗？前者简单，后者才能共享设置热重载。
 - **给自动化测试用的控制接口**：需要能驱动标签/窗格、读终端内容；`diag` 与 `mcp` 只做到了只读现场。
 - **内置 SSH**：暂定不做，外部调用 `ssh` 即可。
-- **自带 `conpty.dll`/`OpenConsole.exe`**：不走系统 conhost 的话，Windows 上程序问终端的配色能问到
-  （ADR-72、`earendil-works/pi#10256` 里 WezTerm nightly 的走法；hyla 就是这么做的，见 `refs/AGENTS.md`）。
-  要评的是打包体积（单 arch 约 1.15 MiB）、与系统 conhost 的 ABI/降级路径，以及它只覆盖自己创建的标签，
-  ADR-03 仍然成立。ADR-73 已决定「ConPTY 下不写任何回复」，这条只在下面任一条成立时才值得重开：上游 mygo
-  自己引入了 bundled conpty；用户反复要求程序能问到配色；需要 `ClearPseudoConsole`/`ReparentPseudoConsole`
-  这类只有新 conpty 才有的能力。
+- **随包 ConPTY 跟版的节奏**：ADR-82 已随包 Windows Terminal 的 ConPTY（`1.25.260930003`，两 arch
+  共 2.4MB，放在 `resources/windows-<goarch>/`，装出来在 exe 旁边），钉死在这个版本，而系统 conhost 随
+  Windows 走。要评的是多久跟一次上游 tag（nuget 上最新稳定是 `1.25.261109001`）；「这次用的是哪一份」
+  已经在 `wt-go diag` 的 `conpty:` 行里说得出。
+- **随包 ConPTY 的清屏语义**：那份的 `ClearPseudoConsole` 不清屏也不重画（ADR-82「代价」），清屏后
+  控制台的行账目可能与终端不同步。要评的是「清屏后由 wt-go 自己重画」够不够，还是要另找路子。

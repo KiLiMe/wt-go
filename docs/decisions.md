@@ -2294,31 +2294,48 @@ pty 层才对每个程序都成立：自己会开 VT 输入模式的（vim、hto
 
 **决定**：
 
-1. fork 的 pty 层带一份 Windows Terminal 的 ConPTY（`Microsoft.Windows.Console.ConPTY` 1.25.260930003，
-   MIT，amd64 与 arm64 各一份），用 `//go:embed` 打进二进制，首次使用时解到
-   `<用户缓存>/mygo/conpty/<版本>/` 再 `LoadLibrary`；`conpty.dll` 与 `OpenConsole.exe` 必须同目录。
-2. 选择顺序：`MYGO_CONPTY`（目录，或字面量 `system` 强制用 Windows 自己的）→ exe 同目录 → 随包解出的
-   → 系统 conhost。随包那份 `CreatePseudoConsole` 失败时退回系统 conhost 再试一次，`start()` 不因此失败。
-3. 因为控制台现在会转发，`writeReply` 只在「控制台会把回复留下」时才闭嘴：pty 新增
-   `KeepsReplies()`（就是「用的是不是系统 conhost」），`terminal.writeReply` 判
-   `t.conpty() && pty.KeepsReplies()`。ADR-72 的「ConPTY 下什么都不写」收窄为「Windows 自己的 ConPTY
-   下什么都不写」。
+1. 随包一份 Windows Terminal 的 ConPTY（`Microsoft.Windows.Console.ConPTY` 1.25.260930003，MIT，
+   amd64 与 arm64 各一份），放在 `resources/windows-<goarch>/`：`conpty.dll`、`OpenConsole.exe` 与
+   `ConPTY-LICENSE.txt`。`go tool mygo build` 把平台目录里的文件平铺到 exe 旁边，所以装出来就是 exe 与
+   这三份并列；fork 的 pty 层不再 `//go:embed` 任何二进制，也不再解到用户缓存。
+2. 选择顺序：`MYGO_CONPTY`（目录，或字面量 `system` 强制用 Windows 自己的）→ exe 同目录 → 系统 conhost。
+   那份 `CreatePseudoConsole` 失败时退回系统 conhost 再试一次，`start()` 不因此失败。
+3. 因为控制台现在会转发，`writeReply` 只在「控制台会把回复留下」时才闭嘴：pty 有 `PassesReplies()`，
+   `terminal.writeReply` 判 `t.conpty() && !pty.PassesReplies()`。ADR-72 的「ConPTY 下什么都不写」收窄为
+   「Windows 自己的 ConPTY 下什么都不写」。
 4. ADR-81 的 `enableVTInput` 只对系统 conhost 用（随包那份本来就转发）。`ClearScreen` 有
    `ClearPseudoConsole` 就用它，系统 conhost 仍走 `PTY_SIGNAL_CLEAR_WINDOW`（24H2 之前没有）。
+5. 来源钉在 `Scripts/conpty.json`：包名、版本、nupkg 的 SHA-256，以及每个随包文件的 SHA-256；根包的
+   `TestConPTYFilesMatchTheManifest` 逐个比对。换版本时先下新 nupkg、核哈希、换文件、改清单。
+6. `wt-go diag` 说出这次用的是哪一份：`conpty: <exe 旁的 conpty.dll>`，没有那份时说「Windows 自己的
+   控制台，程序问的话不回来」。fork 的 `terminal.ConPTY()` 是运行时那份答案（含原因），
+   `internal/sys.ConPTYLibrary()` 是 diag 从文件看得到的同一件事。
 
 **理由**：这两件事（程序要鼠标、终端答问题）都是 conhost 的实现细节，客户端补不齐——`AttachConsole` 能
 补上输入模式让鼠标过去（ADR-81），但回复怎么都进不去。Windows Terminal 自己的 ConPTY 正是为此重写的，
 且 MIT、可随包分发。
 
+放哪儿则不必自创：WezTerm、kero、NyaTerm、ELYTerminal 四家都是「exe 旁边一份 `conpty.dll`」，alacritty
+也从 exe 同目录按裸名 `LoadLibrary` 加载（只是自己不发布那两个文件）。mygo 的
+`resources/windows-<goos>-<goarch>` 本来就是「装出来放在 exe 旁边」；单文件发行 + 运行时解包在这个生态里
+是独一份：它把 2.4MB 二进制塞进 exe、要一个用户缓存目录、要一套「缓存还是不是当初那份」的校验，而这两份
+文件本该是可以被 `signtool` 看见、被用户看一眼的东西。
+
 **代价**：
 
-- 二进制多 2.4MB（运行时解到缓存，不占安装目录）；缓存目录不可写时退回系统 conhost，回复又回到没有。
+- 安装目录多 2.4MB（exe 从 16.6MB 降到 14.7MB，净额不变）；只把 exe 拷走会静默退回系统 conhost，回复又
+  回到没有——`wt-go diag` 的 `conpty:` 行就是为此写的。
 - 随包那份的 `ClearPseudoConsole` 实测不清屏也不重画（探针：清屏后 0 字节；系统 conhost 会重画
   `\x1b[HPS …`）。所以清屏之后屏幕由 wt-go 自己的 vt 重画，控制台的行账目可能与终端不同步——与 kero
   同样的取舍，写在这里备查。
 
-**测试**：fork 的 `TestConPTYPassesTheReply`（子进程写 `\x1b]11;?\x07`，父进程写应答，子进程读到
-`heard:"…\a"`；系统 conhost 下 skip）、`TestConPTYForwardsMouse`（随包那份不需要 `enableVTInput` 就过）、
-`TestConPTYClearScreen`（强制 `MYGO_CONPTY=system` 才断言重画）、`TestWriteReply`（按 `KeepsReplies()`
-断言两种行为）；`go test ./plugins/terminal/...` 全过。真机验收：新构建里重放一段带工具卡片的会话，
-截图里卡片底色是 `#1e2e1c`、错误卡片 `#3d201d`，与 Windows Terminal 一致；修前整屏只有 `#0c0c0c`。
+**测试**：`TestConPTYFilesMatchTheManifest`（清单与字节对得上）；fork 的 `TestConPTYPassesTheReply` 与
+`TestConPTYForwardsMouse` 从 `MYGO_CONPTY` 取目录、没有那份就 skip，`TestConPTYClearScreen` 强制
+`MYGO_CONPTY=system` 才断言重画，`TestWriteReply` 按 `PassesReplies()` 断言两种行为。真机：
+`build\windows-amd64\` 起窗口后 `OpenConsole.exe` 的 `ExecutablePath` 指向同目录、`ParentProcessId` 是
+`wt-go.exe`；把 `conpty.dll` 改名后窗口照旧启动、`diag` 改口成「Windows 自己的控制台」；新构建重放一段带
+工具卡片的会话，卡片底色 `#1e2e1c`、错误卡片 `#3d201d`，与 Windows Terminal 一致。
+
+**后续**：随包版本跟不跟 nuget（现在钉 `1.25.260930003`，最新稳定 `1.25.261109001`）留在 `docs/plan.md`；
+跟版时重跑上面那条哈希流程。fork 里 `conPTY` 的能力字段（`passesReplies`/`needsVTInput`）与 `own()` 只留
+退路判断，这次一并定下来，见 fork 的 `plugins/terminal/internal/pty/conpty_windows.go`。

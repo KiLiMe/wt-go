@@ -25,7 +25,8 @@ tool github.com/egoist/mygo/cmd/mygo
 
 // Our fork of mygo: the console it makes is the ConPTY of Windows Terminal,
 // so what a program asks for reaches the terminal and the answers reach the
-// program (ADR-82), Windows' own console keeping both until its input reads as
-// VT, which ADR-81 covers where the fork falls back to it; keys go as the plain
-// forms while a program has CSI u on (ADR-57).
-replace github.com/egoist/mygo => github.com/KiLiMe/mygo v0.9.1-0.20261115024025-b53c471dd46e
+// program (ADR-82); each console says what it does with them rather than which
+// one it is, Windows' own keeping the replies and needing its input mode set
+// before it forwards the mouse (ADR-81); keys go as the plain forms while a
+// program has CSI u on (ADR-57).
+replace github.com/egoist/mygo => github.com/KiLiMe/mygo v0.9.1-0.20261115131101-ed2bc6757703

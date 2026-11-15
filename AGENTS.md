@@ -35,6 +35,7 @@
 | `internal/mcp/` | 精简的 Model Context Protocol 服务器：JSON-RPC 2.0 + tools/resources（只用标准库） |
 | `tools/genicon/` | 画 `resources/icon.png`：`go run ./tools/genicon` |
 | `resources/icon.png` | 应用图标（1024×1024 PNG），`mygo build` 打包时嵌进 exe |
+| `resources/windows-<goarch>/` | 随包的 ConPTY：`conpty.dll` / `OpenConsole.exe` / `ConPTY-LICENSE.txt`（ADR-82），打包时平铺到 exe 旁边；来源与哈希钉在 `Scripts/conpty.json`，根包 `conpty_test.go` 校验 |
 | `Scripts/build.ps1` | 日常构建（Windows）：`go tool mygo build` 出 `build\windows-amd64\wt-go.exe`（带图标、版本与 native 库） |
 | `Scripts/build.sh` | 同上（Linux / macOS）：出 `build/<os>-<arch>/wt-go`，平台按 `go env` |
 | `docs/` | `使用说明.md` / `配置参考.md`（`settings.json` 全字段）/ `键位.md`（默认键位与键位写法）/ `故障排查.md`（故障码）/ `MCP.md`（`wt-go mcp` 的工具、资源与协议）/ `Linux.md` / `代码导读.md` / `decisions.md`（ADR）/ `plan.md`（阶段计划） |

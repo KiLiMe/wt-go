@@ -3,5 +3,10 @@
 
 # Binaries are not text and must never be converted.
 *.exe binary
+*.dll binary
 *.png binary
 *.ico binary
+
+# The ConPTY license comes from Microsoft byte for byte; conpty_test.go
+# checks the hash, so a conversion here would break a fresh clone.
+resources/windows-*/* -text
