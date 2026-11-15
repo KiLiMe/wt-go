@@ -105,6 +105,37 @@ func Tail(path string, limit int64) (string, bool, error) {
 // of the places the terminal plugin looks.
 var ErrNoNative = errors.New("sys: libghostty-vt is not in any of the places it is looked for")
 
+// ErrNoConPTY is what ConPTYLibrary answers when the app ships no conpty.dll:
+// the terminals then run in Windows' own console, which is no failure, only a
+// console that keeps to itself what a program asks.
+var ErrNoConPTY = errors.New("sys: no conpty.dll beside the executable")
+
+// ConPTYLibrary is the conpty.dll the terminal plugin would make its terminals
+// in, in the order it looks: the directory $MYGO_CONPTY names, then the one
+// beside the executable. Windows' own console is no file, so this answers
+// ErrNoConPTY for it; which of the two runs is the plugin's choice at runtime,
+// and this only says what it has to choose from.
+func ConPTYLibrary() (string, error) {
+	if runtime.GOOS != "windows" {
+		return "", ErrNoConPTY
+	}
+	if dir := os.Getenv("MYGO_CONPTY"); dir != "" && dir != "system" {
+		p := filepath.Join(dir, "conpty.dll")
+		if _, err := os.Stat(p); err == nil {
+			return p, nil
+		}
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return "", ErrNoConPTY
+	}
+	p := filepath.Join(filepath.Dir(exe), "conpty.dll")
+	if _, err := os.Stat(p); err != nil {
+		return "", ErrNoConPTY
+	}
+	return p, nil
+}
+
 // nativeName is what libghostty-vt is called on this platform.
 func nativeName() string {
 	switch runtime.GOOS {

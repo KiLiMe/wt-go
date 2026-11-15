@@ -34,6 +34,7 @@ type Report struct {
 	Executable string          `json:"executable,omitempty"`
 	Settings   SettingsReport  `json:"settings"`
 	Native     NativeReport    `json:"native"`
+	ConPTY     ConPTYReport    `json:"conpty"`
 	Shells     []ShellReport   `json:"shells"`
 	Profiles   []ProfileReport `json:"profiles"`
 	Crashes    []CrashReport   `json:"crash_logs"`
@@ -58,6 +59,15 @@ type SettingsReport struct {
 
 // NativeReport is the libghostty-vt the terminal plugin would load.
 type NativeReport struct {
+	Path  string `json:"path,omitempty"`
+	Env   bool   `json:"from_env,omitempty"`
+	Found bool   `json:"found"`
+}
+
+// ConPTYReport is the conpty.dll the terminals would be made in, empty when
+// Windows' own console is: the window still works, and what a program asks the
+// terminal for does not come back.
+type ConPTYReport struct {
 	Path  string `json:"path,omitempty"`
 	Env   bool   `json:"from_env,omitempty"`
 	Found bool   `json:"found"`
@@ -116,6 +126,7 @@ func Collect() Report {
 	}
 	r.Settings = settingsReport()
 	r.Native = nativeReport()
+	r.ConPTY = conptyReport()
 	r.Shells = shells()
 	r.Profiles = profiles(r.Shells, r.Settings.Error == "")
 	r.Crashes = crashes()
@@ -191,6 +202,9 @@ func (r Report) Text(w io.Writer) {
 		line("          %s", r.Settings.Error)
 	}
 	line("native:   %s", or(r.Native.Path, "not found"))
+	if strings.HasPrefix(r.Platform, "windows/") {
+		line("conpty:   %s", or(r.ConPTY.Path, "Windows' own console, which drops what a program asks"))
+	}
 	for _, p := range r.Profiles {
 		state := "ok"
 		if !p.Available {

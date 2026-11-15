@@ -59,6 +59,19 @@ func nativeReport() NativeReport {
 	return NativeReport{Path: path, Found: true}
 }
 
+// conptyReport is the conpty.dll the terminals would be made in. Windows' own
+// console is no file, and this is where a copy of the exe on its own shows: the
+// terminals run, and programs that ask for the colors and the mouse hear
+// nothing back.
+func conptyReport() ConPTYReport {
+	named := strings.TrimSpace(sys.Getenv("MYGO_CONPTY"))
+	path, err := sys.ConPTYLibrary()
+	if err != nil {
+		return ConPTYReport{}
+	}
+	return ConPTYReport{Path: path, Env: named != "" && named != "system", Found: true}
+}
+
 func shells() []ShellReport {
 	found := sys.Discover()
 	out := make([]ShellReport, 0, len(found))
