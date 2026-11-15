@@ -36,7 +36,7 @@ Linux / macOS 把 `command` 换成 wt-go 的路径，`args` 不变。Claude Desk
 | 工具 | 输入 | 回答 |
 | --- | --- | --- |
 | `wtgo_diag` | 无 | `wt-go diag` 的文本：报告的行，加上每个失败检查的 `fault.Line`（编号 + 细节）。**先调这个** |
-| `wtgo_status` | 无 | 整份报告的 JSON：`program` / `version` / `revision` / `packaged` / `go` / `platform` / `executable` / `settings` / `native` / `shells` / `profiles` / `crash_logs` / `log` / `checks` |
+| `wtgo_status` | 无 | 整份报告的 JSON：`program` / `version` / `revision` / `packaged` / `go` / `platform` / `executable` / `settings` / `native` / `conpty` / `shells` / `profiles` / `crash_logs` / `log` / `checks` |
 | `wtgo_settings` | 无 | `settings` 与头两项检查（配置目录、`settings.json`）：路径、是否存在、能否解析、语言、主题、配色、默认 profile、键位数 |
 | `wtgo_profiles` | 无 | `shells` 与合并后的 `profiles`：这台机器有哪些 shell，每个 profile 用什么命令、能不能真正启动 |
 | `wtgo_log` | `lines`（1–2000，默认 120）、`path`（`wtgo_status` 里看到的某份日志，留空取最新的崩溃日志） | 日志末尾若干行；文件超过 1 MiB 时只读尾部并标一行 `(only the end of the file)` |
