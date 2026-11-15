@@ -2239,3 +2239,40 @@ VSCodium 的 `Editor: Font Family` 那种能直接写的地方，又舍不得那
 （0/负数 → 400，越界夹回 100–900）与 `TestTerminalFont` 里对 `Weight` 的断言；
 `internal/ui/settings_test.go` 的 `TestWeightOptions`（九档、每档 Value 是数字、标签带数字）
 与 `TestWeightIsKept`（文件写着 350 时页面显示 350 并原样写回）。
+
+## ADR-81 一个 ConPTY 造出来的控制台先开 VT 输入模式：程序要的鼠标才到得了终端
+
+**背景**：在 wt-go 里跑 pi，滚轮不动它的正文，反而把输入框的历史翻出来，看着像按了 `↑`。滚轮分三路
+是 xterm/Ghostty 的规矩（`view.scroll`：程序接管了鼠标就发 SGR 报文；全屏程序且 `?1007h` 就发箭头；
+两者都不成立才滚自己的缓冲），所以「变成 `↑`」等于 wt-go 认为 pi 没接管鼠标。实测确实如此：裸 ConPTY
+直连 pi，输出流里只有 `?9001h ?1004h ?25l ?1049h ?2004h ?2031h ?2026h`，pi 写的
+`?1000h ?1002h ?1003h ?1004h ?1006h` 一个都没到终端。原因是 conhost：控制台的输入模式里没有
+`ENABLE_VIRTUAL_TERMINAL_INPUT`（`0x0200`）时，程序写的鼠标模式被它自己收下、不转发；pi（bun）是
+**先**要鼠标、**后**才把控制台设成 `0x208`（含 `0x200`，约 4 秒后才读得到），顺序反了。同一个子进程
+对照：控制台停在 `0x1f7` 时转发 0 个，补到 `0x3f7` 时五个全转发。
+
+**决定**：
+
+1. 修在 fork 的 pty 层：`plugins/terminal/internal/pty/pty_windows.go` 的 `start()` 在 `spawn` 之后调
+   `setVTInput()`——`FreeConsole` → `AttachConsole(pid)`（控制台还在起，头两次会拒，40 次 × 5ms 重试）→
+   打开 `CONIN$` → `GetConsoleMode` → 不在 VT 输入模式就 `SetConsoleMode(mode|0x200)` → `FreeConsole`。
+   失败静默，`start()` 不因此失败。
+2. `go.mod` 的 `replace` 升到 `v0.9.1-0.20261114173155-7bbb59156315`（fork 的 `wtgo` 分支）。
+3. wt-go 侧一行没改：`termOptions` 仍然不设 `OnScroll`，滚轮的三路分流不动。
+
+**理由**：症状在 wt-go 的分流，病因在更下一层——终端根本没被告知程序要了鼠标，任何判据都无解。改在
+pty 层才对每个程序都成立：自己会开 VT 输入模式的（vim、htop、以及开完的 bun）本来就是 `0x200`，跳过；
+只对「先要鼠标、后开 VT」的程序生效。
+
+**代价**：
+
+- `AttachConsole` 要求调用进程没有控制台，所以先 `FreeConsole()`：wt-go 从终端里启动时会失去自己的
+  控制台（GUI 正常启动没有控制台，无影响）。
+- `start()` 多最多 200ms 的同步重试，实测第 3 次、约 10ms 就成。
+- 提前打开 `0x200` 理论上会让「按控制台记录读输入」的老式程序看到 VT 输入；实测 pwsh 交互正常
+  （`echo hi-there` 回显、提示符重画都对）。
+
+**测试**：fork 里 `plugins/terminal/internal/pty/pty_windows_test.go` 的 `TestConPTYForwardsMouse`
+（子进程就是测试二进制自己，`MYGO_PTY_HELPER=mouse` 时写 `?1049h?1000h?1002h?1006h`；把这个修去掉时
+等满 1 分钟失败，带着时 0.04s 过），`go test ./plugins/terminal/...` 全过；wt-go 侧 `go vet ./...`、
+`go test ./...` 全过。真 pi 对照：修前滚两次 `changed=false`，修后 `changed=true`。

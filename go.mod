@@ -23,6 +23,8 @@ require (
 
 tool github.com/egoist/mygo/cmd/mygo
 
-// Our fork of mygo: a terminal behind a ConPTY writes no reply at all, and keys
-// go as the plain forms while a program has CSI u on (ADR-72, ADR-57).
-replace github.com/egoist/mygo => github.com/KiLiMe/mygo v0.9.1-0.20261114074236-9c1200f395e4
+// Our fork of mygo: a terminal behind a ConPTY writes no reply at all, keys
+// go as the plain forms while a program has CSI u on (ADR-72, ADR-57), and a
+// console made here has virtual terminal input on, so a program that asks for
+// the mouse before it turns that on is heard (ADR-81).
+replace github.com/egoist/mygo => github.com/KiLiMe/mygo v0.9.1-0.20261115004314-2c04786e3426
