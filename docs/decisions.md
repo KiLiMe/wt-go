@@ -1478,14 +1478,15 @@ Kitty 分支与 ConPTY 判断都没动，上游 `main` 也一样（git issue #12
 4. 上游没修：`main` 到 `v0.9.1-0.20261113060250-614ea7a6af6e`，`plugins/terminal` 最近 12 个提交没有一条
    碰回复或是 ConPTY 输入，tag 仍停在 `v0.9.0`。
 
-**决定**：fork `egoist/mygo` 到 `KiLiMe/mygo`，分支 `wtgo`，一处两个动作：
+**决定**：fork `egoist/mygo` 到 `KiLiMe/mygo`，分支 `wt-go-pin`，一处两个动作：
 1. `WritePTY` 的回调里用 `splitReplies` 把一次写里的多条回复拆开，逐条 `t.in.push`；
 2. 同一处用 `t.skipReply` 丢掉 ConPTY 载不动的颜色回复（`OSC 4/10/11/12`）——只在
    `Options.Conn == nil && runtime.GOOS == "windows"`（即有 ConPTY）时生效，`Conn` 场景与其它平台照旧全答。
 
 `go.mod` 用 `replace github.com/egoist/mygo => github.com/KiLiMe/mygo v0.9.1-0.20261113062854-43b180c1f204`
-（基线是 `v0.9.1-0.20261113060250-614ea7a6af6e`，比 `v0.8.3` 多 68 个提交；`wtgo` 分支 rebase 上去后是
-两个提交：本条的回复拆条/跳过，加 ADR-57 的键位兜底）。
+（基线是 `v0.9.1-0.20261113060250-614ea7a6af6e`，比 `v0.8.3` 多 68 个提交；`wt-go-pin` 分支 rebase 上去后是
+两个提交：本条的回复拆条/跳过，加 ADR-57 的键位兜底）。`wt-go-pin` 后来一直保持这条形状：始终是「上游的某个提交
+之上只有我们自己的几个提交」，没合并提交，同步上游就是一次 `rebase`（2026-11-16）。
 
 **理由**：规范上这是 pi 的健壮性缺陷（读块边界从来不是协议保证），但 wt-go 侧没有别的落点：`Options`
 里没有「少答/分批答」的开关，想自己控 pty 就得用 `Options.Conn` 把 mygo 的 `internal/pty` 重做一遍
