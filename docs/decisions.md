@@ -2390,9 +2390,9 @@ pty 层才对每个程序都成立：自己会开 VT 输入模式的（vim、hto
 **决定**：
 
 1. `internal/app/links.go` 的 `openLink(dir)` 就是那个钩子，`termOptions` 把它接上。
-2. `isURL` 先分流：带 `mailto:` 或有 `://`（且 scheme 里没有 `/` `\`）的算网址，返回 false 交给插件；
+2. `linkPath` 先分流：带 `mailto:` 或有 `://`（且 scheme 里没有 `/` `\`）的算网址，返回 `""` 交给插件；
    盘符的冒号不是 scheme，`C:\src\main.go` 不会被当成协议。
-3. 其余当路径。`printedPath` 先 `sys.ExpandPath` 展开 `~` 与变量，再去掉 `place` 认出的 `:12` / `:12:3`
+3. 其余当路径。`linkPath` 接着用 `sys.ExpandPath` 展开 `~` 与变量，再去掉 `place` 认出的 `:12` / `:12:3`
    ——终端把位置贴在路径尾巴上，原样交给 `explorer.exe` 什么也打不开。相对路径按 `linkDir` 拼绝对路径：
    shell 用 OSC 7 报过的目录优先，没报过就用这个窗格启动程序时的目录。`dirOf` 在点的一刻才问，
    所以 `cd sub` 之后打印的相对路径能解析对（插件早就把 OSC 7 解出来放在 `Terminal.Dir()` 里，只是 wt-go 一直没用）。
@@ -2414,7 +2414,7 @@ Windows Terminal 用的 OSC 9;9：libghostty-vt 是 C 库，只绑定了 OSC 7 �
 `HoveredLink` 的矩形包住全部）；不按 `Ctrl` 也显下划线（上游刻意的设计，`plugins/terminal/terminal_test.go`
 有测试钉住）、`:12:3` 直接交给编辑器跳到那一行，仍在插件里，没做。
 
-**测试**：`TestPlace`（`:12`/`:12:3` 的长度，盘符冒号不算）、`TestPrintedPath`、`TestIsURL`；
+**测试**：`TestPlace`（`:12`/`:12:3` 的长度，盘符冒号不算）、`TestLinkPath`（网址得 `""`，路径去掉位置）、
 `TestLinkDir`（没终端、终端没报过）、`TestLinkDirFollowsOSC7`（把 `\x1b]7;file:///tmp/somewhere\x07` 喂给一个
 无头终端，等到 `Dir()` 出现再问 `linkDir`）、`TestLinkDirKeepsADriveWhole`（同一手法喂 `file:///C:/src`，要求
 Windows 上回来的是绝对路径，拼出来的链接落在盘符下面）。

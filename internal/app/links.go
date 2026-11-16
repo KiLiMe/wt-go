@@ -19,10 +19,10 @@ import (
 // reported last (OSC 7), or the one the terminal started in.
 func (a *App) openLink(dirOf func() string) func(string) bool {
 	return func(link string) bool {
-		if isURL(link) {
+		path := linkPath(link)
+		if path == "" {
 			return false
 		}
-		path := printedPath(link)
 		if !filepath.IsAbs(path) {
 			path = filepath.Join(dirOf(), path)
 		}
@@ -55,21 +55,18 @@ func linkDir(term *terminal.Terminal, start string) string {
 	return start
 }
 
-// isURL says whether link carries a scheme: what the terminal finds as a URL,
-// OSC 8 or spelled out in the text, is none of this window's business. A path
-// has no scheme, and the colon of a drive letter does not make one.
-func isURL(link string) bool {
+// linkPath is the path a Control+click on a printed link opens, or "" for a
+// URL, which the terminal opens with the desktop: a scheme says it is one, and
+// the colon of a drive letter says nothing. The path comes back with the home
+// directory and the variables expanded and the place in the file taken off, as
+// the terminal hands over main.go:12:3, which no program opens as it stands.
+func linkPath(link string) string {
 	if strings.HasPrefix(link, "mailto:") {
-		return true
+		return ""
 	}
-	i := strings.Index(link, "://")
-	return i > 0 && !strings.ContainsAny(link[:i], `/\`)
-}
-
-// printedPath is link with the home directory and the variables expanded and
-// the place in the file taken off: the terminal hands over main.go:12:3,
-// which no program can open as it stands.
-func printedPath(link string) string {
+	if i := strings.Index(link, "://"); i > 0 && !strings.ContainsAny(link[:i], `/\`) {
+		return ""
+	}
 	link = sys.ExpandPath(link)
 	if n := place(link); n > 0 {
 		link = link[:len(link)-n]

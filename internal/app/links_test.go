@@ -91,8 +91,6 @@ func awaitDir(t *testing.T, term *terminal.Terminal) {
 
 // report is the other end of a terminal that says one thing and then falls
 // silent, which is how a shell reports its directory once.
-// report is the other end of a terminal that says one thing and then falls
-// silent, which is how a shell reports its directory once.
 type report struct {
 	data []byte
 	done bool
@@ -134,44 +132,31 @@ func TestPlace(t *testing.T) {
 	}
 }
 
-// TestPrintedPath covers what a printed path is once the place is off: the
-// path a program would open.
-func TestPrintedPath(t *testing.T) {
+// TestLinkPath covers both halves of a printed link: a scheme is a URL, which
+// the terminal opens with the desktop, and a path comes back with the place in
+// the file off, as the path a program would open.
+func TestLinkPath(t *testing.T) {
 	tests := []struct {
 		link string
 		want string
 	}{
+		// URLs are the terminal's business.
+		{"https://example.com/a?b=1", ""},
+		{"file:///C:/x/a.txt", ""},
+		{"mailto:me@example.com", ""},
+		{"vscode://file/C:/x", ""},
+		// A drive letter is no scheme: the path stays, without its place.
+		{`C:\src\main.go`, `C:\src\main.go`},
+		{`C:\src\main.go:12:3`, `C:\src\main.go`},
+		{"src/a:b", "src/a:b"},
 		{"./build/app.js", "./build/app.js"},
 		{"./build/app.js:12", "./build/app.js"},
-		{`C:\src\main.go:12:3`, `C:\src\main.go`},
 		{"main.go:12", "main.go"},
+		{"", ""},
 	}
 	for _, tt := range tests {
-		if got := printedPath(tt.link); got != tt.want {
-			t.Errorf("printedPath(%q) = %q, want %q", tt.link, got, tt.want)
-		}
-	}
-}
-
-// TestIsURL covers which links this window leaves to the desktop: a scheme
-// says it is a URL, and a drive letter does not.
-func TestIsURL(t *testing.T) {
-	tests := []struct {
-		link string
-		want bool
-	}{
-		{"https://example.com/a?b=1", true},
-		{"file:///C:/x/a.txt", true},
-		{"mailto:me@example.com", true},
-		{"vscode://file/C:/x", true},
-		{`C:\src\main.go`, false},
-		{"main.go", false},
-		{"src/a:b", false},
-		{"", false},
-	}
-	for _, tt := range tests {
-		if got := isURL(tt.link); got != tt.want {
-			t.Errorf("isURL(%q) = %v, want %v", tt.link, got, tt.want)
+		if got := linkPath(tt.link); got != tt.want {
+			t.Errorf("linkPath(%q) = %q, want %q", tt.link, got, tt.want)
 		}
 	}
 }
