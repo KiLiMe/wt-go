@@ -10,32 +10,46 @@ pwsh ./Scripts/build.ps1                                  # 2 构建（Linux/mac
 ./build/windows-amd64/wt-go.exe                           # 3 运行
 ```
 
-发布页每个平台一个便携 zip：Windows 是 `wt-go.exe`、`ghostty-vt.dll` 与 `LICENSE`，Linux 是 `wt-go`、`libghostty-vt.so` 与 `LICENSE`；解压即用，没有安装器、也没有 `.deb`。
-构建脚本参数：`-Test` 先跑 vet 与测试，`-Clean` 清掉 `build/`，`-Package` 只出 `dist/`。
+发布页每个平台一个便携 zip：Windows 含 `wt-go.exe`、`ghostty-vt.dll`、`conpty\` 与 `data\`（便携模式），Linux 含 `wt-go`、`libghostty-vt.so`、`data/` 与 `wt-go.desktop`，均带 `LICENSE`；解压即用，没有安装器或 `.deb`。
+构建脚本参数：`-Test` / `--test` 先跑 vet 与测试，`-Clean` / `--clean` 清掉 `build/`，`-Package` / `--package` 只出 `dist/`。
 
 ## 依赖环境
 
 | 项 | 要求 | 出处 |
 | --- | --- | --- |
-| Go | 1.27.3 | `go.mod` 的 `go` 行，CI 用 `go-version-file: go.mod` |
-| mygo | v0.8.3（提供 `go tool mygo`、UI 与终端插件） | `go.mod` 的 `require` 与 `tool` 行 |
-| purego / golang.org/x/sys | v0.11.1 / v0.48.0 | `go.mod` 的 `require` |
-| Windows | 10 1809+ / 11，需要 ConPTY | 主要支持与验证目标 |
-| Linux | glibc ≥ 2.28；GTK 3、Pango、Cairo 运行库；CJK 字体 | [docs/Linux.md](docs/Linux.md) 第 1 节 |
-| macOS | 能编译，CI 只跑测试、不打包 | `.github/workflows/ci.yml` 的构建矩阵 |
-| 构建工具 | 无额外依赖；PowerShell 7+（Windows）或 bash（Linux/macOS） | `Scripts/build.ps1` / `Scripts/build.sh` |
+| Go | 1.27.3 | `go.mod` |
+| mygo | fork 分支 `wt-go-pin`（见 `go.mod` `replace` 行） | `go.mod` |
+| Windows | Windows 10 1809+ / 11（ConPTY） | 主要支持与验证目标 |
+| Linux（实验性） | glibc ≥ 2.28；GTK 3、Pango、Cairo（purego 调用，无需 cgo/WebKitGTK）；CJK 字体；`GTK_IM_MODULE` | 见下方安装命令 |
+| macOS（实验性） | 可编译，CI 仅跑测试不打包 | `.github/workflows/ci.yml` |
+
+Linux 运行库与字体安装：
+
+```sh
+# Debian / Ubuntu
+sudo apt install libgtk-3-0 libpango-1.0-0 libpangocairo-1.0-0 fonts-noto-cjk
+# Fedora
+sudo dnf install gtk3 pango pangocairo google-noto-sans-cjk-fonts
+# Arch
+sudo pacman -S gtk3 pango noto-fonts-cjk
+```
+
+## 文档
+
+- [使用说明](docs/使用说明.md)：功能、交互、设置页与平台差异
+- [配置参考](docs/配置参考.md)：`settings.json` 全字段、路径写法与默认键位
+- [故障排查](docs/故障排查.md)：`wt-go diag`、故障码 `E1xx`–`E3xx` 与 `wt-go mcp`
+- [代码导读](docs/代码导读.md)：包边界、渲染主循环、关键暗坑与发版流程
+- [架构决策](docs/decisions.md)：关键架构与设计取舍（ADR）
+- 开发约定见 [AGENTS.md](AGENTS.md)
 
 ## 许可
 
-wt-go 本身用 [MIT 许可证](LICENSE)，版权归 Copyright (c) 2026 KiLiMe：可以自由使用、修改、
-再分发（含商用），只需在所有副本里保留版权与许可声明。软件按“原样”提供，不含任何担保。
-
-随二进制分发的第三方组件各自保留原许可：
+wt-go 采用 [MIT 许可证](LICENSE)（Copyright (c) 2026 KiLiMe）。随二进制分发的第三方组件保留原许可：
 
 | 组件 | 用途 | 许可 |
 | --- | --- | --- |
-| mygo v0.8.3 | UI、终端插件与打包工具 | MIT（`LICENSE`） |
-| libghostty-vt（Ghostty） | 终端内核，即 `ghostty-vt.dll` / `libghostty-vt.so` | MIT，见 [Ghostty 上游 LICENSE](https://github.com/ghostty-org/ghostty/blob/main/LICENSE) |
-| Remix Icon v4.8.0 | 界面图标，`internal/icons/svg/` | Apache-2.0（全文见 `internal/icons/LICENSE`，出处见 `internal/icons/NOTICE`） |
-
-开发与提交约定见 [AGENTS.md](AGENTS.md)。
+| mygo（`KiLiMe/mygo`） | UI、终端插件与打包工具 | MIT |
+| libghostty-vt（Ghostty） | 终端内核（`ghostty-vt.dll` / `libghostty-vt.so`） | MIT |
+| Windows Terminal ConPTY | Windows 随包控制台（`conpty.dll` / `OpenConsole.exe`） | MIT（`resources/windows-*/conpty/ConPTY-LICENSE.txt`） |
+| Remix Icon v4.8.0 | 界面图标（`internal/icons/svg/`） | Apache-2.0（`internal/icons/LICENSE`） |
