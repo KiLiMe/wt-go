@@ -8,5 +8,7 @@
 *.ico binary
 
 # The ConPTY license comes from Microsoft byte for byte; conpty_test.go
-# checks the hash, so a conversion here would break a fresh clone.
-resources/windows-*/* -text
+# checks the hash, so a conversion here would break a fresh clone. The
+# double star has to cover the conpty subdirectory too: a single star stops
+# at the slash, and the files stopped being matched when they moved down.
+resources/windows-*/** -text
