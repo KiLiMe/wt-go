@@ -1,6 +1,7 @@
 package app
 
 import (
+	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
@@ -42,17 +43,22 @@ func TestLinkDirFollowsOSC7(t *testing.T) {
 }
 
 // TestLinkDirKeepsADriveWhole covers the shape a file URL of a Windows drive
-// takes in the plugin: /C:/src, which is no absolute path on Windows, so
-// every relative path would land on a drive that is not there.
+// takes: the slash the URL puts in front of the drive is not part of it, so a
+// relative path printed there is joined under the drive itself. It fails if
+// the plugin goes back to handing out /C:/src, which is no path on Windows.
 func TestLinkDirKeepsADriveWhole(t *testing.T) {
 	term := reportingTerminal(t, "\x1b]7;file:///C:/src\x07")
 	defer term.Close()
 	awaitDir(t, term)
-	if got := term.Dir(); got != "/C:/src" {
-		t.Skipf("the plugin reports %q, not the slash before the drive", got)
+	dir := term.Dir()
+	if runtime.GOOS == "windows" && !filepath.IsAbs(dir) {
+		t.Fatalf("the plugin reports %q, which is no absolute path on Windows", dir)
 	}
-	if got := linkDir(term, `C:\start`); got != `C:\start` {
-		t.Errorf("linkDir = %q, want the start directory", got)
+	if !filepath.IsAbs(dir) {
+		t.Skipf("the plugin reports %q, which is no path here", dir)
+	}
+	if got := linkDir(term, `C:\start`); got != dir {
+		t.Errorf("linkDir = %q, want the reported %q", got, dir)
 	}
 }
 
