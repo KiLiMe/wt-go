@@ -313,6 +313,7 @@ func Parse(b []byte) (Settings, error) {
 	if err := json.Unmarshal(b, &s); err != nil {
 		return Settings{}, fmt.Errorf("settings: %w", err)
 	}
+	s.fillEmptyLists()
 	// A key no field names is kept as it was written, so that saving from the
 	// settings page does not drop what a person or a later version put there.
 	// Reading b twice rather than teaching Settings to read itself keeps the

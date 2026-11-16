@@ -17,7 +17,7 @@ import (
 func OpenPath(path string) error {
 	abs, err := filepath.Abs(path)
 	if err != nil {
-		return fmt.Errorf("sys: open %s: %w", path, err)
+		return openError(path, err)
 	}
 	// The one in %SystemRoot% is the one this Windows ships; a bare name is
 	// whatever the PATH decides, which is not something to trust with a click.
@@ -27,12 +27,12 @@ func OpenPath(path string) error {
 	}
 	cmd := exec.Command(explorer, abs)
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("sys: open %s: %w", path, err)
+		return openError(path, err)
 	}
 	// Nothing waits for Explorer: releasing the process keeps the window from
 	// holding it for the rest of the session.
 	if err := cmd.Process.Release(); err != nil {
-		return fmt.Errorf("sys: open %s: %w", path, err)
+		return openError(path, err)
 	}
 	return nil
 }
@@ -45,11 +45,11 @@ func OpenPath(path string) error {
 func OpenURL(url string) error {
 	verb, err := syscall.UTF16PtrFromString("open")
 	if err != nil {
-		return err
+		return openError(url, err)
 	}
 	target, err := syscall.UTF16PtrFromString(url)
 	if err != nil {
-		return err
+		return openError(url, err)
 	}
 	const swShownormal = 1
 	r, _, _ := shellExecuteW.Call(0,
@@ -63,3 +63,7 @@ func OpenURL(url string) error {
 }
 
 var shellExecuteW = syscall.NewLazyDLL("shell32.dll").NewProc("ShellExecuteW")
+
+// openError is how every way of failing says the same thing, the way launch
+// does on the other systems.
+func openError(what string, err error) error { return fmt.Errorf("sys: open %s: %w", what, err) }

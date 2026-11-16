@@ -39,9 +39,8 @@ func (a *App) forget(terms ...*terminal.Terminal) {
 // the plugin keeps the process to itself, so the window learns it from the one
 // child that starts between the two lists.
 func (a *App) newTerminal(opts terminal.Options) (*terminal.Terminal, error) {
-	// A path printed in a terminal is a link only because this window opens
-	// it, and from where: the directory the shell reported last (OSC 7) when
-	// it reports one, else the one the terminal started in.
+	// A printed path opens from where the shell says it is now, so the
+	// directory is asked for at the click, when term is no longer nil.
 	var term *terminal.Terminal
 	opts.OpenLink = func(link string) bool { return a.openLink(link, linkDir(term, opts.Dir)) }
 	before, berr := sys.Subtree(sys.OwnPID())

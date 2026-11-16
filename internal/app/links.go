@@ -22,11 +22,13 @@ import (
 // no link while the setting says so (setLinks), which is also what keeps the
 // pointer from underlining one.
 func (a *App) openLink(link, dir string) bool {
+	// An empty link is no link: false leaves it to the terminal, which found
+	// nothing to hand over in the first place.
+	if link == "" {
+		return false
+	}
 	path := linkPath(link)
 	if path == "" {
-		if link == "" {
-			return false
-		}
 		if err := sys.OpenURL(link); err != nil {
 			log.Printf("wt-go: %s", fault.Line(fault.OpenLink, err.Error()))
 		}
@@ -70,11 +72,11 @@ func linkDir(term *terminal.Terminal, start string) string {
 	return start
 }
 
-// linkPath is the path a click on a printed link opens, or "" for a
-// URL, whose scheme says it is one, and the colon of a drive letter says
-// nothing. The path comes back with the home
-// directory and the variables expanded and the place in the file taken off, as
-// the terminal hands over main.go:12:3, which no program opens as it stands.
+// linkPath is the path a click on a printed link opens, or "" for a URL. A
+// URL's scheme says it is one, and the colon of a drive letter says nothing.
+// The path comes back with the home directory and the variables expanded and
+// the place in the file taken off: the terminal hands over main.go:12:3, which
+// no program opens as it stands.
 func linkPath(link string) string {
 	if strings.HasPrefix(link, "mailto:") {
 		return ""
@@ -91,15 +93,19 @@ func linkPath(link string) string {
 func pathWithoutPlace(path string) string {
 	for {
 		i := strings.LastIndexByte(path, ':')
-		if i <= 1 || path[i+1:] == "" || !allDigits(path[i+1:]) {
+		if i <= 1 || !allDigits(path[i+1:]) {
 			return path
 		}
 		path = path[:i]
 	}
 }
 
-// allDigits reports whether s is a run of decimal digits.
+// allDigits reports whether s is a run of decimal digits. An empty string is
+// none: the place in a file is a place only when it has a number.
 func allDigits(s string) bool {
+	if s == "" {
+		return false
+	}
 	for _, r := range s {
 		if r < '0' || r > '9' {
 			return false

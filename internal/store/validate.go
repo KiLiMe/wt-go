@@ -59,6 +59,19 @@ func ProfileIDs(profiles []Profile) []string {
 	return bad
 }
 
+// fillEmptyLists turns a list the file wrote as null into an empty one. Clone
+// and Equal compare what the window shows with reflect.DeepEqual, where a nil
+// list and an empty one are different answers: a file that said null would
+// otherwise read as a change the person never made.
+func (s *Settings) fillEmptyLists() {
+	if s.Schemes == nil {
+		s.Schemes = []Scheme{}
+	}
+	if s.Profiles == nil {
+		s.Profiles = []Profile{}
+	}
+}
+
 // fallbackUnknown puts back the default for each name the file wrote that no
 // setting takes. A word the window does not know is a hand-written mistake, and
 // docs/配置参考.md promises it is read as the default rather than refused: the
@@ -77,15 +90,6 @@ func (s *Settings) fallbackUnknown() {
 	s.ClipboardWrite = known(s.ClipboardWrite, enumClipboardWrites, d.ClipboardWrite)
 	s.NewTabPosition = known(s.NewTabPosition, enumTabPositions, d.NewTabPosition)
 	s.TabWidth = known(s.TabWidth, enumTabWidths, d.TabWidth)
-	// A list the file wrote as null, or left out, is an empty list: Clone and
-	// Equal compare what the window shows, and nil against [] reads as a change
-	// the person never made.
-	if s.Schemes == nil {
-		s.Schemes = []Scheme{}
-	}
-	if s.Profiles == nil {
-		s.Profiles = []Profile{}
-	}
 	// A family the file leaves empty is the generic one, which is also what the
 	// window draws with: an empty setting would say nothing at all.
 	s.FillEmptyFont()
