@@ -112,7 +112,7 @@
 2. 复制粘贴按 Windows Terminal 的行为（选中即复制可配、右键粘贴/复制、多行粘贴确认）。
 3. ~~命令面板（`Ctrl+Shift+P`）：可搜动作列表~~（已完成：动作目录 `internal/action`，面板列出动作、标签与 profile，模糊匹配标题/分组/动作名）。
 4. 滚动条、`Ctrl+Shift+滚轮` 透明度调节。
-5. ~~链接打开、路径识别~~（部分完成，2026-11-16，ADR-84：插件的 `OpenLink` 接上了，网址由系统浏览器开，打印出来的路径由 wt-go 用桌面关联的程序打开，相对路径按 shell 的 OSC 7 报告目录（`Terminal.Dir()`，点的一刻才问）算、没报过就退回启动目录，`:12`/`:12:3` 先去掉；还差的都在 mygo 一侧：断行折行的网址（已能做，上游 egoist/mygo 自己做了跨行链接，`linkSpan`/`spanOf` 把折行区拍平成视口里一段连续格子；我们先写了同一块，同步上游时改用它的，钉在 `74cf1408`）、Windows PowerShell 不报目录（要认 OSC 9;9；已评估：libghostty-vt 是 C 库，得在 Go 侧嗅探字节流，收益只对装了 WT shell integration 的机器，暂缓）、不按 `Ctrl` 也显下划线与悬停提示、行号交给编辑器跳过去）。
+5. ~~链接打开、路径识别~~（部分完成，2026-11-16，ADR-84：插件的 `OpenLink` 接上了，网址由系统浏览器开，打印出来的路径由 wt-go 用桌面关联的程序打开，相对路径按 shell 的 OSC 7 报告目录（`Terminal.Dir()`，点的一刻才问）算、没报过就退回启动目录，`:12`/`:12:3` 先去掉；还差的都在 mygo 一侧：断行折行的网址（已能做，上游 egoist/mygo 自己做了跨行链接，`linkSpan`/`spanOf` 把折行区拍平成视口里一段连续格子；我们先写了同一块，同步上游时改用它的，钉在同步后的 fork）、Windows PowerShell 不报目录（要认 OSC 9;9；已评估：libghostty-vt 是 C 库，得在 Go 侧嗅探字节流，收益只对装了 WT shell integration 的机器，暂缓）、不按 `Ctrl` 也显下划线与悬停提示、行号交给编辑器跳过去）。
 6. `Ctrl+Shift+1..9` 直接开第 n 个 profile（与 ▾ 菜单里显示的一致）。
 7. 关于对话框（版本、mygo/libghostty 版本、配置文件路径）。
 
