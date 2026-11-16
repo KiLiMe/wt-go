@@ -119,39 +119,48 @@ func (a *App) isMonospace(family string, size float32) bool {
 	return ok
 }
 
-// monospaceFamilies are the installed families a terminal can draw with: those
-// the text engine calls monospaced and that shape the printable ASCII at one
-// advance, sorted. The font setting lists them, so that a family it offers is
-// one the terminal takes as it is, without a line about it in the log.
-func (a *App) monospaceFamilies(fs []myui.FontFamily, size float32) []string {
-	var out []string
-	for _, f := range fs {
-		if f.Monospaced && a.isMonospace(f.Name, size) {
-			out = append(out, f.Name)
+// census is what the machine's families are to a terminal: the ones it can draw
+// a grid with, those the text engine calls monospaced that also shape the
+// printable ASCII at one advance, sorted, and every family with whether it can.
+// The font setting lists the first, so that a family it offers is one the
+// terminal takes as it is, and reads the names it is given against the second:
+// a family this machine is missing is said so, and one it has that cannot draw
+// a grid is one the terminal passes over.
+//
+// It shapes, which is the first frame's 23–26 ms when the page that lists them
+// opens, so it runs off the UI thread; it makes the measures itself and hands
+// them back for the window to keep, since the window's cache is the window's.
+func census(fs []myui.FontFamily, size float32) (families []string, installed []ui.InstalledFont, mono map[monoKey]bool) {
+	mono = make(map[monoKey]bool)
+	isMono := func(family string) bool {
+		family, at := fontOf(family, size)
+		key := monoKey{family: family, size: at}
+		ok, known := mono[key]
+		if !known {
+			ok = monospace(family, at)
+			mono[key] = ok
 		}
+		return ok
 	}
-	slices.Sort(out)
-	return out
-}
-
-// installedFonts are every family the machine has, and whether a terminal can
-// draw a grid of cells with it: the setting says which of the names in it this
-// machine is missing, and a name it has but cannot draw a grid with is one the
-// terminal passes over, which is worth a line under the field.
-func (a *App) installedFonts(fs []myui.FontFamily, size float32) []ui.InstalledFont {
-	out := make([]ui.InstalledFont, 0, len(fs))
+	installed = make([]ui.InstalledFont, 0, len(fs))
 	for _, f := range fs {
-		out = append(out, ui.InstalledFont{Name: f.Name, Mono: f.Monospaced && a.isMonospace(f.Name, size)})
+		m := f.Monospaced && isMono(f.Name)
+		if m {
+			families = append(families, f.Name)
+		}
+		installed = append(installed, ui.InstalledFont{Name: f.Name, Mono: m})
 	}
-	slices.SortFunc(out, func(x, y ui.InstalledFont) int { return strings.Compare(x.Name, y.Name) })
-	return out
+	slices.Sort(families)
+	slices.SortFunc(installed, func(x, y ui.InstalledFont) int { return strings.Compare(x.Name, y.Name) })
+	return families, installed, mono
 }
 
 // ensureFontFamilies lists the families the font setting offers, which only the
 // page that lists them needs: enumerating the machine's fonts and shaping the
 // ASCII of each monospaced one costs the first frame 23–26 ms for a menu the
 // user may not open. The first ask starts the work, later ones keep it; the
-// measures are the window's, so they run on the UI thread once the list is in.
+// shapes run off the UI thread, the text engine being the process's and locked,
+// and their answers join the window's cache when they arrive.
 func (a *App) ensureFontFamilies(size float32) {
 	if a.fonts.asked {
 		return
@@ -159,9 +168,15 @@ func (a *App) ensureFontFamilies(size float32) {
 	a.fonts.asked = true
 	go func() {
 		fs := myui.FontFamilies()
+		families, installed, mono := census(fs, size)
 		a.Do(func() {
-			a.fonts.families = a.monospaceFamilies(fs, size)
-			a.fonts.installed = a.installedFonts(fs, size)
+			a.fonts.families, a.fonts.installed = families, installed
+			if a.fonts.mono == nil {
+				a.fonts.mono = make(map[monoKey]bool, len(mono))
+			}
+			for key, ok := range mono {
+				a.fonts.mono[key] = ok
+			}
 			a.redraw()
 		})
 	}()

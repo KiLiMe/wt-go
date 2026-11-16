@@ -284,6 +284,30 @@ func EqualProfile(a, b Profile) bool {
 	return reflect.DeepEqual(a, b)
 }
 
+// EqualSchemes reports whether two lists write the same color schemes: the same
+// names in the same order, with the same colors. The settings page keeps the
+// list of schemes it built while this holds, since the built-in names and
+// Ghostty's are the same for as long as the window runs.
+func EqualSchemes(a, b []Scheme) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		x, y := a[i], b[i]
+		if !strings.EqualFold(x.Name, y.Name) || x.Background != y.Background ||
+			x.Foreground != y.Foreground || x.Cursor != y.Cursor ||
+			x.Selection != y.Selection || len(x.Palette) != len(y.Palette) {
+			return false
+		}
+		for j := range x.Palette {
+			if x.Palette[j] != y.Palette[j] {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 // Clone is a copy of the settings that shares nothing with them, so that a
 // form may edit it, and the file's copy stay as it was.
 func (s Settings) Clone() Settings {

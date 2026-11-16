@@ -304,6 +304,11 @@ func (a *App) act(id string) {
 		a.OpenPalette()
 	case action.Find:
 		a.OpenFind()
+	case action.Frames:
+		a.showFrames = !a.showFrames
+		// A readout that started with the frames of before would say nothing
+		// about now: the meter begins again with the frames that follow.
+		a.meter = frameMeter{}
 	default:
 		if i, ok := action.GotoIndex(id); ok {
 			a.FocusTab(i)

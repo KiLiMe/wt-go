@@ -5,6 +5,7 @@ package ui
 
 import (
 	"strings"
+	"sync"
 
 	myui "github.com/egoist/mygo/ui"
 
@@ -61,14 +62,7 @@ func fontNames(list string) []string {
 // fontEntries are the names of a family list and what this machine makes of
 // each.
 func fontEntries(list string, fonts []InstalledFont) []fontEntry {
-	known := make(map[string]bool, len(fonts))
-	mono := make(map[string]bool, len(fonts))
-	for _, f := range fonts {
-		known[f.Name] = true
-		if f.Mono {
-			mono[f.Name] = true
-		}
-	}
+	known, mono := fontMaps(fonts)
 	names := fontNames(list)
 	out := make([]fontEntry, 0, len(names))
 	for _, name := range names {
@@ -84,6 +78,47 @@ func fontEntries(list string, fonts []InstalledFont) []fontEntry {
 		}
 	}
 	return out
+}
+
+// fontMaps are the machine's families by name: the ones it has, and the ones it
+// draws a grid with. The appearance page notes a family on every frame it
+// draws, and the machine's fonts do not change while the window runs, so the
+// two maps are made once for the list the window holds.
+func fontMaps(fonts []InstalledFont) (known, mono map[string]bool) {
+	fontKnown.Lock()
+	defer fontKnown.Unlock()
+	if fontKnown.known != nil && sameFonts(fontKnown.from, fonts) {
+		return fontKnown.known, fontKnown.mono
+	}
+	known = make(map[string]bool, len(fonts))
+	mono = make(map[string]bool, len(fonts))
+	for _, f := range fonts {
+		known[f.Name] = true
+		if f.Mono {
+			mono[f.Name] = true
+		}
+	}
+	fontKnown.from, fontKnown.known, fontKnown.mono = fonts, known, mono
+	return known, mono
+}
+
+// fontKnown is what the maps of the last list were made from, for the frames
+// that ask with the same one.
+var fontKnown struct {
+	sync.Mutex
+	from  []InstalledFont
+	known map[string]bool
+	mono  map[string]bool
+}
+
+// sameFonts reports whether two lists are the machine's same families: the
+// window builds the list once and hands the page that one, so the slices are
+// the same, and a page given another list is answered anew.
+func sameFonts(a, b []InstalledFont) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	return len(a) == 0 || &a[0] == &b[0]
 }
 
 // slicesContain reports whether one of the names is the one, compared without

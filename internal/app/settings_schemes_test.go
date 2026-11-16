@@ -153,6 +153,26 @@ func TestSchemeListIsBuiltOnce(t *testing.T) {
 	}
 }
 
+// A setting that does not reach the list of color schemes does not build it
+// again: the settings page applies the draft on every frame of a drag, and a
+// drag of the opacity has nothing to do with a list of names.
+func TestSchemeListIgnoresOtherSettings(t *testing.T) {
+	a := &App{settings: store.Default()}
+	first := a.schemeList()
+	if len(first) == 0 {
+		t.Fatal("no schemes")
+	}
+	a.settings.BackgroundOpacity = 0.5
+	a.settings.Font.Size = 17
+	if second := a.schemeList(); &second[0] != &first[0] {
+		t.Fatal("the list was rebuilt for a setting that does not reach it")
+	}
+	a.settings.Schemes = append(a.settings.Schemes, store.Scheme{Name: "Mine", Background: "#101010"})
+	if third := a.schemeList(); &third[0] == &first[0] {
+		t.Fatal("the list was kept while the file wrote a new scheme")
+	}
+}
+
 // The schemes the settings page offers come from the theme package, which
 // sorts the 617 names it is built with and reads a theme for each of their
 // colors; once per frame is a cost the page should not pay, so this pins what

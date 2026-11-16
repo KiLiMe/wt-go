@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"sync"
+	"time"
 	"wtgo/internal/fault"
 	"wtgo/internal/layout"
 	"wtgo/internal/pane"
@@ -82,11 +83,13 @@ type App struct {
 	// made of them; the settings page lists the families, so they are asked for
 	// when that page first shows.
 	fonts fontCensus
-	// schemes are the color schemes the settings page lists, built once per
-	// settings the window applied: the list is a directory of Ghostty's names
-	// and a sort of several hundred of them, which are not worth a frame. nil
-	// says the settings changed since it was built.
-	schemes []ui.Scheme
+	// schemes are the color schemes the settings page lists, built once per set
+	// of schemes the settings write: the list is a directory of Ghostty's names
+	// and a sort of several hundred of them, which are not worth a frame, and
+	// nothing but the schemes in the file can change it. schemesFrom is the
+	// schemes it was built from, which a new draft is compared against.
+	schemes     []ui.Scheme
+	schemesFrom []store.Scheme
 	// swatches are the colors the page shows those schemes by, the ones the
 	// settings do not write kept from one build of the list to the next.
 	swatches schemeSwatches
@@ -122,6 +125,20 @@ type App struct {
 	// watchStop stops the goroutine that watches the file when the window
 	// closes.
 	watchStop chan struct{}
+
+	// faceSent is whether the terminals have been given a look at all: the
+	// first apply gives them all of it, and later ones only what changed.
+	faceSent bool
+
+	// meter times the frames the window draws, and showFrames is whether the
+	// readout of the rate it makes is open: the window is what a person
+	// asking what the frame rate is is asking about.
+	meter      frameMeter
+	showFrames bool
+
+	// capture is what the actions page listens for a new key with: the keys a
+	// recording needs are made once here, not on every frame of a recording.
+	capture ui.Capture
 
 	// settingsTab is the tab that edits the settings, nil while it is not
 	// open, and settingsPage the page it shows.
@@ -279,6 +296,10 @@ func (a *App) view(c *myui.Context) {
 	}
 	for _, tab := range a.panes.Tabs {
 		st.Tabs = append(st.Tabs, a.uiTab(tab))
+	}
+	if a.showFrames {
+		a.meter.tick(time.Now())
+		st.Frames = a.meter.frames()
 	}
 	ui.View(c, st, a)
 	a.syncTitle()

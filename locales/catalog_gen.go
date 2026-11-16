@@ -1214,6 +1214,46 @@ func (msgs Messages) About() string {
 	return Catalog.Format(msgs.locale, "about", nil)
 }
 
+// FrameRate says "Frame Rate"
+// in the language the app shows.
+func FrameRate() string { return In(i18n.Locale()).FrameRate() }
+
+// FrameRate says "Frame Rate"
+// in the language of msgs.
+func (msgs Messages) FrameRate() string {
+	return Catalog.Format(msgs.locale, "frameRate", nil)
+}
+
+// FramesAverage says "Average"
+// in the language the app shows.
+func FramesAverage() string { return In(i18n.Locale()).FramesAverage() }
+
+// FramesAverage says "Average"
+// in the language of msgs.
+func (msgs Messages) FramesAverage() string {
+	return Catalog.Format(msgs.locale, "framesAverage", nil)
+}
+
+// FramesLowest says "Lowest"
+// in the language the app shows.
+func FramesLowest() string { return In(i18n.Locale()).FramesLowest() }
+
+// FramesLowest says "Lowest"
+// in the language of msgs.
+func (msgs Messages) FramesLowest() string {
+	return Catalog.Format(msgs.locale, "framesLowest", nil)
+}
+
+// FramesLongest says "Longest frame"
+// in the language the app shows.
+func FramesLongest() string { return In(i18n.Locale()).FramesLongest() }
+
+// FramesLongest says "Longest frame"
+// in the language of msgs.
+func (msgs Messages) FramesLongest() string {
+	return Catalog.Format(msgs.locale, "framesLongest", nil)
+}
+
 // AboutCommit says "Commit"
 // in the language the app shows.
 func AboutCommit() string { return In(i18n.Locale()).AboutCommit() }

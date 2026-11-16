@@ -31,7 +31,7 @@ func schemePicker(c *myui.Context, s *store.Settings, st Settings, act Actions) 
 	card(c, cardFace(t), cardLine(t), func() {
 		field(c, locales.Scheme(), locales.ColorSchemeNote(), func() {
 			myui.Row(c).AlignItems(myui.Center).Gap(10).Children(func() {
-				bg, fg := swatchOf(st.Schemes, s.ColorScheme, t)
+				bg, fg := swatchOf(cache, st.Schemes, s.ColorScheme, t)
 				schemeSwatch(c, bg, fg, 16)
 				myui.Text(c, schemeNamed(*s)).FontSize(13).SingleLine().MaxWidth(220)
 				myui.Button(c, locales.SchemeCopy()).OnClick(act.CopyScheme)
@@ -77,13 +77,58 @@ func schemeNamed(s store.Settings) string {
 
 // swatchOf is the colors the page shows the scheme called name by: the ones the
 // list carries, and the window's own muted pair for a name the list has none of.
-func swatchOf(schemes []Scheme, name string, t *myui.Theme) (bg, fg myui.Color) {
-	for _, sc := range schemes {
-		if sc.Name == name {
-			return sc.Bg, sc.Fg
+func swatchOf(cache *SchemesCache, schemes []Scheme, name string, t *myui.Theme) (bg, fg myui.Color) {
+	sc, ok := findScheme(cache, schemes, name)
+	if !ok {
+		return t.Surface, t.TextMuted
+	}
+	return sc.Bg, sc.Fg
+}
+
+// findScheme is the scheme the list carries by that name, and whether it carries
+// one. The list is hundreds of names long and the page asks for one of them a
+// frame: the cache keeps them by name while the list is the one it was made from,
+// and a page drawn without a window to keep a cache reads the list.
+func findScheme(cache *SchemesCache, schemes []Scheme, name string) (Scheme, bool) {
+	if cache == nil {
+		for _, sc := range schemes {
+			if sc.Name == name {
+				return sc, true
+			}
+		}
+		return Scheme{}, false
+	}
+	cache.Lock()
+	defer cache.Unlock()
+	// The list is read again only when it is another list: walking it to compare
+	// every scheme would cost more than the walk this map saves.
+	if cache.names == nil || !sameList(cache.named, schemes) {
+		cache.names, cache.named = byName(schemes), schemes
+	}
+	sc, ok := cache.names[name]
+	return sc, ok
+}
+
+// sameList reports whether two lists are the one list: the window builds the
+// schemes it hands the page once per set of them, and keeps that list, so the
+// same slice is the same list.
+func sameList(a, b []Scheme) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	return len(a) == 0 || &a[0] == &b[0]
+}
+
+// byName is the schemes by name: the first of a name that the list carries twice,
+// which is the one the list would have shown first.
+func byName(all []Scheme) map[string]Scheme {
+	by := make(map[string]Scheme, len(all))
+	for _, sc := range all {
+		if _, ok := by[sc.Name]; !ok {
+			by[sc.Name] = sc
 		}
 	}
-	return t.Surface, t.TextMuted
+	return by
 }
 
 // schemeSwatch is a scheme as a chip: its background, and a bar of the color its
@@ -187,6 +232,9 @@ type SchemesCache struct {
 	All  []Scheme
 	Key  string
 	Rows []Scheme
+	// names is the list by name, kept while named is the list it was made from.
+	names map[string]Scheme
+	named []Scheme
 }
 
 // search is search, with the answer of the last call kept while the list of
@@ -213,6 +261,7 @@ func (s *SchemesCache) reset() {
 	s.Lock()
 	defer s.Unlock()
 	s.All, s.Key, s.Rows = nil, "", nil
+	s.names, s.named = nil, nil
 }
 
 // sameSchemes reports whether two lists name the same schemes, in the same

@@ -20,15 +20,19 @@ func TestInstalledFonts(t *testing.T) {
 		{Name: "no-such-font-at-all", Monospaced: true},
 		{Name: "sans-serif", Monospaced: false},
 	}
-	a := &App{}
-	got := a.installedFonts(fs, 13)
+	_, got, mono := census(fs, 13)
 	want := []ui.InstalledFont{
 		{Name: "monospace", Mono: true},
 		{Name: "no-such-font-at-all", Mono: false},
 		{Name: "sans-serif", Mono: false},
 	}
 	if !slices.Equal(got, want) {
-		t.Errorf("installedFonts() = %v, want %v", got, want)
+		t.Errorf("census() installed = %v, want %v", got, want)
+	}
+	// The measures come back for the window to keep: the two the text engine
+	// calls monospaced, since the third is measured nowhere.
+	if len(mono) != 2 {
+		t.Errorf("census() measured %d families, want the two monospaced ones", len(mono))
 	}
 }
 
@@ -64,9 +68,9 @@ func TestMonospaceFamilies(t *testing.T) {
 		{Name: "no-such-font-at-all", Monospaced: true},
 		{Name: "sans-serif", Monospaced: false},
 	}
-	a := &App{}
-	if got, want := a.monospaceFamilies(fs, 13), []string{"monospace"}; !slices.Equal(got, want) {
-		t.Errorf("monospaceFamilies() = %v, want %v", got, want)
+	got, _, _ := census(fs, 13)
+	if want := []string{"monospace"}; !slices.Equal(got, want) {
+		t.Errorf("census() families = %v, want %v", got, want)
 	}
 }
 

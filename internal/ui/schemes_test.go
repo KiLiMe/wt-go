@@ -195,12 +195,32 @@ func TestSchemeSearchEnterPicks(t *testing.T) {
 func TestSwatchOf(t *testing.T) {
 	bg, fg := myui.RGB(1, 2, 3), myui.RGB(4, 5, 6)
 	schemes := []Scheme{{Name: "Paper", Bg: bg, Fg: fg}}
-	if gotBg, gotFg := swatchOf(schemes, "Paper", myui.DarkTheme()); gotBg != bg || gotFg != fg {
-		t.Errorf("swatchOf(Paper) = %v, %v, want the scheme's own %v, %v", gotBg, gotFg, bg, fg)
-	}
 	th := myui.DarkTheme()
-	if gotBg, gotFg := swatchOf(schemes, "None", th); gotBg != th.Surface || gotFg != th.TextMuted {
-		t.Errorf("swatchOf(None) = %v, %v, want the window's muted pair", gotBg, gotFg)
+	// A page drawn without a window keeps no cache, and one drawn in a window
+	// keeps the names by name: both say the same thing about every list.
+	for _, cache := range []*SchemesCache{nil, {}} {
+		if gotBg, gotFg := swatchOf(cache, schemes, "Paper", th); gotBg != bg || gotFg != fg {
+			t.Errorf("swatchOf(Paper) = %v, %v, want the scheme's own %v, %v", gotBg, gotFg, bg, fg)
+		}
+		if gotBg, gotFg := swatchOf(cache, schemes, "None", th); gotBg != th.Surface || gotFg != th.TextMuted {
+			t.Errorf("swatchOf(None) = %v, %v, want the window's muted pair", gotBg, gotFg)
+		}
+	}
+
+	// The names are of the list they were made from: a list that changed is
+	// read again rather than answered from the one before it.
+	cache := &SchemesCache{}
+	swatchOf(cache, schemes, "Paper", th)
+	other := myui.RGB(7, 8, 9)
+	if gotBg, _ := swatchOf(cache, []Scheme{{Name: "Paper", Bg: other, Fg: fg}}, "Paper", th); gotBg != other {
+		t.Errorf("swatchOf(Paper) after the list changed = %v, want %v", gotBg, other)
+	}
+
+	// The colors are the first of a name the list carries twice: the one the
+	// list would have shown first.
+	first := myui.RGB(9, 9, 9)
+	if gotBg, _ := swatchOf(&SchemesCache{}, []Scheme{{Name: "Paper", Bg: first}, {Name: "Paper", Bg: bg}}, "Paper", th); gotBg != first {
+		t.Errorf("swatchOf(Paper) of a list that writes it twice = %v, want the first %v", gotBg, first)
 	}
 }
 

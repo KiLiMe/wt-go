@@ -234,3 +234,80 @@ func TestGroupsOrder(t *testing.T) {
 		}
 	}
 }
+
+// stubActions records the keybinding a recording writes, and nothing else.
+type stubActions struct {
+	Actions
+	got string
+}
+
+func (s *stubActions) SetKeybinding(action, key string) { s.got = action + " " + key }
+
+// TestCaptureMakesTheKeysOnce covers what a recording listens for: the keys are
+// made once, though every frame declares them again because a window keeps the
+// shortcuts of the frame that declared them; each one records the key it names
+// for the action being recorded when it is pressed.
+func TestCaptureMakesTheKeysOnce(t *testing.T) {
+	act := &stubActions{}
+	keys := &Capture{}
+	keys.ready(act, action.TabNew)
+	if len(keys.keys) == 0 {
+		t.Fatal("a recording made no keys to listen for")
+	}
+	if len(keys.fns) != len(keys.keys) {
+		t.Fatalf("%d keys made %d functions", len(keys.keys), len(keys.fns))
+	}
+	first := &keys.keys[0]
+	keys.ready(act, action.TabNew)
+	if &keys.keys[0] != first {
+		t.Error("the keys were made again, want the ones the first frame made")
+	}
+	for i, k := range keys.keys {
+		keys.fns[i]()
+		if want := action.TabNew + " " + k.name; act.got != want {
+			t.Fatalf("key %d recorded %q, want %q", i, act.got, want)
+		}
+	}
+
+	// A key pressed while nothing is being recorded records nothing, and the
+	// action follows the page from frame to frame.
+	keys.ready(act, "")
+	act.got = ""
+	keys.fns[0]()
+	if act.got != "" {
+		t.Errorf("a key recorded %q while no action was being recorded", act.got)
+	}
+	keys.ready(act, action.Settings)
+	keys.fns[0]()
+	if want := action.Settings + " " + keys.keys[0].name; act.got != want {
+		t.Errorf("the key recorded %q, want %q for the action recorded now", act.got, want)
+	}
+}
+
+// TestCaptureKeysAreTheShortcuts covers which keys a recording listens for: the
+// keys a person can type, with every combination of the modifiers the recording
+// knows, and each named the way the window names a keybinding.
+func TestCaptureKeysAreTheShortcuts(t *testing.T) {
+	keys := &Capture{}
+	keys.ready(&stubActions{}, action.TabNew)
+	seen := make(map[captureKey]bool, len(keys.keys))
+	for _, k := range keys.keys {
+		if seen[k] {
+			t.Fatalf("%v is listened for twice", k)
+		}
+		seen[k] = true
+		name, ok := FormatKey(k.mods, k.key)
+		if !ok || name != k.name {
+			t.Errorf("%v records %q, want the name FormatKey gives (%q, %v)", k, k.name, name, ok)
+		}
+	}
+	for _, m := range captureMods() {
+		for _, n := range KeyNames() {
+			if name, ok := FormatKey(m, n.Key); ok {
+				if !seen[captureKey{mods: m, key: n.Key, name: name}] {
+					t.Fatalf("%v is not listened for", name)
+				}
+			}
+		}
+	}
+}

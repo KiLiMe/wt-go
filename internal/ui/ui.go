@@ -237,6 +237,11 @@ type Settings struct {
 	// Recording is the action the window waits for a key of, "" while it
 	// waits for none.
 	Recording string
+	// Capture is where the actions page keeps the keys it listens for while an
+	// action is being recorded, so that they are made once instead of on every
+	// frame of the recording. A page drawn without one makes them for its own
+	// frame.
+	Capture *Capture
 	// Filter is what the color schemes page searches for.
 	Filter *string
 	// ActionFilter is what the actions page searches for: an action's name,
@@ -408,6 +413,9 @@ type State struct {
 	// Shortcut is the key the settings bind an action to, as a keybinding
 	// writes it, and "" when none binds it. nil shows no shortcut.
 	Shortcut func(action string) string
+	// Frames is the readout of the rate the window draws at, nil while it is
+	// closed.
+	Frames *Frames
 }
 
 // Content is the room the panes take: the window, less the strip it draws
@@ -429,4 +437,5 @@ func View(c *myui.Context, st State, act Actions) {
 	about(c, st, act)
 	findBar(c, st, act)
 	palette(c, st, act)
+	frames(c, st)
 }

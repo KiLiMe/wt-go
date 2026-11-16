@@ -56,6 +56,7 @@ func (a *App) settingsState() ui.Settings {
 		Dirty:         a.dirty(),
 		Note:          a.settingsNote(),
 		Recording:     a.recording,
+		Capture:       &a.capture,
 		Validation:    a.validation,
 		Filter:        &a.filter,
 		ActionFilter:  &a.actionSearch,

@@ -231,3 +231,45 @@ func TestUILightTheme(t *testing.T) {
 		t.Errorf("a light scheme of its own draws on %v, want %v", got, light)
 	}
 }
+
+// TestNamedSchemesAreCopies covers what the cache hands out: the same name
+// twice is two schemes, so that the colors a caller writes over one are not the
+// next frame's, and both read the same way.
+func TestNamedSchemesAreCopies(t *testing.T) {
+	s := store.Default()
+	one, ok := Scheme(s, "Dracula")
+	if !ok {
+		t.Skip("this build carries no Dracula")
+	}
+	two, ok := Scheme(s, "Dracula")
+	if !ok {
+		t.Fatal("the second read of a scheme found none")
+	}
+	if one == two {
+		t.Error("the second read gave the scheme the first one got: a caller's colors would reach the cache")
+	}
+	if *one != *two {
+		t.Errorf("two reads of a scheme differ: %+v and %+v", *one, *two)
+	}
+}
+
+// TestCustomColorsStayOutOfTheCache covers the copy from the other side: a
+// scheme the file writes colors that one read alone.
+func TestCustomColorsStayOutOfTheCache(t *testing.T) {
+	plain, ok := Scheme(store.Default(), "Dracula")
+	if !ok {
+		t.Skip("this build carries no Dracula")
+	}
+	own := store.Default()
+	own.Schemes = []store.Scheme{{Name: "Dracula", Background: "#010203"}}
+	custom, ok := Scheme(own, "Dracula")
+	if !ok {
+		t.Fatal("a scheme the file writes was not found")
+	}
+	if got := Hex(custom.Background); got != "#010203" {
+		t.Errorf("the scheme's background = %s, want the file's #010203", got)
+	}
+	if got := Hex(plain.Background); got == "#010203" {
+		t.Error("the file's colors reached the scheme read without them")
+	}
+}

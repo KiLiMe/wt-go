@@ -424,6 +424,46 @@ func TestFontWeight(t *testing.T) {
 	}
 }
 
+// TestEqualSchemes covers what the settings page asks the schemes it built
+// against: the same names in the same order with the same colors, and a name
+// whose case differs is the same scheme.
+func TestEqualSchemes(t *testing.T) {
+	one := storeScheme("Campbell", "#111111")
+	same := storeScheme("campbell", "#111111")
+	other := storeScheme("Campbell", "#222222")
+	palette := storeScheme("Campbell", "#111111")
+	palette.Palette = []string{"#000000", "#ffffff"}
+	tests := []struct {
+		name string
+		a, b []Scheme
+		want bool
+	}{
+		{"none", nil, nil, true},
+		{"none and one", nil, []Scheme{one}, false},
+		{"the same", []Scheme{one}, []Scheme{one}, true},
+		{"a name in another case", []Scheme{one}, []Scheme{same}, true},
+		{"a color", []Scheme{one}, []Scheme{other}, false},
+		{"a palette", []Scheme{palette}, []Scheme{palette}, true},
+		{"a palette entry", []Scheme{palette}, []Scheme{one}, false},
+		{"the order", []Scheme{one, other}, []Scheme{other, one}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := EqualSchemes(tt.a, tt.b); got != tt.want {
+				t.Errorf("EqualSchemes() = %v, want %v", got, tt.want)
+			}
+			if got := EqualSchemes(tt.b, tt.a); got != tt.want {
+				t.Errorf("EqualSchemes() is not symmetric: %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// storeScheme is a color scheme with one background color, for the comparisons.
+func storeScheme(name, background string) Scheme {
+	return Scheme{Name: name, Background: background}
+}
+
 // TestFillEmptyFont covers a family the settings leave empty: an empty family
 // is not a font, and the file says what the window draws with instead of
 // leaving it to be read as the generic one. The window fills it in on save, and

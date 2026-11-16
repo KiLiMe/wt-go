@@ -11,11 +11,18 @@ import (
 	"wtgo/locales"
 )
 
-// schemeList is the color schemes the settings page lists, built once per
-// settings the window applied and kept until they change.
+// schemeList is the color schemes the settings page lists, built once per set
+// of schemes the file writes and kept until those change. Nothing else in the
+// settings reaches the list -- the names this program carries and Ghostty's are
+// the same while the window runs, and the colors of the ones it does not write
+// are kept by name -- so a change to any other setting, and the settings page
+// applies one on every frame of a drag, does not build it again.
 func (a *App) schemeList() []ui.Scheme {
-	if a.schemes == nil {
+	if a.schemes == nil || !store.EqualSchemes(a.schemesFrom, a.settings.Schemes) {
 		a.schemes = a.uiSchemes(a.settings)
+		// A copy, palettes and all: the page edits the schemes the settings
+		// hold in place, and a fingerprint into them would follow the edit.
+		a.schemesFrom = a.settings.Clone().Schemes
 	}
 	return a.schemes
 }

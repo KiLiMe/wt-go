@@ -2,6 +2,7 @@ package theme
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/egoist/mygo/plugins/terminal"
 
@@ -33,8 +34,12 @@ func Scheme(s store.Settings, name string) (*terminal.Theme, bool) {
 // writes, the ones this program carries, and the ones Ghostty ships, in
 // order, once each.
 func Schemes(s store.Settings) []string {
+	// The names Ghostty ships come from a directory read and a sort of several
+	// hundred of them: asked for once here, not once for the room and once for
+	// the list.
+	ghostty := terminal.GhosttyThemes()
 	seen := make(map[string]bool)
-	out := make([]string, 0, len(s.Schemes)+len(terminal.GhosttyThemes())+8)
+	out := make([]string, 0, len(s.Schemes)+len(ghostty)+8)
 	add := func(name string) {
 		if name == "" || seen[strings.ToLower(name)] {
 			return
@@ -48,15 +53,45 @@ func Schemes(s store.Settings) []string {
 	for _, name := range BuiltinSchemes() {
 		add(name)
 	}
-	for _, name := range terminal.GhosttyThemes() {
+	for _, name := range ghostty {
 		add(name)
 	}
 	return out
 }
 
 // named is the scheme called name that the terminal ships: one built in, else
-// one of Ghostty's.
+// one of Ghostty's. It is a copy, since a caller writes the colors of its own
+// over it.
 func named(name string) (*terminal.Theme, bool) {
+	t, ok := shipped(name)
+	if !ok {
+		return nil, false
+	}
+	copied := *t
+	return &copied, true
+}
+
+// shipped is the scheme called name that the terminal ships, read once per
+// name: a theme of Ghostty's is a file read and parsed, one the terminal
+// carries a scan of its six hundred names, and the appearance page asks for the
+// same name on every frame it draws. A theme file changed while the window runs
+// is read again at the next launch.
+func shipped(name string) (*terminal.Theme, bool) {
+	namedCache.Lock()
+	defer namedCache.Unlock()
+	if entry, ok := namedCache.byName[name]; ok {
+		return entry.theme, entry.ok
+	}
+	t, ok := read(name)
+	if namedCache.byName == nil || len(namedCache.byName) >= namedCacheMax {
+		namedCache.byName = make(map[string]namedEntry, namedCacheMax)
+	}
+	namedCache.byName[name] = namedEntry{theme: t, ok: ok}
+	return t, ok
+}
+
+// read is the scheme called name that the terminal ships, read from it.
+func read(name string) (*terminal.Theme, bool) {
 	if t := builtin(name); t != nil {
 		return t, true
 	}
@@ -64,6 +99,24 @@ func named(name string) (*terminal.Theme, bool) {
 		return t, true
 	}
 	return nil, false
+}
+
+// namedCache keeps the shipped schemes the frames before this one read, for the
+// frames about to read the same ones.
+var namedCache struct {
+	sync.Mutex
+	byName map[string]namedEntry
+}
+
+// namedCacheMax bounds it: a person may name any of Ghostty's schemes, and the
+// settings page visits few of them.
+const namedCacheMax = 64
+
+// namedEntry is what the cache keeps of a name: the scheme the terminal ships
+// under it, or that it ships none.
+type namedEntry struct {
+	theme *terminal.Theme
+	ok    bool
 }
 
 // custom is the scheme the settings write by the name, if they write one.
