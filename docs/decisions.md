@@ -2413,6 +2413,11 @@ pty 层才对每个程序都成立：自己会开 VT 输入模式的（vim、hto
    另拆一个不要修饰键的 `linkHere`；按下落在链接上时只记下来（`view.arm` 记链接与那一格），
    抬手时还在同一格才打开，中途移走则当选择——这样才能在链接上拖选（复制网址的最常见动作）。
    程序接管鼠标（`MouseTracking`）时不该抢：那一下照旧报给程序。
+8. 「悬停下划线」是另一个开关（`links.underline`，默认 `false`）：打开后指针一停在链接上就画下划线、
+   变手型，不必按修饰键——Windows Terminal 的提示就是这个；关掉则要按住 `Ctrl` 才算「悬停在链接上」。
+   插件为它多了 `SetLinkHoverHint`（`linkUnder` 的修饰键判断改成「没有修饰键且提示关着就答空」）。
+   两个开关互不牵联：`open` 关掉时两者都不画（`SetLinks(false)` 一律赢）；`open` 开着而提示关着时，
+   点一下照样打开，只是没有预告。
 
 **理由**：插件已经把钩子留好了，一个文件加 `termOptions` 一行就能让路径可点成为默认行为，不必先改 mygo
 再发一个 pseudo-version；网址留给插件，浏览器由桌面挑，wt-go 不该有自己的那份「默认浏览器」逻辑。
@@ -2431,7 +2436,8 @@ Windows Terminal 用的 OSC 9;9：libghostty-vt 是 C 库，只绑定了 OSC 7 �
 **测试**：`TestPathWithoutPlace`（`main.go:12:3` → `main.go`，盘符冒号不算）、`TestLinkPath`（网址得 `""`，路径去掉位置）、
 `TestLinkDir`（没终端、终端没报过）、`TestLinkDirFollowsOSC7`（把 `\x1b]7;file:///tmp/somewhere\x07` 喂给一个
 无头终端，等到 `Dir()` 出现再问 `linkDir`）、`TestLinkDirKeepsADriveWhole`（同一手法喂 `file:///C:/src`，要求
-Windows 上回来的是绝对路径，拼出来的链接落在盘符下面）、`TestParseLinks`（文件没写 `links` 时是开、
-写了 `{"open":false}` 时是关）；插件侧 `TestSetLinksOff`（关掉后指针下不下划线、不出手型、
+Windows 上回来的是绝对路径，拼出来的链接落在盘符下面）、`TestParseLinks`（文件没写 `links` 时是开、写了 `{"open":false}` 时是关，`underline` 同法：
+没写是关、写了 `{"underline":true}` 时打开）；插件侧 `TestSetLinksOff`（关掉后指针下不下划线、不出手型、
 `HoveredLink` 为空、点一下什么都不打开，再打开又恢复）、`TestClickOpensLinksWithoutCommand`
-（不按 `Ctrl` 点网址与路径都打开，从链接上拖走则只选中、不打开）。
+（不按 `Ctrl` 点网址与路径都打开，从链接上拖走则只选中、不打开）、
+`TestLinkHoverHintWithoutCommand`（提示打开后不按 `Ctrl` 也有下划线与手型，关掉又没了）。

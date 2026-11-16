@@ -1534,6 +1534,26 @@ func (msgs Messages) LinksNote() string {
 	return Catalog.Format(msgs.locale, "linksNote", nil)
 }
 
+// LinksUnderline says "Underline on hover"
+// in the language the app shows.
+func LinksUnderline() string { return In(i18n.Locale()).LinksUnderline() }
+
+// LinksUnderline says "Underline on hover"
+// in the language of msgs.
+func (msgs Messages) LinksUnderline() string {
+	return Catalog.Format(msgs.locale, "linksUnderline", nil)
+}
+
+// LinksUnderlineNote says "Underline a link as soon as the pointer is over it, and show the hand, the way Windows Terminal does, instead of only…"
+// in the language the app shows.
+func LinksUnderlineNote() string { return In(i18n.Locale()).LinksUnderlineNote() }
+
+// LinksUnderlineNote says "Underline a link as soon as the pointer is over it, and show the hand, the way Windows Terminal does, instead of only…"
+// in the language of msgs.
+func (msgs Messages) LinksUnderlineNote() string {
+	return Catalog.Format(msgs.locale, "linksUnderlineNote", nil)
+}
+
 // ScrollMultiplier says "Scroll multiplier"
 // in the language the app shows.
 func ScrollMultiplier() string { return In(i18n.Locale()).ScrollMultiplier() }

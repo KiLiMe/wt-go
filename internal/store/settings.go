@@ -148,9 +148,15 @@ type Settings struct {
 	Extra map[string]json.RawMessage `json:"-"`
 }
 
-// Links is what a click on a link in a terminal does.
+// Links is what a click on a link in a terminal does, and what the pointer
+// shows of one.
 type Links struct {
+	// Open is whether a click opens a link.
 	Open bool `json:"open"`
+	// Underline is whether the pointer underlines a link on hover alone: on,
+	// it is Windows Terminal's hint (no Control to hold); off, Control is what
+	// shows the hint.
+	Underline bool `json:"underline"`
 }
 
 // Font is the font of a terminal's text.
