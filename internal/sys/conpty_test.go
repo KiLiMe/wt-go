@@ -1,9 +1,10 @@
+//go:build windows
+
 package sys
 
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 )
 
@@ -12,9 +13,6 @@ import (
 // names and the terminal plugin loads, over a conpty.dll a person may have
 // left beside the exe from an older unpack.
 func TestConPTYLibraryPrefersTheConptyDir(t *testing.T) {
-	if runtime.GOOS != "windows" {
-		t.Skip("ConPTY is Windows' own")
-	}
 	root := t.TempDir()
 	withExecutableDir(t, root)
 	// adopted is the package's, not the test's: a test that sets it leaves it
@@ -81,9 +79,6 @@ func TestConPTYLibraryPrefersTheConptyDir(t *testing.T) {
 // directory existed, and one unpacked without it: the flat file is still
 // found, and with neither Windows' own console answers.
 func TestConPTYLibraryWithoutTheConptyDir(t *testing.T) {
-	if runtime.GOOS != "windows" {
-		t.Skip("ConPTY is Windows' own")
-	}
 	root := t.TempDir()
 	withExecutableDir(t, root)
 	t.Setenv("MYGO_CONPTY", "")

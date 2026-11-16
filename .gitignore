@@ -1,6 +1,6 @@
 /build/
 /dist/
-/tmp_*/
+/tmp_*
 /wtgo
 /wt-go
 *.exe
@@ -11,5 +11,4 @@
 # without it left the file out of the commit, which is what debbc6a fixed once
 # for the flat layout.
 !/resources/windows-*/conpty/OpenConsole.exe
-tmp_*.png
 /refs/
