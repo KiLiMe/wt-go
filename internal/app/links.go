@@ -18,15 +18,11 @@ import (
 // OpenLink), so it is opened here, relative to dirOf: the directory the shell
 // reported last (OSC 7), or the one the terminal started in.
 //
-// With the setting turned off every link is answered here and nothing opens:
-// the terminal is told so that it does not open a URL itself either. The
-// setting is read at the click rather than when the terminal was made, so
-// turning links off takes effect in the tabs already open.
+// Whether a click opens anything at all is not decided here: the terminal
+// finds no link while the setting says so (Terminal.SetLinks), which is also
+// what keeps the pointer from underlining one.
 func (a *App) openLink(dirOf func() string) func(string) bool {
 	return func(link string) bool {
-		if !a.settings.Links.Open {
-			return true
-		}
 		path := linkPath(link)
 		if path == "" {
 			return false

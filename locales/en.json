@@ -197,7 +197,7 @@
   "rightClick": "Right click",
   "rightClickNote": "What a right click does.",
   "links": "Links",
-  "linksNote": "Whether Control+click opens a link: a path a program printed, a URL, or a hyperlink the program set. Off takes effect at once; the underline under the pointer still shows.",
+  "linksNote": "Whether Control+click opens a link: a path a program printed, a URL, or a hyperlink the program set. Off takes effect at once, and the pointer underlines nothing either.",
   "scrollMultiplier": "Scroll multiplier",
   "scrollMultiplierNote": "How far a notch of the wheel and a touchpad's scrolling go; 1 scrolls the way the system's own setting does.",
   "clipboardRead": "Clipboard read",
