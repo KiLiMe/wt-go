@@ -2404,10 +2404,15 @@ pty 层才对每个程序都成立：自己会开 VT 输入模式的（vim、hto
 再发一个 pseudo-version；网址留给插件，浏览器由桌面挑，wt-go 不该有自己的那份「默认浏览器」逻辑。
 
 **代价**：相对路径靠 shell 自己报（OSC 7），而 Windows 上 PowerShell 默认不报，于是 `cd sub` 之后打印的相对
-路径仍按窗格启动目录解析——要补这一头，得让插件也认 Windows Terminal 用的那条 OSC 9;9，那是改 mygo、
-重钉 `go.mod` 的事。跨行折行的网址、不按 `Ctrl` 也显下划线、`:12:3` 直接交给编辑器跳到那一行，同样在插件里，
-见 `docs/plan.md` 阶段 4 第 5 条。
+路径仍按窗格启动目录解析。插件把 `file:///C:/src` 交出来时是 `/C:/src`（盘符前多了个斜杠，在 Windows 上不是
+绝对路径），所以 `linkDir` 只认绝对路径、不满足就退回启动目录；盘符那一半的真修在插件里（`fileURLPath`）。
+要再补 PowerShell 那一头，得让插件认 Windows Terminal 用的 OSC 9;9：libghostty-vt 是 C 库，只绑定了 OSC 7 的
+pwd，既没有这条序列也没有写 pwd 的接口，只能在 Go 侧嗅探字节流（还要处理跨 read 的分片），而收益只对装了
+WT shell integration 的机器——暂时不做，记在 `docs/plan.md` 阶段 4 第 5 条。跨行折行的网址、不按 `Ctrl` 也显
+下划线（上游刻意的设计，`plugins/terminal/terminal_test.go` 有测试钉住）、`:12:3` 直接交给编辑器跳到那一行，
+同样在插件里。
 
 **测试**：`TestPlace`（`:12`/`:12:3` 的长度，盘符冒号不算）、`TestPrintedPath`、`TestIsURL`；
 `TestLinkDir`（没终端、终端没报过）、`TestLinkDirFollowsOSC7`（把 `\x1b]7;file:///tmp/somewhere\x07` 喂给一个
-无头终端，等到 `Dir()` 出现再问 `linkDir`）。
+无头终端，等到 `Dir()` 出现再问 `linkDir`）、`TestLinkDirKeepsADriveWhole`（同一手法喂 `file:///C:/src`，断言
+退回启动目录而不是往 `/C:/src` 里拼）。

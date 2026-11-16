@@ -1,6 +1,7 @@
 package app
 
 import (
+	"runtime"
 	"testing"
 	"time"
 
@@ -25,24 +26,60 @@ func TestLinkDir(t *testing.T) {
 // TestLinkDirFollowsOSC7 covers a shell that reports its directory: the
 // relative path printed after a cd is opened from where the shell went.
 func TestLinkDirFollowsOSC7(t *testing.T) {
+	// A shell reports a file URL; on Windows the plugin hands the drive back
+	// with a slash in front of it (see TestLinkDirKeepsADriveWhole), so the
+	// path alone is what is reported there.
+	reported, start := "/tmp/somewhere", "/start"
+	if runtime.GOOS == "windows" {
+		reported, start = `C:\somewhere`, `C:\start`
+	}
+	term := reportingTerminal(t, "\x1b]7;"+reported+"\x07")
+	defer term.Close()
+	awaitDir(t, term)
+	if got := linkDir(term, start); got != reported {
+		t.Errorf("linkDir = %q, want the reported directory", got)
+	}
+}
+
+// TestLinkDirKeepsADriveWhole covers the shape a file URL of a Windows drive
+// takes in the plugin: /C:/src, which is no absolute path on Windows, so
+// every relative path would land on a drive that is not there.
+func TestLinkDirKeepsADriveWhole(t *testing.T) {
+	term := reportingTerminal(t, "\x1b]7;file:///C:/src\x07")
+	defer term.Close()
+	awaitDir(t, term)
+	if got := term.Dir(); got != "/C:/src" {
+		t.Skipf("the plugin reports %q, not the slash before the drive", got)
+	}
+	if got := linkDir(term, `C:\start`); got != `C:\start` {
+		t.Errorf("linkDir = %q, want the start directory", got)
+	}
+}
+
+// reportingTerminal is a terminal whose other end says what a shell says once
+// and then falls silent, as when it reports its directory.
+func reportingTerminal(t *testing.T, seq string) *terminal.Terminal {
+	t.Helper()
 	if err := terminal.Load(); err != nil {
 		t.Skip(err)
 	}
-	conn := &report{data: []byte("\x1b]7;file:///tmp/somewhere\x07")}
-	term, err := terminal.New(terminal.Options{Conn: conn, NoExitMessage: true})
+	term, err := terminal.New(terminal.Options{Conn: &report{data: []byte(seq)}, NoExitMessage: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer term.Close()
+	return term
+}
+
+// awaitDir waits for the terminal to read a reported directory, and for the
+// plugin to hand it out.
+func awaitDir(t *testing.T, term *terminal.Terminal) {
+	t.Helper()
 	deadline := time.Now().Add(5 * time.Second)
 	for term.Dir() == "" {
 		if time.Now().After(deadline) {
 			t.Fatal("the terminal never read the reported directory")
 		}
 		time.Sleep(5 * time.Millisecond)
-	}
-	if got := linkDir(term, "/start"); got != "/tmp/somewhere" {
-		t.Errorf("linkDir = %q, want the reported directory", got)
 	}
 }
 

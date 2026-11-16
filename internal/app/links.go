@@ -43,9 +43,12 @@ func (a *App) openLink(dirOf func() string) func(string) bool {
 // reported last (OSC 7), else the one the terminal started in. A shell that
 // never reports its directory, as PowerShell does on Windows, leaves the
 // second, which is where a relative path printed before any cd resolves.
+// A reported directory that is not absolute is not used either: a file URL
+// of a Windows drive comes out of the plugin as /C:/src, which would put
+// every relative path on a drive that does not exist.
 func linkDir(term *terminal.Terminal, start string) string {
 	if term != nil {
-		if dir := term.Dir(); dir != "" {
+		if dir := term.Dir(); filepath.IsAbs(dir) {
 			return dir
 		}
 	}
