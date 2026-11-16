@@ -12,35 +12,39 @@ import (
 	"wtgo/internal/sys"
 )
 
-// openLink is what a click on a link in a terminal does. A URL is
-// left to the terminal, which opens it with the desktop; a file path printed
-// as text is a link only because this window answers for it (the terminal's
-// OpenLink), so it is opened here, relative to dirOf: the directory the shell
-// reported last (OSC 7), or the one the terminal started in.
+// openLink is what a click on a link in a terminal does, opened from dir: a
+// URL is left to the terminal, which opens it with the desktop; a file path
+// printed as text is a link only because this window answers for it (the
+// terminal's OpenLink), so it is opened here.
 //
-// Whether a click opens anything at all is not decided here: the terminal
-// finds no link while the setting says so (Terminal.SetLinks), which is also
-// what keeps the pointer from underlining one.
-func (a *App) openLink(dirOf func() string) func(string) bool {
-	return func(link string) bool {
-		path := linkPath(link)
-		if path == "" {
-			return false
-		}
-		if !filepath.IsAbs(path) {
-			path = filepath.Join(dirOf(), path)
-		}
-		// A path that is not there is not opened: explorer.exe would show a
-		// folder nobody asked for, and a click in a terminal has nowhere on
-		// screen to say why nothing happened.
-		if _, err := os.Stat(path); err != nil {
-			return true
-		}
-		if err := sys.OpenPath(path); err != nil {
-			log.Printf("wt-go: %s", fault.Line(fault.OpenLink, err.Error()))
-		}
+// Whether a click opens anything at all is not decided here: the terminal finds
+// no link while the setting says so (setLinks), which is also what keeps the
+// pointer from underlining one.
+func (a *App) openLink(link, dir string) bool {
+	path := linkPath(link)
+	if path == "" {
+		return false
+	}
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(dir, path)
+	}
+	// A path that is not there is not opened: explorer.exe would show a folder
+	// nobody asked for, and a click in a terminal has nowhere on screen to say
+	// why nothing happened.
+	if _, err := os.Stat(path); err != nil {
 		return true
 	}
+	if err := sys.OpenPath(path); err != nil {
+		log.Printf("wt-go: %s", fault.Line(fault.OpenLink, err.Error()))
+	}
+	return true
+}
+
+// setLinks hands the one setting to the two knobs the plugin has: whether a
+// click opens a link, and whether the pointer shows one at all.
+func setLinks(term *terminal.Terminal, open bool) {
+	term.SetLinks(open)
+	term.SetLinkHoverHint(open)
 }
 
 // linkDir is the directory a printed path is opened from: the one the shell
@@ -60,8 +64,8 @@ func linkDir(term *terminal.Terminal, start string) string {
 }
 
 // linkPath is the path a click on a printed link opens, or "" for a
-// URL, which the terminal opens with the desktop: a scheme says it is one, and
-// the colon of a drive letter says nothing. The path comes back with the home
+// URL, whose scheme says it is one, and the colon of a drive letter says
+// nothing. The path comes back with the home
 // directory and the variables expanded and the place in the file taken off, as
 // the terminal hands over main.go:12:3, which no program opens as it stands.
 func linkPath(link string) string {
@@ -78,14 +82,13 @@ func linkPath(link string) string {
 // appends to a file it finds taken off. The colon after a drive letter is no
 // place, or a path on C: would lose its drive.
 func pathWithoutPlace(path string) string {
-	i := strings.LastIndexByte(path, ':')
-	if i <= 1 || path[i+1:] == "" || !allDigits(path[i+1:]) {
-		return path
+	for {
+		i := strings.LastIndexByte(path, ':')
+		if i <= 1 || path[i+1:] == "" || !allDigits(path[i+1:]) {
+			return path
+		}
+		path = path[:i]
 	}
-	if j := strings.LastIndexByte(path[:i], ':'); j > 1 && allDigits(path[j+1:i]) {
-		return path[:j]
-	}
-	return path[:i]
 }
 
 // allDigits reports whether s is a run of decimal digits.

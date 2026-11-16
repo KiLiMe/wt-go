@@ -48,10 +48,10 @@ func TestLinkDirKeepsADriveWhole(t *testing.T) {
 	defer term.Close()
 	awaitDir(t, term)
 	dir := term.Dir()
-	if runtime.GOOS == "windows" && !filepath.IsAbs(dir) {
-		t.Fatalf("the plugin reports %q, which is no absolute path on Windows", dir)
-	}
 	if !filepath.IsAbs(dir) {
+		if runtime.GOOS == "windows" {
+			t.Fatalf("the plugin reports %q, which is no absolute path on Windows", dir)
+		}
 		t.Skipf("the plugin reports %q, which is no path here", dir)
 	}
 	if got := linkDir(term, `C:\start`); got != dir {
@@ -82,20 +82,18 @@ func awaitDir(t *testing.T, term *terminal.Terminal) {
 // report is the other end of a terminal that says one thing and then falls
 // silent, which is how a shell reports its directory once.
 type report struct {
+	sink
 	data []byte
-	done bool
+	sent bool
 }
 
 func (r *report) Read(p []byte) (int, error) {
-	if r.done {
+	if r.sent {
 		select {}
 	}
-	r.done = true
+	r.sent = true
 	return copy(p, r.data), nil
 }
-
-func (r *report) Write(p []byte) (int, error) { return len(p), nil }
-func (r *report) Close() error                { return nil }
 
 // TestPathWithoutPlace covers the place in a file the terminal appends to a
 // path it finds: :line and :line:col come off, and the colon of a drive does

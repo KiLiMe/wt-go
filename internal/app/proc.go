@@ -43,7 +43,7 @@ func (a *App) newTerminal(opts terminal.Options) (*terminal.Terminal, error) {
 	// it, and from where: the directory the shell reported last (OSC 7) when
 	// it reports one, else the one the terminal started in.
 	var term *terminal.Terminal
-	opts.OpenLink = a.openLink(func() string { return linkDir(term, opts.Dir) })
+	opts.OpenLink = func(link string) bool { return a.openLink(link, linkDir(term, opts.Dir)) }
 	before, berr := sys.Subtree(sys.OwnPID())
 	term, err := terminal.New(opts)
 	if err != nil {
@@ -51,8 +51,7 @@ func (a *App) newTerminal(opts terminal.Options) (*terminal.Terminal, error) {
 	}
 	// A tab opened while the setting says no links starts with them off, so
 	// that its first frame underlines nothing.
-	term.SetLinks(a.settings.Links.Open)
-	term.SetLinkHoverHint(a.settings.Links.Open)
+	setLinks(term, a.settings.Links.Open)
 	if berr == nil {
 		// The plugin starts the program in a goroutine of its own, so the
 		// child is not there the moment New returns: wait for it off the UI

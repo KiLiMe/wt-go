@@ -66,8 +66,7 @@ func (a *App) applyWindow(s store.Settings) {
 			term.SetFont(font)
 			term.SetTheme(colors, nil)
 			term.SetCopyOnSelect(copyOnSelect)
-			term.SetLinks(s.Links.Open)
-			term.SetLinkHoverHint(s.Links.Open)
+			setLinks(term, s.Links.Open)
 			term.SetScrollMultiplier(multiplier)
 			term.SetMinimumContrast(s.MinimumContrast)
 		}
