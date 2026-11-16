@@ -7,7 +7,31 @@ import (
 	"time"
 
 	"github.com/egoist/mygo/plugins/terminal"
+
+	"wtgo/internal/store"
 )
+
+// TestOpenLinkFollowsTheSwitch covers the setting: with links turned off a
+// click opens nothing, and the terminal is told the window answered, so that
+// it does not open a URL itself. The switch is read at the click, so a tab
+// already open follows it too.
+func TestOpenLinkFollowsTheSwitch(t *testing.T) {
+	a := &App{settings: store.Default()}
+	open := a.openLink(func() string { return t.TempDir() })
+	if open("https://example.com") {
+		t.Error("a URL with links on was taken by the window, want the terminal to open it")
+	}
+	a.settings.Links.Open = false
+	if !open("https://example.com") {
+		t.Error("a URL with links off was left to the terminal")
+	}
+	// A path that is not there is the cheapest answer with links off: it
+	// never reaches the desktop, and it is the one a click gets when the
+	// setting says nothing opens.
+	if !open(filepath.Join(t.TempDir(), "missing.txt")) {
+		t.Error("a path with links off was left to the terminal")
+	}
+}
 
 // TestLinkDir covers where a printed relative path is opened from: the
 // directory the shell reported last when it reports one, else the one the

@@ -121,6 +121,10 @@ type Settings struct {
 	ClipboardRead  string `json:"clipboardRead"`
 	ClipboardWrite string `json:"clipboardWrite"`
 
+	// Links is whether a Control+click on a link in a terminal opens it: a
+	// path a program printed, a URL, or a hyperlink the program set (OSC 8).
+	Links Links `json:"links"`
+
 	// NewTabPosition is where a tab opens: "last" or "first". TabWidth is
 	// how wide tabs are: "compact", to the name, or "equal", all alike.
 	NewTabPosition string `json:"newTabPosition"`
@@ -141,6 +145,11 @@ type Settings struct {
 	// a hand-written key or one a later version of the file knows. It is not
 	// part of the settings themselves: Equal, Clone and Validate leave it be.
 	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// Links is what a Control+click on a link in a terminal does.
+type Links struct {
+	Open bool `json:"open"`
 }
 
 // Font is the font of a terminal's text.
@@ -230,6 +239,7 @@ func Default() Settings {
 		ScrollMultiplier:      1,
 		ClipboardRead:         "deny",
 		ClipboardWrite:        "allow",
+		Links:                 Links{Open: true},
 		RightClick:            "copyOrPaste",
 		PasteMultilineConfirm: true,
 		ConfirmClose:          ConfirmRunning,
@@ -338,6 +348,7 @@ var knownKeys = map[string]struct{}{
 	"copyOnSelect": {}, "rightClick": {}, "pasteMultilineConfirm": {},
 	"confirmClose": {}, "closeOnLastTab": {}, "confirmCloseWindow": {},
 	"scrollMultiplier": {}, "clipboardRead": {}, "clipboardWrite": {},
+	"links": {},
 
 	"newTabPosition": {}, "tabWidth": {}, "alwaysOnTop": {},
 	"titleFromActiveTerminal": {},

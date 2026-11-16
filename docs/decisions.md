@@ -2400,6 +2400,10 @@ pty 层才对每个程序都成立：自己会开 VT 输入模式的（vim、hto
 4. 不存在的路径不打开：`os.Stat` 失败就静默返回 true。给 `explorer.exe` 一个不存在的路径，它会弹一个空的
    文件管理器窗口，而终端里没有地方解释「为什么点了没反应」。
 5. 打不开记 `E209`（`fault.OpenLink`），复用「关于」页项目主页按钮那一行文案，不新开故障码。
+6. `settings.json` 的 `links.open`（默认 `true`）能关掉这一切：关掉后 `openLink` 一律返回 true，
+   路径与网址都不打开，也不把网址交回插件（否则插件会自己用浏览器打开）。这一项在**点击的一刻**
+   读 `a.settings`，而不是建终端时定死，所以设置页改完立即生效，已经开着的标签也跟着变——
+   `Options.OpenLink` 是建终端时给的，本来会把「要不要开」锁死在终端生命周期里。
 
 **理由**：插件已经把钩子留好了，一个文件加 `termOptions` 一行就能让路径可点成为默认行为，不必先改 mygo
 再发一个 pseudo-version；网址留给插件，浏览器由桌面挑，wt-go 不该有自己的那份「默认浏览器」逻辑。
@@ -2418,4 +2422,6 @@ Windows Terminal 用的 OSC 9;9：libghostty-vt 是 C 库，只绑定了 OSC 7 �
 **测试**：`TestPathWithoutPlace`（`main.go:12:3` → `main.go`，盘符冒号不算）、`TestLinkPath`（网址得 `""`，路径去掉位置）、
 `TestLinkDir`（没终端、终端没报过）、`TestLinkDirFollowsOSC7`（把 `\x1b]7;file:///tmp/somewhere\x07` 喂给一个
 无头终端，等到 `Dir()` 出现再问 `linkDir`）、`TestLinkDirKeepsADriveWhole`（同一手法喂 `file:///C:/src`，要求
-Windows 上回来的是绝对路径，拼出来的链接落在盘符下面）。
+Windows 上回来的是绝对路径，拼出来的链接落在盘符下面）、`TestParseLinks`（文件没写 `links` 时是开、
+写了 `{"open":false}` 时是关）、`TestOpenLinkFollowsTheSwitch`（关掉后网址与路径都由本窗口认领，
+不留给终端）。

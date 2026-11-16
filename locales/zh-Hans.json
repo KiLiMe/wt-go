@@ -196,6 +196,8 @@
   "copyOnSelectNote": "选中内容后立刻复制到剪贴板。",
   "rightClick": "右键行为",
   "rightClickNote": "在终端里点右键时做什么。",
+  "links": "链接",
+  "linksNote": "Ctrl+点击 是否打开链接：程序打印出来的路径、网址，以及程序设置的超链接（OSC 8）。关掉立即生效；指针下的下划线仍会出现。",
   "scrollMultiplier": "滚轮倍数",
   "scrollMultiplierNote": "滚轮一格、触摸板滑一下走多远；1 表示按系统自己的设置来。",
   "clipboardRead": "剪贴板读取",

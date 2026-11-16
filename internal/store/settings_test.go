@@ -40,6 +40,25 @@ func TestDefault(t *testing.T) {
 	}
 }
 
+// TestParseLinks covers the switch on links: a file that leaves it out keeps
+// the default of opening them, and one that turns it off says so.
+func TestParseLinks(t *testing.T) {
+	s, err := Parse([]byte(`{}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !s.Links.Open {
+		t.Error("no links key: links are off, want the default of on")
+	}
+	s, err = Parse([]byte(`{"links":{"open":false}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Links.Open {
+		t.Error("links turned off in the file stayed on")
+	}
+}
+
 // TestParseKeepsDefaults covers a file that names some settings: the ones it
 // leaves out keep the default rather than turning into zero values.
 func TestParseKeepsDefaults(t *testing.T) {
