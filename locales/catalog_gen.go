@@ -1524,11 +1524,11 @@ func (msgs Messages) Links() string {
 	return Catalog.Format(msgs.locale, "links", nil)
 }
 
-// LinksNote says "Whether Control+click opens a link: a path a program printed, a URL, or a hyperlink the program set. Off takes effect…"
+// LinksNote says "Whether a click opens a link: a path a program printed, a URL, or a hyperlink the program set. Control is not needed …"
 // in the language the app shows.
 func LinksNote() string { return In(i18n.Locale()).LinksNote() }
 
-// LinksNote says "Whether Control+click opens a link: a path a program printed, a URL, or a hyperlink the program set. Off takes effect…"
+// LinksNote says "Whether a click opens a link: a path a program printed, a URL, or a hyperlink the program set. Control is not needed …"
 // in the language of msgs.
 func (msgs Messages) LinksNote() string {
 	return Catalog.Format(msgs.locale, "linksNote", nil)

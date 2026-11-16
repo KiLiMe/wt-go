@@ -121,8 +121,9 @@ type Settings struct {
 	ClipboardRead  string `json:"clipboardRead"`
 	ClipboardWrite string `json:"clipboardWrite"`
 
-	// Links is whether a Control+click on a link in a terminal opens it: a
-	// path a program printed, a URL, or a hyperlink the program set (OSC 8).
+	// Links is whether a click on a link in a terminal opens it: a path a
+	// program printed, a URL, or a hyperlink the program set (OSC 8). Control
+	// is not needed, and dragging off a link selects it instead.
 	Links Links `json:"links"`
 
 	// NewTabPosition is where a tab opens: "last" or "first". TabWidth is
@@ -147,7 +148,7 @@ type Settings struct {
 	Extra map[string]json.RawMessage `json:"-"`
 }
 
-// Links is what a Control+click on a link in a terminal does.
+// Links is what a click on a link in a terminal does.
 type Links struct {
 	Open bool `json:"open"`
 }

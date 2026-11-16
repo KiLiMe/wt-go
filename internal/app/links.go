@@ -12,7 +12,7 @@ import (
 	"wtgo/internal/sys"
 )
 
-// openLink is what a Control+click on a link in a terminal does. A URL is
+// openLink is what a click on a link in a terminal does. A URL is
 // left to the terminal, which opens it with the desktop; a file path printed
 // as text is a link only because this window answers for it (the terminal's
 // OpenLink), so it is opened here, relative to dirOf: the directory the shell
@@ -59,7 +59,7 @@ func linkDir(term *terminal.Terminal, start string) string {
 	return start
 }
 
-// linkPath is the path a Control+click on a printed link opens, or "" for a
+// linkPath is the path a click on a printed link opens, or "" for a
 // URL, which the terminal opens with the desktop: a scheme says it is one, and
 // the colon of a drive letter says nothing. The path comes back with the home
 // directory and the variables expanded and the place in the file taken off, as

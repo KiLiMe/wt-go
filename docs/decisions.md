@@ -2402,11 +2402,17 @@ pty 层才对每个程序都成立：自己会开 VT 输入模式的（vim、hto
 5. 打不开记 `E209`（`fault.OpenLink`），复用「关于」页项目主页按钮那一行文案，不新开故障码。
 6. `settings.json` 的 `links.open`（默认 `true`）能关掉这一切。这个开关的落脚点在插件：
    `Terminal.SetLinks` 一关，`linkUnder` 就直接回答「没有链接」——于是指针不再给任何东西画下划线、
-   不出手型，`Ctrl+点击` 也不会走到 `OpenLink`，网址不会被插件自己用浏览器打开。wt-go 只负责把
+   不出手型，点击也不会走到 `OpenLink`，网址不会被插件自己用浏览器打开。wt-go 只负责把
    `s.Links.Open` 推进去：`applyWindow` 与字体、配色那些一起遍历已开着的终端，`newTerminal` 给新建
    的终端先设一次（否则关掉开关后开的标签，第一帧还会下划线）。`SetLinks` 是 fork 里新加的（上游没有，
    与 ConPTY、盘符修正同在 `wt-go-pin` 上重基）——下划线是插件画的，像主机不告诉它「链接关掉」，
    就没有别的办法藏住它。
+7. 链接**不按 `Ctrl` 也能点开**。上游的规矩是「按住 Command/Ctrl 悬停才下划线，`Ctrl+点击` 才打开」，
+   而 Windows Terminal 自己的悬停提示也不需要 `Ctrl`。这里两边都很友好：按住 `Ctrl` 悬停仍是那个提示
+   （下划线 + 手型），不按 `Ctrl` 直接点也照样打开。做法在 fork 里：`linkUnder`（要求修饰键）只管提示，
+   另拆一个不要修饰键的 `linkHere`；按下落在链接上时只记下来（`view.arm` 记链接与那一格），
+   抬手时还在同一格才打开，中途移走则当选择——这样才能在链接上拖选（复制网址的最常见动作）。
+   程序接管鼠标（`MouseTracking`）时不该抢：那一下照旧报给程序。
 
 **理由**：插件已经把钩子留好了，一个文件加 `termOptions` 一行就能让路径可点成为默认行为，不必先改 mygo
 再发一个 pseudo-version；网址留给插件，浏览器由桌面挑，wt-go 不该有自己的那份「默认浏览器」逻辑。
@@ -2427,4 +2433,5 @@ Windows Terminal 用的 OSC 9;9：libghostty-vt 是 C 库，只绑定了 OSC 7 �
 无头终端，等到 `Dir()` 出现再问 `linkDir`）、`TestLinkDirKeepsADriveWhole`（同一手法喂 `file:///C:/src`，要求
 Windows 上回来的是绝对路径，拼出来的链接落在盘符下面）、`TestParseLinks`（文件没写 `links` 时是开、
 写了 `{"open":false}` 时是关）；插件侧 `TestSetLinksOff`（关掉后指针下不下划线、不出手型、
-`HoveredLink` 为空、点一下什么都不打开，再打开又恢复）。
+`HoveredLink` 为空、点一下什么都不打开，再打开又恢复）、`TestClickOpensLinksWithoutCommand`
+（不按 `Ctrl` 点网址与路径都打开，从链接上拖走则只选中、不打开）。
