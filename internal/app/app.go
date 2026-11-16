@@ -220,6 +220,12 @@ func newApp(startDir string) *App {
 		}
 	}
 	a.profiles = profile.Resolve(a.settings.Profiles, a.found)
+	// A profile the file names twice, or not at all, is one the window leaves
+	// out: it says which one here, since the list on the profiles page shows
+	// only what survived and would leave the person looking for it.
+	for _, problem := range store.ProfileIDs(a.settings.Profiles) {
+		log.Printf("wt-go: %s", fault.Line(fault.BadProfileID, problem))
+	}
 	a.keys = bindings(a.settings.Keybindings)
 	return a
 }

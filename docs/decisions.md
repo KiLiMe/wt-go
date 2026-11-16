@@ -2448,3 +2448,36 @@ Windows 上回来的是绝对路径，拼出来的链接落在盘符下面）、
 （不按 `Ctrl` 点网址与路径都打开，从链接上拖走则只选中、不打开）、
 `TestLinkHoverHintWithoutCommand`（提示打开后不按 `Ctrl` 也有下划线与手型，关掉又没了）。`sys.OpenURL` 没有单测：
 拿一个没人注册的假协议去试会弹 Windows 的「找一个应用来打开这个链接」，不适合放进 `go test`。
+
+## ADR-85 技术债的五条收尾：范围只写一份、空列表写成 `[]`、版本不读全量、打开的参数整条给、丢 profile 要说话
+
+**背景**：`docs/plan.md` 的「技术债」那一节列了五件小事，都不是行为错误，而是「写法会让下一个人误判」的那类：
+`wt-go version` 为了一个版本号跑全量 `Collect()`（读设置、探 shell、列 profile、读崩溃日志）；
+`sys.OpenPath` 把路径原样交给 `xdg-open` / `open` / `explorer.exe`，以 `-`（Windows 上还有 `/`）开头的名字
+会被当成选项，Windows 侧还写死了 PATH 上的 `explorer.exe`、`Start` 之后不 `Release()`；
+透明度在 `store` 允 `[0, 1]`、设置页滑杆只给 `[0.3, 1]`，手写的 `0.1` 能让窗口几乎看不见却不报错；
+`Default()` 不初始化 `Schemes` / `Profiles`，首跑写出来的文件是 `"schemes":null`，人读起来以为是另一回事；
+`profiles[].id` 空白或重名时 `internal/profile` 直接 `continue`，配置页、日志、`diag` 没有一处说得出丢了哪一条。
+
+**决定**：
+
+1. 透明度只有一个范围 `[0.3, 1]`：`internal/store/validate.go` 的 `check("backgroundOpacity", …)` 与
+   `internal/ui/settings_appearance.go` 的滑杆用同一组数。手写的 `0.2` 算越界，整份文件退回默认——宁可
+   给一句「越界」，也不留一个看上去「生效了」却什么也看不见的窗口。
+2. 两张表默认就是空切片：`Default()` 写 `Schemes: []Scheme{}` / `Profiles: []Profile{}`，
+   `fallbackUnknown` 把文件里写 `null` 的也归一成空切片，`Clone` 同步用 `[]T{}` 而不是 `nil`——
+   `Equal` 是 `reflect.DeepEqual`，`nil` 与 `[]` 会被当成「改过」，那样配置页的「有改动」标会一直在。
+3. `wt-go version` 不再调 `Collect()`：只拿 `buildInfo()` 与 `versionLabel(version, packagedVersion)`，
+   两行输出的字不变。
+4. `sys.OpenPath` 先把路径变成绝对路径再交给桌面，这样以 `-` 开头的名字不再是选项；Windows 用
+   `%SystemRoot%\explorer.exe`（拿不到才退到 PATH），`Start` 之后 `Release`，与 `open_other.go` 的
+   `launch` 一样不等它；`OpenURL` 不动，URL 加绝对路径反而会弄坏。
+5. 丢 profile 要说出来：`store.ProfileIDs` 报出空 `id` 与重名，`internal/app` 在 `Resolve` 之后用
+   `fault.Line(fault.BadProfileID, …)` 记一行 `E211`（`docs/故障排查.md` 有确认与修法）。这一条**不**放进
+   `Validate`：越界值的代价是整份文件不用，而重名 id 的文件其余部分完全能跑，为它换默认值反而丢得更多。
+
+**代价**：`0.1` 这种手写值从此会被退回默认，文件里原本「能开但几乎看不见」的窗口变成「能看见」。
+
+**测试**：`TestValidate`（新增 `0.2` 一例）、`TestDefault`（两张表非 nil 且为空）、
+`TestMarshalWritesEmptyLists`（首跑文件里是 `"schemes":[]` / `"profiles":[]`）、
+`TestParseEmptyLists`（文件写 `null` 也是空表）、`TestProfileIDs`（空 id 与重名各报一条，无 profile 时没有报）。

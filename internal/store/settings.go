@@ -255,6 +255,11 @@ func Default() Settings {
 		TabWidth:              "compact",
 		MaxPanes:              4,
 		Keybindings:           DefaultKeybindings(),
+		// A list the file may leave out is still a list: an empty one writes
+		// itself as [] rather than null, which is what a person reading the file
+		// expects of a setting that holds many things.
+		Schemes:  []Scheme{},
+		Profiles: []Profile{},
 	}
 }
 
@@ -283,15 +288,15 @@ func EqualProfile(a, b Profile) bool {
 // form may edit it, and the file's copy stay as it was.
 func (s Settings) Clone() Settings {
 	out := s
-	out.Schemes = append([]Scheme(nil), s.Schemes...)
+	out.Schemes = append([]Scheme{}, s.Schemes...)
 	for i := range out.Schemes {
-		out.Schemes[i].Palette = append([]string(nil), s.Schemes[i].Palette...)
+		out.Schemes[i].Palette = append([]string{}, s.Schemes[i].Palette...)
 	}
-	out.Profiles = append([]Profile(nil), s.Profiles...)
+	out.Profiles = append([]Profile{}, s.Profiles...)
 	for i := range out.Profiles {
-		out.Profiles[i].Args = append([]string(nil), s.Profiles[i].Args...)
+		out.Profiles[i].Args = append([]string{}, s.Profiles[i].Args...)
 	}
-	out.Keybindings = append([]Keybinding(nil), s.Keybindings...)
+	out.Keybindings = append([]Keybinding{}, s.Keybindings...)
 	// Extra is shared like the strings are: a form edits the settings, never
 	// the map of keys it does not know.
 	return out

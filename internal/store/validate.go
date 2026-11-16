@@ -22,7 +22,7 @@ func (s Settings) Validate() error {
 	check("font.lineHeight", between(float64(s.Font.LineHeight), 0.5, 4), "between 0.5 and 4")
 	check("padding.x", between(float64(s.Padding.X), 0, 256), "between 0 and 256")
 	check("padding.y", between(float64(s.Padding.Y), 0, 256), "between 0 and 256")
-	check("backgroundOpacity", between(s.BackgroundOpacity, 0, 1), "between 0 and 1")
+	check("backgroundOpacity", between(s.BackgroundOpacity, 0.3, 1), "between 0.3 and 1")
 	check("scrollbackMB", between(float64(s.ScrollbackMB), 0, 1024), "between 0 and 1024")
 	check("scrollMultiplier", between(float64(s.ScrollMultiplier), 0.1, 10), "between 0.1 and 10")
 	check("minimumContrast", between(float64(s.MinimumContrast), 0, 21), "between 0 and 21")
@@ -35,6 +35,28 @@ func (s Settings) Validate() error {
 		return nil
 	}
 	return fmt.Errorf("settings: %s", strings.Join(bad, "; "))
+}
+
+// ProfileIDs names the profiles the file cannot open: an id that is empty, or
+// the same as one before it. internal/profile drops those when it builds the
+// list of profiles, so the file's entry never appears anywhere; this is how a
+// caller can say which line of the file was lost instead of leaving the person
+// to wonder. It is not part of Validate because such a file still runs: the
+// profiles it names that are fine are the ones the window shows.
+func ProfileIDs(profiles []Profile) []string {
+	var bad []string
+	seen := make(map[string]bool, len(profiles))
+	for i, p := range profiles {
+		if p.ID == "" {
+			bad = append(bad, fmt.Sprintf("profiles[%d].id is empty", i))
+			continue
+		}
+		if seen[p.ID] {
+			bad = append(bad, fmt.Sprintf("profiles[%d].id is %q, which a profile above it has", i, p.ID))
+		}
+		seen[p.ID] = true
+	}
+	return bad
 }
 
 // fallbackUnknown puts back the default for each name the file wrote that no
@@ -55,6 +77,15 @@ func (s *Settings) fallbackUnknown() {
 	s.ClipboardWrite = known(s.ClipboardWrite, enumClipboardWrites, d.ClipboardWrite)
 	s.NewTabPosition = known(s.NewTabPosition, enumTabPositions, d.NewTabPosition)
 	s.TabWidth = known(s.TabWidth, enumTabWidths, d.TabWidth)
+	// A list the file wrote as null, or left out, is an empty list: Clone and
+	// Equal compare what the window shows, and nil against [] reads as a change
+	// the person never made.
+	if s.Schemes == nil {
+		s.Schemes = []Scheme{}
+	}
+	if s.Profiles == nil {
+		s.Profiles = []Profile{}
+	}
 	// A family the file leaves empty is the generic one, which is also what the
 	// window draws with: an empty setting would say nothing at all.
 	s.FillEmptyFont()

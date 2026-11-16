@@ -5,13 +5,20 @@ package sys
 import (
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 )
 
 // OpenPath opens path in the program the desktop uses for it: open on macOS,
 // xdg-open elsewhere. A missing program is an error the settings page shows.
 func OpenPath(path string) error {
-	return launch(path)
+	// The path goes in whole: a name that starts with a dash is otherwise read
+	// as an option of xdg-open or open, and an option is not the file.
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return fmt.Errorf("sys: open %s: %w", path, err)
+	}
+	return launch(abs)
 }
 
 // OpenURL opens url in the program the desktop associates with its scheme,

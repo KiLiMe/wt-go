@@ -214,11 +214,6 @@ Linux 上冷启动的 150 MB RSS 里 Go 代码只占约 9 MB，大头是 MyGo �
 | 是什么 | 现在在哪 |
 | --- | --- |
 | 录制快捷键时每帧重绑：每个动作每帧注册一次 `OnWindowShortcut`，上千个动作就是上千次绑定 | `internal/ui/keybindings.go:416`，该只在进入录制状态时绑一次 |
-| `wt-go version` 为了一个版本号跑全量 `Collect()`：读设置、探 shell、列 profile、读崩溃日志 | `internal/cli/cli.go:56` |
-| `open` 的参数边界：路径以 `-` 开头会被 `xdg-open` / `open` 当成选项；Windows 侧写死 `explorer.exe` 而不是 `%SystemRoot%\explorer.exe`，也没有 `Process.Release()` | `internal/sys/open_other.go`、`internal/sys/open_windows.go:10` |
-| 设置范围写了两份且不一致：透明度在 `store` 是 `[0,1]`，界面滑杆只给 `[0.3,1]` | `internal/store/validate.go:25`、`internal/ui/settings_appearance.go:30` |
-| `Default()` 不初始化 `Schemes` / `Profiles`，序列化出来是 `null` 不是 `[]` | `internal/store/settings.go:216`（字段在 `:135-136`） |
-| 配置文件 `ID` 重复或为空时被静默 `continue` 丢掉，不给一句诊断 | `internal/profile/profile.go:112` |
 | 配色方案的颜色格式、手写键位能不能解析，只在用到时才暴露 | `internal/store/validate.go` |
 | 还没有的界面与功能：`Ctrl+Shift+滚轮` 调窗口透明度、终端的滚动条（`tabs.go:194` 的 `Scrollbars(false)` 是标签条的）、`startOn: "restore"`（`store` 现在把 `restore` 当未知值回默认） | `internal/ui/`、`internal/store/validate.go` |
 
@@ -226,8 +221,6 @@ Linux 上冷启动的 150 MB RSS 里 Go 代码只占约 9 MB，大头是 MyGo �
 
 未决定、也没有排进阶段的几件事，记在这里免得丢：
 
-- **会话常驻**：是否采用 ADR-09 所述的会话服务模型（阶段 5 再评估）。
-- **多窗口**：独立进程还是单进程多窗？前者简单，后者才能共享设置热重载。
 - **给自动化测试用的控制接口**：需要能驱动标签/窗格、读终端内容；`diag` 与 `mcp` 只做到了只读现场。
 - **内置 SSH**：暂定不做，外部调用 `ssh` 即可。
 - **随包 ConPTY 跟版的节奏**：ADR-82 已随包 Windows Terminal 的 ConPTY（`1.25.260930003`，两 arch

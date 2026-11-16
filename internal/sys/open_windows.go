@@ -4,15 +4,37 @@ package sys
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 	"unsafe"
 )
 
 // OpenPath opens path in the program the desktop uses for it, which Explorer
-// is on Windows.
+// is on Windows. The path goes in whole: explorer.exe reads a name that starts
+// with a dash or a slash as an option, and an option is not the file.
 func OpenPath(path string) error {
-	return exec.Command("explorer.exe", path).Start()
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return fmt.Errorf("sys: open %s: %w", path, err)
+	}
+	// The one in %SystemRoot% is the one this Windows ships; a bare name is
+	// whatever the PATH decides, which is not something to trust with a click.
+	explorer := "explorer.exe"
+	if root := os.Getenv("SystemRoot"); root != "" {
+		explorer = filepath.Join(root, "explorer.exe")
+	}
+	cmd := exec.Command(explorer, abs)
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("sys: open %s: %w", path, err)
+	}
+	// Nothing waits for Explorer: releasing the process keeps the window from
+	// holding it for the rest of the session.
+	if err := cmd.Process.Release(); err != nil {
+		return fmt.Errorf("sys: open %s: %w", path, err)
+	}
+	return nil
 }
 
 // OpenURL opens url in the program the desktop associates with its scheme.

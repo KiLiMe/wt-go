@@ -24,6 +24,7 @@ func TestValidate(t *testing.T) {
 		{"line height", func(s *Settings) { s.Font.LineHeight = 0 }, "font.lineHeight"},
 		{"padding", func(s *Settings) { s.Padding.X = -1 }, "padding.x"},
 		{"opacity", func(s *Settings) { s.BackgroundOpacity = 1.5 }, "backgroundOpacity"},
+		{"opacity too clear", func(s *Settings) { s.BackgroundOpacity = 0.2 }, "backgroundOpacity"},
 		{"scrollback", func(s *Settings) { s.ScrollbackMB = 1 << 20 }, "scrollbackMB"},
 		{"scroll multiplier", func(s *Settings) { s.ScrollMultiplier = 0 }, "scrollMultiplier"},
 		{"contrast", func(s *Settings) { s.MinimumContrast = 21.5 }, "minimumContrast"},
@@ -44,6 +45,21 @@ func TestValidate(t *testing.T) {
 				t.Errorf("error = %q, want it to name %s", err, tt.want)
 			}
 		})
+	}
+}
+
+// TestProfileIDs covers the profiles a file cannot open: none of them refuses
+// the file, so the window names them rather than dropping them in silence.
+func TestProfileIDs(t *testing.T) {
+	got := ProfileIDs([]Profile{{ID: "pwsh"}, {ID: ""}, {ID: "pwsh"}, {ID: "cmd"}})
+	if len(got) != 2 {
+		t.Fatalf("problems = %q, want the empty id and the repeated one", got)
+	}
+	if !strings.Contains(got[0], "profiles[1]") || !strings.Contains(got[1], "profiles[2]") {
+		t.Errorf("problems = %q, want them to name the two lines", got)
+	}
+	if p := ProfileIDs(nil); p != nil {
+		t.Errorf("problems of no profiles = %q, want none", p)
 	}
 }
 

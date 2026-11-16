@@ -53,8 +53,15 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) Result {
 	case "mcp":
 		return Result{Handled: true, Code: servemcp(in, out, errOut)}
 	case "version":
-		r := Collect()
-		fmt.Fprintf(out, "wt-go %s %s\n", r.version(), r.Revision)
+		// One line, so read only what it says: the report reads the settings
+		// file, probes the shells and lists the profiles, and a version is none
+		// of that.
+		version, revision := buildInfo()
+		line := fmt.Sprintf("wt-go %s", versionLabel(version, packagedVersion))
+		if revision != "" {
+			line += " " + revision
+		}
+		fmt.Fprintln(out, line)
 		return Result{Handled: true}
 	case "help", "-h", "--help", "-help":
 		fmt.Fprint(out, Usage)

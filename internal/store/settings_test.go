@@ -35,8 +35,8 @@ func TestDefault(t *testing.T) {
 	if len(s.Keybindings) == 0 {
 		t.Fatal("no default keybindings")
 	}
-	if s.Profiles != nil || s.Schemes != nil {
-		t.Errorf("defaults name profiles or schemes: %v, %v", s.Profiles, s.Schemes)
+	if s.Profiles == nil || s.Schemes == nil || len(s.Profiles) != 0 || len(s.Schemes) != 0 {
+		t.Errorf("defaults name profiles or schemes, or leave them nil: %v, %v", s.Profiles, s.Schemes)
 	}
 }
 
@@ -109,6 +109,32 @@ func TestParseLegacyLanguage(t *testing.T) {
 func TestParseRejects(t *testing.T) {
 	if _, err := Parse([]byte("{oops")); err == nil {
 		t.Fatal("parsed a broken file")
+	}
+}
+
+// TestMarshalWritesEmptyLists covers a list the settings hold none of: the file
+// says [] rather than null, so that a person reading it sees a list.
+func TestMarshalWritesEmptyLists(t *testing.T) {
+	b, err := Marshal(Default())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{`"schemes": []`, `"profiles": []`} {
+		if !strings.Contains(string(b), key) {
+			t.Errorf("file has no %s: %s", key, b)
+		}
+	}
+}
+
+// TestParseEmptyLists covers a file that says null where a list belongs: the
+// window shows an empty list, which is what Clone and Equal compare.
+func TestParseEmptyLists(t *testing.T) {
+	s, err := Parse([]byte(`{"schemes":null,"profiles":null}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Schemes == nil || s.Profiles == nil {
+		t.Errorf("lists = %v, %v, want empty lists", s.Schemes, s.Profiles)
 	}
 }
 

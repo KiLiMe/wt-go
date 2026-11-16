@@ -30,6 +30,7 @@ const (
 	OpenFolder    Code = "E208" // a folder could not be opened
 	OpenLink      Code = "E209" // a link could not be opened
 	OpenFile      Code = "E210" // settings.json could not be opened
+	BadProfileID  Code = "E211" // a profile in settings.json names no profile
 
 	// While it runs.
 	ChildFailed   Code = "E301" // a shell could not be started
@@ -54,6 +55,7 @@ var about = map[Code]string{
 	OpenFolder:    "the folder could not be opened: the desktop has no program for it",
 	OpenLink:      "the link could not be opened: the desktop has no browser for it",
 	OpenFile:      "settings.json could not be opened: the desktop has no program for it",
+	BadProfileID:  "A profile in settings.json has an empty id, or one another profile has, so it is not shown",
 	ChildFailed:   "A shell could not be started, so the tab has nothing in it",
 	Crashed:       "The window stopped with a panic; the stack is in the crash log",
 	NoProcessList: "The process list could not be read, so whether a tab still runs a program is unknown",
