@@ -2409,8 +2409,10 @@ pty 层才对每个程序都成立：自己会开 VT 输入模式的（vim、hto
 修好并重钉了 `go.mod`（`TestLinkDirKeepsADriveWhole` 钉住这一条）。要再补 PowerShell 那一头，得让插件认
 Windows Terminal 用的 OSC 9;9：libghostty-vt 是 C 库，只绑定了 OSC 7 的 pwd，既没有这条序列也没有写 pwd 的
 接口，只能在 Go 侧嗅探字节流（还要处理跨 read 的分片），而收益只对装了 WT shell integration 的机器——暂时
-不做，记在 `docs/plan.md` 阶段 4 第 5 条。跨行折行的网址、不按 `Ctrl` 也显下划线（上游刻意的设计，
-`plugins/terminal/terminal_test.go` 有测试钉住）、`:12:3` 直接交给编辑器跳到那一行，同样在插件里。
+不做，记在 `docs/plan.md` 阶段 4 第 5 条。跨行折行的网址已在插件里修好（同一个 fork，`fa451a38`：
+插件把「屏幕行」当成从折行起点到折行终点的整段，逐 rune 记行列，命中答回的是一组行段，下划线逐段画，
+`HoveredLink` 的矩形包住全部）；不按 `Ctrl` 也显下划线（上游刻意的设计，`plugins/terminal/terminal_test.go`
+有测试钉住）、`:12:3` 直接交给编辑器跳到那一行，仍在插件里，没做。
 
 **测试**：`TestPlace`（`:12`/`:12:3` 的长度，盘符冒号不算）、`TestPrintedPath`、`TestIsURL`；
 `TestLinkDir`（没终端、终端没报过）、`TestLinkDirFollowsOSC7`（把 `\x1b]7;file:///tmp/somewhere\x07` 喂给一个
