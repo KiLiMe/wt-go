@@ -73,7 +73,7 @@ func TestNewAppKeepsABadFile(t *testing.T) {
 	if !store.Equal(a.saved, store.Default()) {
 		t.Error("saved settings are not the defaults")
 	}
-	dir, err := sys.Dir()
+	dir, err := sys.ConfigDir()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +100,7 @@ func TestReloadKeepsABadFileOnce(t *testing.T) {
 		t.Errorf("badData = %q, want the original", a.badData)
 	}
 	a.reload(bad)
-	dir, err := sys.Dir()
+	dir, err := sys.ConfigDir()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -427,7 +427,7 @@ func TestPollWaitsForBadBytesToSettle(t *testing.T) {
 		t.Fatalf("dispatched %d times for settled bad bytes, want one", calls)
 	}
 
-	dir, err := sys.Dir()
+	dir, err := sys.ConfigDir()
 	if err != nil {
 		t.Fatal(err)
 	}

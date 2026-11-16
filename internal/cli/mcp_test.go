@@ -76,9 +76,9 @@ func TestLogToolRefusesOutsidePaths(t *testing.T) {
 // A path inside the wt-go directory is read: a log that is there and not
 // there answers with the OS error, which is what the caller has to see.
 func TestLogToolReadsLogPath(t *testing.T) {
-	dir, err := sys.Dir()
+	dir, err := sys.CrashDir()
 	if err != nil {
-		t.Skipf("Dir: %v", err)
+		t.Skipf("CrashDir: %v", err)
 	}
 	p := join(dir, "crash-19700101-000000.log")
 	if !sys.IsLogPath(p) {

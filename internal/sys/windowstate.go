@@ -10,7 +10,7 @@ import (
 // WindowStatePath is where the window's place, size and state live: beside
 // the settings, since the geometry a window was left in is a preference too.
 func WindowStatePath() (string, error) {
-	dir, err := Dir()
+	dir, err := ConfigDir()
 	if err != nil {
 		return "", err
 	}

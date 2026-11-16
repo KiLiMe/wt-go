@@ -6,7 +6,10 @@
 *.exe
 *.syso
 # The shipped ConPTY is an .exe too (ADR-82); the rule above is there for
-# build output, not for the console Windows Terminal gives us.
-!/resources/windows-*/OpenConsole.exe
+# build output, not for the console Windows Terminal gives us. ADR-83 moved it
+# into a conpty subdirectory, and the exception has to name that: a pattern
+# without it left the file out of the commit, which is what debbc6a fixed once
+# for the flat layout.
+!/resources/windows-*/conpty/OpenConsole.exe
 tmp_*.png
 /refs/

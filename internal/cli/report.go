@@ -25,21 +25,26 @@ var packagedVersion string
 // Report is what wt-go knows about itself from outside: a fresh process
 // reading the files the window reads.
 type Report struct {
-	Program    string          `json:"program"`
-	Version    string          `json:"version"`
-	Revision   string          `json:"revision,omitempty"`
-	Packaged   string          `json:"packaged,omitempty"`
-	Go         string          `json:"go"`
-	Platform   string          `json:"platform"`
-	Executable string          `json:"executable,omitempty"`
-	Settings   SettingsReport  `json:"settings"`
-	Native     NativeReport    `json:"native"`
-	ConPTY     ConPTYReport    `json:"conpty"`
-	Shells     []ShellReport   `json:"shells"`
-	Profiles   []ProfileReport `json:"profiles"`
-	Crashes    []CrashReport   `json:"crash_logs"`
-	Log        LogReport       `json:"log"`
-	Checks     []Check         `json:"checks"`
+	Program    string `json:"program"`
+	Version    string `json:"version"`
+	Revision   string `json:"revision,omitempty"`
+	Packaged   string `json:"packaged,omitempty"`
+	Go         string `json:"go"`
+	Platform   string `json:"platform"`
+	Executable string `json:"executable,omitempty"`
+	// Portable says this copy keeps its files beside the executable, and Data
+	// is the directory they are in: the two decide what the paths below point
+	// to, so a report of one kind is not read as the other's.
+	Portable bool            `json:"portable,omitempty"`
+	Data     string          `json:"data,omitempty"`
+	Settings SettingsReport  `json:"settings"`
+	Native   NativeReport    `json:"native"`
+	ConPTY   ConPTYReport    `json:"conpty"`
+	Shells   []ShellReport   `json:"shells"`
+	Profiles []ProfileReport `json:"profiles"`
+	Crashes  []CrashReport   `json:"crash_logs"`
+	Log      LogReport       `json:"log"`
+	Checks   []Check         `json:"checks"`
 }
 
 // SettingsReport is the file the settings live in, and what it holds.
@@ -124,6 +129,10 @@ func Collect() Report {
 	if exe, err := sys.Executable(); err == nil {
 		r.Executable = exe
 	}
+	if dir := sys.DataDir(); dir != "" {
+		r.Portable = true
+		r.Data = dir
+	}
 	r.Settings = settingsReport()
 	r.Native = nativeReport()
 	r.ConPTY = conptyReport()
@@ -197,6 +206,9 @@ func (r Report) Text(w io.Writer) {
 	line := func(format string, a ...any) { fmt.Fprintf(w, format+"\n", a...) }
 	line("wt-go %s %s %s", r.version(), r.Revision, r.Platform)
 	line("exe:      %s", or(r.Executable, "unknown"))
+	if r.Portable {
+		line("portable: %s", or(r.Data, "unknown"))
+	}
 	line("settings: %s", or(r.Settings.Path, "not available"))
 	if r.Settings.Error != "" {
 		line("          %s", r.Settings.Error)

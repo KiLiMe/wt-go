@@ -103,6 +103,10 @@ type App struct {
 	// content is the room the panes took in the last frame, which the keys
 	// that split and move between panes measure.
 	content layout.Rect
+	// console is where the terminals' console comes from, as the about dialog
+	// words it: read once at startup, since mygo picks a ConPTY once and the
+	// dialog must name the one the terminals in front were made in.
+	console consoleSource
 
 	// saved is the settings the file holds, and savedData the bytes it held,
 	// which the window watches for changes; applied is what it gave the
@@ -185,6 +189,10 @@ func newApp(startDir string) *App {
 		watchStop: make(chan struct{}),
 		relaunch:  sys.Relaunch,
 	}
+	// The console a terminal is made in is a fact about the program's folder
+	// and the environment, and it is read before anything is drawn: a read
+	// later would name a dll the terminals in front were not made in.
+	a.console = consoleOf(sys.ConPTYLibrary())
 	settings, data, fresh, err := load()
 	if err == nil {
 		a.settings = settings

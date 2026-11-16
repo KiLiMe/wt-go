@@ -50,6 +50,7 @@ func (r Report) Redact(pairs [][2]string) Report {
 	}
 	s := func(v string) string { return redact(v, pairs) }
 	r.Executable = s(r.Executable)
+	r.Data = s(r.Data)
 	r.Settings.Path = s(r.Settings.Path)
 	r.Settings.Error = s(r.Settings.Error)
 	r.Native.Path = s(r.Native.Path)

@@ -22,25 +22,65 @@ const project = "https://github.com/KiLiMe/wt-go"
 func (a *App) OpenAbout() {
 	self := cli.About()
 	a.openOverlay(overlayAbout)
-	a.about = aboutOf(self, mygo.Version, sys.SettingsPath, sys.LogPath)
+	a.about = aboutOf(self, aboutCopy{
+		mygo:     mygo.Version,
+		portable: sys.Portable(),
+		console:  a.console,
+		settings: sys.SettingsPath,
+		log:      sys.LogPath,
+	})
 	a.about.Project = project
 	a.redraw()
 }
 
-// aboutOf is the dialog about self, built on mygo version and the two paths,
-// apart from the window it is shown in: a test can say what the dialog shows
-// without a machine to ask.
-func aboutOf(self cli.Self, mygoVersion string, settings, logPath func() (string, error)) *ui.About {
+// aboutCopy is the part of the about dialog that is not the build: which copy
+// this is, where it keeps its files and which console its terminals are made
+// in.
+//
+// A struct rather than five arguments, two of which are a lookup that can fail:
+// a test fills it in without a machine to ask.
+type aboutCopy struct {
+	mygo     string
+	portable bool
+	console  consoleSource
+	settings func() (string, error)
+	log      func() (string, error)
+}
+
+// aboutOf is the dialog about self, in the copy it gives, apart from the window
+// it is shown in.
+func aboutOf(self cli.Self, copy aboutCopy) *ui.About {
 	return &ui.About{
-		Open:     true,
-		Version:  self.Label(),
-		Revision: self.Revision,
-		Mygo:     mygoVersion,
-		Go:       self.Go,
-		Platform: self.Platform,
-		Settings: pathOf(settings),
-		Log:      pathOf(logPath),
+		Open:         true,
+		Version:      self.Label(),
+		Revision:     self.Revision,
+		Mygo:         copy.mygo,
+		Go:           self.Go,
+		Platform:     self.Platform,
+		Portable:     copy.portable,
+		Terminal:     copy.console.kind,
+		TerminalPath: copy.console.path,
+		Settings:     pathOf(copy.settings),
+		Log:          pathOf(copy.log),
 	}
+}
+
+// consoleSource is where the terminals' console comes from: the kind the about
+// dialog words, and the dll it is, "" for the console the machine comes with.
+type consoleSource struct {
+	kind string
+	path string
+}
+
+// consoleOf reads what sys.ConPTYLibrary answers as the dialog words it.
+func consoleOf(dll string, fromEnv bool, err error) consoleSource {
+	switch {
+	case err != nil:
+		return consoleSource{kind: ui.TerminalInherent}
+	case fromEnv:
+		return consoleSource{kind: ui.TerminalEnv, path: dll}
+	}
+	return consoleSource{kind: ui.TerminalApp, path: dll}
 }
 
 // pathOf is a path the dialog shows, or "" when the folder it comes from

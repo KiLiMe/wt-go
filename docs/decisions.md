@@ -2298,8 +2298,10 @@ pty 层才对每个程序都成立：自己会开 VT 输入模式的（vim、hto
    amd64 与 arm64 各一份），放在 `resources/windows-<goarch>/`：`conpty.dll`、`OpenConsole.exe` 与
    `ConPTY-LICENSE.txt`。`go tool mygo build` 把平台目录里的文件平铺到 exe 旁边，所以装出来就是 exe 与
    这三份并列；fork 的 pty 层不再 `//go:embed` 任何二进制，也不再解到用户缓存。
+   （ADR-83 起这三份挪进 `resources/windows-<goarch>/conpty/`，装出来是 exe 旁的 `conpty\` 文件夹。）
 2. 选择顺序：`MYGO_CONPTY`（目录，或字面量 `system` 强制用 Windows 自己的）→ exe 同目录 → 系统 conhost。
    那份 `CreatePseudoConsole` 失败时退回系统 conhost 再试一次，`start()` 不因此失败。
+   （ADR-83 起 exe 同目录这一档排在 `conpty\` 之后，见那条决定。）
 3. 因为控制台现在会转发，`writeReply` 只在「控制台会把回复留下」时才闭嘴：pty 有 `PassesReplies()`，
    `terminal.writeReply` 判 `t.conpty() && !pty.PassesReplies()`。ADR-72 的「ConPTY 下什么都不写」收窄为
    「Windows 自己的 ConPTY 下什么都不写」。
@@ -2339,3 +2341,41 @@ pty 层才对每个程序都成立：自己会开 VT 输入模式的（vim、hto
 **后续**：随包版本跟不跟 nuget（现在钉 `1.25.260930003`，最新稳定 `1.25.261109001`）留在 `docs/plan.md`；
 跟版时重跑上面那条哈希流程。fork 里 `conPTY` 的能力字段（`passesReplies`/`needsVTInput`）与 `own()` 只留
 退路判断，这次一并定下来，见 fork 的 `plugins/terminal/internal/pty/conpty_windows.go`。
+
+## ADR-83 便携版：exe 旁边的 `data` 目录说了算
+
+**背景**：发布出去的东西本来就是解压即用的 zip，但文件还是写在 `%LOCALAPPDATA%\wt-go`：设置、窗口几何、
+日志、崩溃日志全在用户目录，换个地方解压就跟换台机器一样，U 盘带走也带不走配置。ADR-82 又把
+`conpty.dll` 与 `OpenConsole.exe` 平铺在 exe 旁边，根目录开始散。NyaTerm 的做法是把这些收进 exe 旁的
+`data\`，发布包里预置一个空目录就行。
+
+**决定**：
+
+1. 判定：exe 同目录存在名为 `data` 的**目录**即便携模式（`sys.Portable()`）；同名文件不算。
+2. 便携时 `sys.Dir()` 是那个 `data`，其下分 `config`（`settings.json`、`window-state.json`、mygo 的
+   `locale`）、`logs`（`wt-go.log`、`wt-go.log.1`）、`crashes`（`crash-*.log`）；安装版（没有 `data`）
+   一切照旧，`%LOCALAPPDATA%\wt-go` 平铺。老用户无感，也不自动搬迁。
+3. `resources/windows-<goarch>/conpty/` 打出来是 exe 旁的 `conpty\`：`MYGO_CONPTY` → `conpty\` → exe 同目录
+   平铺（旧布局）→ 系统 conhost。fork 的 `chosenConPTY` 是 `sync.OnceValue`，第一次建终端就定下来，
+   所以 `Run` 在建第一个终端之前调 `sys.UseBundledConPTY()` 设 `MYGO_CONPTY`；用户自己设了就不动。
+4. mygo 自己的用户数据目录（语言选择）用 `mygo.App.SetPath(mygo.PathUserData, data\config)` 钉进 data，
+   否则会留在 `%APPDATA%`。
+5. 用户看得见：关于页多一行「运行方式：便携版/安装版」，`wt-go diag` 多一行 `portable: <data>`（安装版
+   没有这一行），`wtgo_status` 的 JSON 多 `portable`/`data`；后端是哪份 `conpty.dll` 与「运行方式」
+   并列写在关于页（「终端」一行，只读，见 ADR-82 注记）。
+6. `internal/sys` 的路径判据都改走 `sys.Dir()`/`ConfigDir()`/`LogDir()`/`CrashDir()`，要 OS 能力的调用点
+   （`OpenSettingsFolder`、MCP 的日志校验）跟着用；`IsLogPath` 按文件名分派到 `LogDir`/`CrashDir` 再比对。
+
+**理由**：便携包就该解压即用、连配置一起带走；`data` 这个目录名一眼看得出是程序自己的东西，而判定只看
+它的存在，用户想回安装版删掉即可。conpty 归到一个子目录，根目录只剩 exe 与 `data`，也不必再为「exe 同目录
+一份 dll」跟别的程序的同名文件混在一起。
+
+**代价**：机器上可能同时有 `data\config\settings.json` 与 `%LOCALAPPDATA%\wt-go\settings.json` 两份，
+哪个管用只能靠 `portable:` 行与关于页说；这个文件夹只读（解在 `Program Files`、只读盘）时 `E103` 会报
+设置目录不可用，修法是多走一步换到可写的地方。
+
+**测试**：`TestPortableDirs`/`TestInstalledDirs`（含「`data` 是文件」）、
+`TestConPTYLibraryPrefersTheConptyDir`/`TestConPTYLibraryWithoutTheConptyDir`、`TestPortablePaths`；
+`Scripts/build.ps1` 之后实跑：便携目录里 `diag` 打 `portable:` 与 `data\config` 下的路径、窗口在
+`data\config`/`data\logs` 里落盘；把 exe 单独拷到空目录再跑，`diag` 回到 `%LOCALAPPDATA%` 且说
+「Windows 自己的控制台」。

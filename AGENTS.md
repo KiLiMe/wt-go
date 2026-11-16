@@ -26,7 +26,7 @@
 | `internal/profile/` | profile 模型，以及把用户写的与自动发现的结果合并成列表（纯函数） |
 | `internal/store/` | `settings.json` 的解析、序列化、默认值与范围校验（纯函数，字节由 app 读写） |
 | `internal/theme/` | 配色：设置里的方案 > 内置 > Ghostty 的 617 套（纯函数） |
-| `internal/sys/` | 全部 OS 副作用：路径、原子写、坏配置归档、Job Object、shell 探测、打开路径、崩溃日志 |
+| `internal/sys/` | 全部 OS 副作用：路径（便携版的 `data` 目录，ADR-83）、原子写、坏配置归档、Job Object、shell 探测、打开路径、崩溃日志 |
 | `internal/i18n/` | 按 key 说一句话（`T`/`F`/`Has`），语言跟随 `mygo.App` 的当前语言；不 import 根包 `mygo` |
 | `locales/` | 消息目录：`en.json` / `zh-Hans.json` 与 `mygo generate` 写出的 `catalog_gen.go`（typed 访问器） |
 | `internal/icons/` | 界面图标：Remix Icon v4.8.0（Apache-2.0）的 SVG，`//go:embed` 打进二进制，由 `ui.Icon` 画（纯函数） |
@@ -35,7 +35,8 @@
 | `internal/mcp/` | 精简的 Model Context Protocol 服务器：JSON-RPC 2.0 + tools/resources（只用标准库） |
 | `tools/genicon/` | 画 `resources/icon.png`：`go run ./tools/genicon` |
 | `resources/icon.png` | 应用图标（1024×1024 PNG），`mygo build` 打包时嵌进 exe |
-| `resources/windows-<goarch>/` | 随包的 ConPTY：`conpty.dll` / `OpenConsole.exe` / `ConPTY-LICENSE.txt`（ADR-82），打包时平铺到 exe 旁边；来源与哈希钉在 `Scripts/conpty.json`，根包 `conpty_test.go` 校验 |
+| `resources/windows-<goarch>/conpty/` | 随包的 ConPTY：`conpty.dll` / `OpenConsole.exe` / `ConPTY-LICENSE.txt`（ADR-82），打包装进 exe 旁的 `conpty/`；来源与哈希钉在 `Scripts/conpty.json`，根包 `conpty_test.go` 校验 |
+| `resources/data/README.txt` | 装出来是 exe 旁的 `data/README.txt`：同目录存在 `data` 目录即走便携模式（ADR-83） |
 | `Scripts/build.ps1` | 日常构建（Windows）：`go tool mygo build` 出 `build\windows-amd64\wt-go.exe`（带图标、版本与 native 库） |
 | `Scripts/build.sh` | 同上（Linux / macOS）：出 `build/<os>-<arch>/wt-go`，平台按 `go env` |
 | `docs/` | `使用说明.md` / `配置参考.md`（`settings.json` 全字段）/ `键位.md`（默认键位与键位写法）/ `故障排查.md`（故障码）/ `MCP.md`（`wt-go mcp` 的工具、资源与协议）/ `Linux.md` / `代码导读.md` / `decisions.md`（ADR）/ `plan.md`（阶段计划） |

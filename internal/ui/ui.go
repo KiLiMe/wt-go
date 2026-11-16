@@ -286,6 +286,19 @@ type Settings struct {
 	Search *string
 }
 
+// Where the terminals' console comes from, which the about dialog says.
+const (
+	// TerminalApp is the ConPTY shipped beside the program, in its conpty
+	// folder, which is what a build unpacks to.
+	TerminalApp = "app"
+	// TerminalEnv is the ConPTY that MYGO_CONPTY names, which is where a person
+	// points the window at a build of their own.
+	TerminalEnv = "env"
+	// TerminalInherent is the console the machine comes with: Windows' own, or
+	// the pty a system gives every program.
+	TerminalInherent = "inherent"
+)
+
 // About is the dialog that says what the program is: the version it runs, what
 // it was built from, what it runs on and the files it leaves, and what it is
 // licensed under.
@@ -304,6 +317,18 @@ type About struct {
 	// which build of the framework a bug report is about matters as much as
 	// which build of the program.
 	Mygo string
+	// Portable is whether this copy keeps its files in a data directory beside
+	// the executable rather than under the user's application data: it decides
+	// where the two paths below point, and a person pasting a report needs it
+	// to read them.
+	Portable bool
+	// Terminal is where the terminals' console comes from — TerminalApp,
+	// TerminalEnv or TerminalInherent — and TerminalPath the dll it is, ""
+	// for the console the machine comes with. mygo picks a ConPTY the first
+	// time it makes a terminal, so it is read once at startup: a later read
+	// would name a dll the terminals in front were not made in.
+	Terminal     string
+	TerminalPath string
 	// Settings and Log are where settings.json and wt-go.log are, the first
 	// thing `wt-go diag` is asked about: a person sent to look at a file by a
 	// bug report should not have to open a console to find it.

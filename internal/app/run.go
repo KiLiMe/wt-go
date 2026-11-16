@@ -28,6 +28,17 @@ func Run() (err error) {
 		}
 		return nil
 	}
+	// A portable copy keeps mygo's own file beside the settings rather than
+	// under the application data directory: the language the window was last
+	// told to speak is one more thing the folder a person unzipped holds
+	// (ADR-83). An installed copy is left to mygo's default.
+	if dir := sys.PortableConfigDir(); dir != "" {
+		mygo.App.SetPath(mygo.PathUserData, dir)
+	}
+	// Before the first terminal: the plugin reads MYGO_CONPTY once, when it
+	// makes one, so a ConPTY that arrives later would be the one the window
+	// never uses.
+	sys.UseBundledConPTY()
 	// A window started from Explorer has no console: what it says goes to
 	// wt-go.log as well, so that `wt-go diag` can read it back later.
 	if f, ferr := sys.OpenLog(); ferr == nil {

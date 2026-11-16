@@ -14,9 +14,9 @@ import (
 // window it belonged to is gone.
 func TestReportCrash(t *testing.T) {
 	settingsDir(t)
-	dir, err := sys.Dir()
+	dir, err := sys.CrashDir()
 	if err != nil {
-		t.Fatalf("Dir: %v", err)
+		t.Fatalf("CrashDir: %v", err)
 	}
 	reportCrash("wtgo test panic")
 

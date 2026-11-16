@@ -1234,6 +1234,76 @@ func (msgs Messages) AboutRuntime() string {
 	return Catalog.Format(msgs.locale, "aboutRuntime", nil)
 }
 
+// AboutMode says "Mode"
+// in the language the app shows.
+func AboutMode() string { return In(i18n.Locale()).AboutMode() }
+
+// AboutMode says "Mode"
+// in the language of msgs.
+func (msgs Messages) AboutMode() string {
+	return Catalog.Format(msgs.locale, "aboutMode", nil)
+}
+
+// AboutModePortable says "Portable"
+// in the language the app shows.
+func AboutModePortable() string { return In(i18n.Locale()).AboutModePortable() }
+
+// AboutModePortable says "Portable"
+// in the language of msgs.
+func (msgs Messages) AboutModePortable() string {
+	return Catalog.Format(msgs.locale, "aboutModePortable", nil)
+}
+
+// AboutModeInstalled says "Installed"
+// in the language the app shows.
+func AboutModeInstalled() string { return In(i18n.Locale()).AboutModeInstalled() }
+
+// AboutModeInstalled says "Installed"
+// in the language of msgs.
+func (msgs Messages) AboutModeInstalled() string {
+	return Catalog.Format(msgs.locale, "aboutModeInstalled", nil)
+}
+
+// AboutTerminal says "Terminal"
+// in the language the app shows.
+func AboutTerminal() string { return In(i18n.Locale()).AboutTerminal() }
+
+// AboutTerminal says "Terminal"
+// in the language of msgs.
+func (msgs Messages) AboutTerminal() string {
+	return Catalog.Format(msgs.locale, "aboutTerminal", nil)
+}
+
+// AboutTerminalApp says "The ConPTY beside the program"
+// in the language the app shows.
+func AboutTerminalApp() string { return In(i18n.Locale()).AboutTerminalApp() }
+
+// AboutTerminalApp says "The ConPTY beside the program"
+// in the language of msgs.
+func (msgs Messages) AboutTerminalApp() string {
+	return Catalog.Format(msgs.locale, "aboutTerminalApp", nil)
+}
+
+// AboutTerminalEnv says "The one MYGO_CONPTY names"
+// in the language the app shows.
+func AboutTerminalEnv() string { return In(i18n.Locale()).AboutTerminalEnv() }
+
+// AboutTerminalEnv says "The one MYGO_CONPTY names"
+// in the language of msgs.
+func (msgs Messages) AboutTerminalEnv() string {
+	return Catalog.Format(msgs.locale, "aboutTerminalEnv", nil)
+}
+
+// AboutTerminalInherent says "The system's own console"
+// in the language the app shows.
+func AboutTerminalInherent() string { return In(i18n.Locale()).AboutTerminalInherent() }
+
+// AboutTerminalInherent says "The system's own console"
+// in the language of msgs.
+func (msgs Messages) AboutTerminalInherent() string {
+	return Catalog.Format(msgs.locale, "aboutTerminalInherent", nil)
+}
+
 // AboutMygo says "mygo"
 // in the language the app shows.
 func AboutMygo() string { return In(i18n.Locale()).AboutMygo() }

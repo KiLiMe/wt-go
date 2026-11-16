@@ -13,7 +13,7 @@ import (
 // answers with the path it wrote. A window that dies leaves something to read
 // instead of a window that is gone.
 func WriteCrashLog(reason string, stack []byte) (string, error) {
-	dir, err := Dir()
+	dir, err := CrashDir()
 	if err != nil {
 		return "", err
 	}
@@ -21,13 +21,13 @@ func WriteCrashLog(reason string, stack []byte) (string, error) {
 		return "", fmt.Errorf("sys: create %s: %w", dir, err)
 	}
 	now := time.Now()
-	base := "crash-" + now.Format("20060102-150405")
+	base := crashName + now.Format("20060102-150405")
 	body := fmt.Sprintf("%s\n%s\n\n%s\n", now.Format(time.RFC3339), reason, stack)
 	// O_EXCL: two crashes in one second would otherwise write the same name,
 	// and the second would overwrite the first instead of joining it. The
 	// suffix keeps both, and the name still matches IsLogPath's crash-*.log.
 	for i := 0; i < crashTries; i++ {
-		path := filepath.Join(dir, base+crashSuffix(i)+".log")
+		path := filepath.Join(dir, base+crashSuffix(i)+logExt)
 		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 		if errors.Is(err, fs.ErrExist) {
 			continue

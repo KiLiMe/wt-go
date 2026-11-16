@@ -44,7 +44,7 @@ func SettingsFileInfo() (SettingsFile, error) {
 // CrashLogs is the crash logs the program wrote, newest first. A window that
 // died leaves one; the newest is the one a diagnostic reads.
 func CrashLogs() ([]string, error) {
-	dir, err := Dir()
+	dir, err := CrashDir()
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func CrashLogs() ([]string, error) {
 	}
 	var out []string
 	for _, e := range entries {
-		if e.IsDir() || !strings.HasPrefix(e.Name(), "crash-") || !strings.HasSuffix(e.Name(), ".log") {
+		if e.IsDir() || !isCrashLog(e.Name()) {
 			continue
 		}
 		out = append(out, filepath.Join(dir, e.Name()))
@@ -110,30 +110,50 @@ var ErrNoNative = errors.New("sys: libghostty-vt is not in any of the places it 
 // console that keeps to itself what a program asks.
 var ErrNoConPTY = errors.New("sys: no conpty.dll beside the executable")
 
+// conptyName is the library Windows Terminal's ConPTY ships as: the name the
+// terminal plugin loads, and the file whose presence means a directory holds a
+// console (ADR-82).
+const conptyName = "conpty.dll"
+
+// isCrashLog reports whether name is one wt-go wrote when a window died: crash
+// logs share the log extension under a prefix of their own.
+func isCrashLog(name string) bool {
+	return strings.HasPrefix(name, crashName) && strings.HasSuffix(name, logExt)
+}
+
 // ConPTYLibrary is the conpty.dll the terminal plugin would make its terminals
-// in, in the order it looks: the directory $MYGO_CONPTY names, then the one
-// beside the executable, and whether $MYGO_CONPTY named it. Windows' own console
-// is no file, so this answers ErrNoConPTY for it; which of the two runs is the
-// plugin's choice at runtime, and this only says what it has to choose from.
-func ConPTYLibrary() (path string, fromEnv bool, err error) {
+// in, in the order it looks: the directory $MYGO_CONPTY names, then the conpty
+// directory beside the executable, then the executable's own directory, which
+// is where a copy unpacked before the conpty directory existed keeps it; and
+// whether $MYGO_CONPTY named it. Windows' own console is no file, so this
+// answers ErrNoConPTY for it; which of the two runs is the plugin's choice at
+// runtime, and this only says what it has to choose from.
+func ConPTYLibrary() (string, bool, error) {
 	if runtime.GOOS != "windows" {
 		return "", false, ErrNoConPTY
 	}
-	if dir := os.Getenv("MYGO_CONPTY"); dir != "" && dir != "system" {
-		p := filepath.Join(dir, "conpty.dll")
-		if _, err := os.Stat(p); err == nil {
-			return p, true, nil
-		}
+	if dir := os.Getenv("MYGO_CONPTY"); dir != "" && dir != "system" && hasConPTY(dir) {
+		// adopted is this program's own pick, which the variable carries: a
+		// report says the ConPTY beside the program, not one a person chose.
+		return filepath.Join(dir, conptyName), dir != adopted, nil
 	}
-	exe, err := os.Executable()
-	if err != nil {
-		return "", false, ErrNoConPTY
+	if dir := bundledConPTYDir(); dir != "" {
+		return filepath.Join(dir, conptyName), false, nil
 	}
-	p := filepath.Join(filepath.Dir(exe), "conpty.dll")
-	if _, err := os.Stat(p); err != nil {
-		return "", false, ErrNoConPTY
+	if exe, err := executableDir(); err == nil && hasConPTY(exe) {
+		return filepath.Join(exe, conptyName), false, nil
 	}
-	return p, false, nil
+	return "", false, ErrNoConPTY
+}
+
+// hasConPTY reports whether dir holds the console library: conpty.dll is the
+// file that decides, and it runs the OpenConsole.exe beside it.
+func hasConPTY(dir string) bool {
+	if dir == "" {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(dir, conptyName))
+	return err == nil
 }
 
 // nativeName is what libghostty-vt is called on this platform.

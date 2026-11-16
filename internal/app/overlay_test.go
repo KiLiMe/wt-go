@@ -59,7 +59,13 @@ func TestAboutSaysWhichBuild(t *testing.T) {
 	self := cli.Self{Version: "v0.4.0", Revision: "a8e3625", Go: "go1.25.0", Platform: "windows/amd64"}
 	settings := func() (string, error) { return `C:\Users\me\AppData\Local\wt-go\settings.json`, nil }
 	logPath := func() (string, error) { return `C:\Users\me\AppData\Local\wt-go\wt-go.log`, nil }
-	a := aboutOf(self, "0.9.0", settings, logPath)
+	a := aboutOf(self, aboutCopy{
+		mygo:     "0.9.0",
+		portable: true,
+		console:  consoleSource{ui.TerminalApp, `C:\wt-go\conpty\conpty.dll`},
+		settings: settings,
+		log:      logPath,
+	})
 	if a.Version != "v0.4.0" {
 		t.Errorf("version = %q", a.Version)
 	}
@@ -75,6 +81,12 @@ func TestAboutSaysWhichBuild(t *testing.T) {
 	if a.Settings != `C:\Users\me\AppData\Local\wt-go\settings.json` {
 		t.Errorf("settings = %q", a.Settings)
 	}
+	if !a.Portable {
+		t.Error("portable = false, want the dialog to say where the files are")
+	}
+	if a.Terminal != ui.TerminalApp || a.TerminalPath != `C:\wt-go\conpty\conpty.dll` {
+		t.Errorf("terminal = %q, %q, want the conpty.dll beside the program", a.Terminal, a.TerminalPath)
+	}
 	if a.Log != `C:\Users\me\AppData\Local\wt-go\wt-go.log` {
 		t.Errorf("log = %q", a.Log)
 	}
@@ -82,7 +94,7 @@ func TestAboutSaysWhichBuild(t *testing.T) {
 	// A folder that cannot be named is E103: the dialog says less, not a
 	// path of its own invention.
 	broken := func() (string, error) { return "", errors.New("no LOCALAPPDATA") }
-	a = aboutOf(self, "", broken, broken)
+	a = aboutOf(self, aboutCopy{settings: broken, log: broken})
 	if a.Settings != "" || a.Log != "" {
 		t.Errorf("settings, log = %q, %q, want both empty", a.Settings, a.Log)
 	}

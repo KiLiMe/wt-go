@@ -3,11 +3,11 @@
   "version": "1.25.260930003",
   "nupkg_sha256": "02b07b349af66d801159bdf9e440d4a1ce78bb951f37fc8609731665afdae7ee",
   "files": {
-    "resources/windows-amd64/conpty.dll": "feeef341d891643c62d30b6b07800bc70f0bc148f44cb8c3bee84aa557ae805a",
-    "resources/windows-amd64/OpenConsole.exe": "3d66b23d0a71bb8eed2b77edc8b9df9bf54ce6c8fb74c863a30e760997f80586",
-    "resources/windows-amd64/ConPTY-LICENSE.txt": "84038e9237033308778cc3542ea38286a7ce65e347224fcc943213c8f30f903e",
-    "resources/windows-arm64/conpty.dll": "151a02355227710c20c9f8f1eaf68ac4668aa09cdc921adc7ec661804d8eb1bf",
-    "resources/windows-arm64/OpenConsole.exe": "4313825a3ba634d113cc6ed3bc8ce735e3c19d360cecd985794787479469f91f",
-    "resources/windows-arm64/ConPTY-LICENSE.txt": "84038e9237033308778cc3542ea38286a7ce65e347224fcc943213c8f30f903e"
+    "resources/windows-amd64/conpty/conpty.dll": "feeef341d891643c62d30b6b07800bc70f0bc148f44cb8c3bee84aa557ae805a",
+    "resources/windows-amd64/conpty/OpenConsole.exe": "3d66b23d0a71bb8eed2b77edc8b9df9bf54ce6c8fb74c863a30e760997f80586",
+    "resources/windows-amd64/conpty/ConPTY-LICENSE.txt": "84038e9237033308778cc3542ea38286a7ce65e347224fcc943213c8f30f903e",
+    "resources/windows-arm64/conpty/conpty.dll": "151a02355227710c20c9f8f1eaf68ac4668aa09cdc921adc7ec661804d8eb1bf",
+    "resources/windows-arm64/conpty/OpenConsole.exe": "4313825a3ba634d113cc6ed3bc8ce735e3c19d360cecd985794787479469f91f",
+    "resources/windows-arm64/conpty/ConPTY-LICENSE.txt": "84038e9237033308778cc3542ea38286a7ce65e347224fcc943213c8f30f903e"
   }
 }

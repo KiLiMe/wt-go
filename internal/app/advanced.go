@@ -71,11 +71,12 @@ func (a *App) reset() {
 	a.closeWindow()
 }
 
-// OpenSettingsFolder opens the directory settings.json lives in. The file
-// itself needs a program the desktop has a handler for, which a Linux desktop
-// need not have; a directory opens everywhere.
+// OpenSettingsFolder opens the directory settings.json lives in: the config
+// directory of a portable copy, the one the app has always used otherwise. The
+// file itself needs a program the desktop has a handler for, which a Linux
+// desktop need not have; a directory opens everywhere.
 func (a *App) OpenSettingsFolder() {
-	dir, err := sys.Dir()
+	dir, err := sys.ConfigDir()
 	if err != nil {
 		a.note = err.Error()
 		a.redraw()

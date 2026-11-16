@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"strings"
+
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/locales"
@@ -29,6 +31,12 @@ func about(c *myui.Context, st State, act Actions) {
 					aboutLine(c, locales.AboutMygo(), a.Mygo)
 				}
 				aboutLine(c, locales.AboutRuntime(), a.Go+" "+a.Platform)
+				mode := locales.AboutModeInstalled()
+				if a.Portable {
+					mode = locales.AboutModePortable()
+				}
+				aboutLine(c, locales.AboutMode(), mode)
+				aboutTerminal(c, a.Terminal, a.TerminalPath)
 				aboutLine(c, locales.License(), "MIT")
 				aboutLine(c, locales.ProjectPage(), projectShown(a.Project))
 			})
@@ -56,7 +64,8 @@ func about(c *myui.Context, st State, act Actions) {
 	})
 }
 
-// aboutLine is one line of the dialog: what it is, and what it is.
+// aboutLine is one row of the dialog: what it is called on the left, and what
+// it says on the right.
 func aboutLine(c *myui.Context, label, value string) {
 	myui.Row(c).Justify(myui.SpaceBetween).Gap(16).Children(func() {
 		myui.Text(c, label).FontSize(12).TextColor(c.Theme().TextMuted)
@@ -67,19 +76,48 @@ func aboutLine(c *myui.Context, label, value string) {
 // aboutPath is a line of the dialog that holds a file's path: the name, and the
 // path under it, wrapped rather than cut, since a path is only useful whole.
 func aboutPath(c *myui.Context, label, path string) {
-	t := c.Theme()
 	myui.Column(c).Gap(2).Children(func() {
-		myui.Text(c, label).FontSize(12).TextColor(t.TextMuted)
-		myui.Text(c, path).FontSize(11).Wrap()
+		myui.Text(c, label).FontSize(12).TextColor(c.Theme().TextMuted)
+		pathText(c, path)
 	})
+}
+
+// aboutTerminal is the line that says where the terminals' console comes from,
+// with the dll under it when there is one: a report about colors or the mouse
+// starts by asking which console it is.
+func aboutTerminal(c *myui.Context, kind, path string) {
+	myui.Column(c).Gap(2).Children(func() {
+		aboutLine(c, locales.AboutTerminal(), terminalName(kind))
+		if path != "" {
+			pathText(c, path)
+		}
+	})
+}
+
+// terminalName is where the terminals' console comes from, in the words the
+// dialog shows.
+func terminalName(kind string) string {
+	switch kind {
+	case TerminalApp:
+		return locales.AboutTerminalApp()
+	case TerminalEnv:
+		return locales.AboutTerminalEnv()
+	}
+	return locales.AboutTerminalInherent()
+}
+
+// pathText is a path in the dialog, smaller than the text around it and wrapped
+// rather than cut: it is long, and half of one says nothing.
+func pathText(c *myui.Context, path string) {
+	myui.Text(c, path).FontSize(11).Wrap()
 }
 
 // projectShown is the address without the scheme, which a line of a dialog
 // says well enough and reads without one.
 func projectShown(project string) string {
-	for _, prefix := range []string{"https://", "http://"} {
-		if len(project) > len(prefix) && project[:len(prefix)] == prefix {
-			return project[len(prefix):]
+	for _, scheme := range []string{"https://", "http://"} {
+		if rest, ok := strings.CutPrefix(project, scheme); ok {
+			return rest
 		}
 	}
 	return project
