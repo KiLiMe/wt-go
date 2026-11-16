@@ -2393,8 +2393,9 @@ pty 层才对每个程序都成立：自己会开 VT 输入模式的（vim、hto
 2. `isURL` 先分流：带 `mailto:` 或有 `://`（且 scheme 里没有 `/` `\`）的算网址，返回 false 交给插件；
    盘符的冒号不是 scheme，`C:\src\main.go` 不会被当成协议。
 3. 其余当路径。`printedPath` 先 `sys.ExpandPath` 展开 `~` 与变量，再去掉 `place` 认出的 `:12` / `:12:3`
-   ——终端把位置贴在路径尾巴上，原样交给 `explorer.exe` 什么也打不开。相对路径按 `dir` 拼绝对路径，`dir`
-   是这个窗格启动程序时的目录。
+   ——终端把位置贴在路径尾巴上，原样交给 `explorer.exe` 什么也打不开。相对路径按 `linkDir` 拼绝对路径：
+   shell 用 OSC 7 报过的目录优先，没报过就用这个窗格启动程序时的目录。`dirOf` 在点的一刻才问，
+   所以 `cd sub` 之后打印的相对路径能解析对（插件早就把 OSC 7 解出来放在 `Terminal.Dir()` 里，只是 wt-go 一直没用）。
 4. 不存在的路径不打开：`os.Stat` 失败就静默返回 true。给 `explorer.exe` 一个不存在的路径，它会弹一个空的
    文件管理器窗口，而终端里没有地方解释「为什么点了没反应」。
 5. 打不开记 `E209`（`fault.OpenLink`），复用「关于」页项目主页按钮那一行文案，不新开故障码。
@@ -2402,8 +2403,11 @@ pty 层才对每个程序都成立：自己会开 VT 输入模式的（vim、hto
 **理由**：插件已经把钩子留好了，一个文件加 `termOptions` 一行就能让路径可点成为默认行为，不必先改 mygo
 再发一个 pseudo-version；网址留给插件，浏览器由桌面挑，wt-go 不该有自己的那份「默认浏览器」逻辑。
 
-**代价**：相对路径按启动目录算，`cd` 之后打印的相对路径会解析到错的地方——要修得让插件追 OSC 7
-（Windows Terminal 的 `Terminal::SetWorkingDirectory`），那是改 mygo、重钉 `go.mod` 的事。跨行折行的网址、
-不按 `Ctrl` 也显下划线、`:12:3` 直接交给编辑器跳到那一行，同样在插件里，见 `docs/plan.md` 阶段 4 第 5 条。
+**代价**：相对路径靠 shell 自己报（OSC 7），而 Windows 上 PowerShell 默认不报，于是 `cd sub` 之后打印的相对
+路径仍按窗格启动目录解析——要补这一头，得让插件也认 Windows Terminal 用的那条 OSC 9;9，那是改 mygo、
+重钉 `go.mod` 的事。跨行折行的网址、不按 `Ctrl` 也显下划线、`:12:3` 直接交给编辑器跳到那一行，同样在插件里，
+见 `docs/plan.md` 阶段 4 第 5 条。
 
-**测试**：`TestPlace`（`:12`/`:12:3` 的长度，盘符冒号不算）、`TestPrintedPath`、`TestIsURL`。
+**测试**：`TestPlace`（`:12`/`:12:3` 的长度，盘符冒号不算）、`TestPrintedPath`、`TestIsURL`；
+`TestLinkDir`（没终端、终端没报过）、`TestLinkDirFollowsOSC7`（把 `\x1b]7;file:///tmp/somewhere\x07` 喂给一个
+无头终端，等到 `Dir()` 出现再问 `linkDir`）。

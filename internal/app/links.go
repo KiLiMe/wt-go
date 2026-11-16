@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/egoist/mygo/plugins/terminal"
+
 	"wtgo/internal/fault"
 	"wtgo/internal/sys"
 )
@@ -13,16 +15,16 @@ import (
 // openLink is what a Control+click on a link in a terminal does. A URL is
 // left to the terminal, which opens it with the desktop; a file path printed
 // as text is a link only because this window answers for it (the terminal's
-// OpenLink), so it is opened here, from dir, where the program that printed
-// it started.
-func (a *App) openLink(dir string) func(string) bool {
+// OpenLink), so it is opened here, relative to dirOf: the directory the shell
+// reported last (OSC 7), or the one the terminal started in.
+func (a *App) openLink(dirOf func() string) func(string) bool {
 	return func(link string) bool {
 		if isURL(link) {
 			return false
 		}
 		path := printedPath(link)
 		if !filepath.IsAbs(path) {
-			path = filepath.Join(dir, path)
+			path = filepath.Join(dirOf(), path)
 		}
 		// A path that is not there is not opened: explorer.exe would show a
 		// folder nobody asked for, and a click in a terminal has nowhere on
@@ -35,6 +37,19 @@ func (a *App) openLink(dir string) func(string) bool {
 		}
 		return true
 	}
+}
+
+// linkDir is the directory a printed path is opened from: the one the shell
+// reported last (OSC 7), else the one the terminal started in. A shell that
+// never reports its directory, as PowerShell does on Windows, leaves the
+// second, which is where a relative path printed before any cd resolves.
+func linkDir(term *terminal.Terminal, start string) string {
+	if term != nil {
+		if dir := term.Dir(); dir != "" {
+			return dir
+		}
+	}
+	return start
 }
 
 // isURL says whether link carries a scheme: what the terminal finds as a URL,
