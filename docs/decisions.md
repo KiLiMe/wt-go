@@ -2379,3 +2379,31 @@ pty 层才对每个程序都成立：自己会开 VT 输入模式的（vim、hto
 `Scripts/build.ps1` 之后实跑：便携目录里 `diag` 打 `portable:` 与 `data\config` 下的路径、窗口在
 `data\config`/`data\logs` 里落盘；把 exe 单独拷到空目录再跑，`diag` 回到 `%LOCALAPPDATA%` 且说
 「Windows 自己的控制台」。
+
+## ADR-84 终端里的链接：网址交给桌面，打印出来的路径由本窗口打开
+
+**背景**：mygo 的终端插件认三种链接——程序给的 OSC 8、文本里的网址、打印出来的文件路径——都是
+`Ctrl+点击`。打开之前它问 `Options.OpenLink func(string) bool`：返回 true 表示调用方认领了，返回 false
+（或没设）就交回插件，由 `services.OpenURL` 用系统默认浏览器打开。wt-go 一直没设这个钩子，于是网址能点、
+`docs/plan.md` 阶段 4 第 5 条「链接打开、路径识别」里的路径点不动。
+
+**决定**：
+
+1. `internal/app/links.go` 的 `openLink(dir)` 就是那个钩子，`termOptions` 把它接上。
+2. `isURL` 先分流：带 `mailto:` 或有 `://`（且 scheme 里没有 `/` `\`）的算网址，返回 false 交给插件；
+   盘符的冒号不是 scheme，`C:\src\main.go` 不会被当成协议。
+3. 其余当路径。`printedPath` 先 `sys.ExpandPath` 展开 `~` 与变量，再去掉 `place` 认出的 `:12` / `:12:3`
+   ——终端把位置贴在路径尾巴上，原样交给 `explorer.exe` 什么也打不开。相对路径按 `dir` 拼绝对路径，`dir`
+   是这个窗格启动程序时的目录。
+4. 不存在的路径不打开：`os.Stat` 失败就静默返回 true。给 `explorer.exe` 一个不存在的路径，它会弹一个空的
+   文件管理器窗口，而终端里没有地方解释「为什么点了没反应」。
+5. 打不开记 `E209`（`fault.OpenLink`），复用「关于」页项目主页按钮那一行文案，不新开故障码。
+
+**理由**：插件已经把钩子留好了，一个文件加 `termOptions` 一行就能让路径可点成为默认行为，不必先改 mygo
+再发一个 pseudo-version；网址留给插件，浏览器由桌面挑，wt-go 不该有自己的那份「默认浏览器」逻辑。
+
+**代价**：相对路径按启动目录算，`cd` 之后打印的相对路径会解析到错的地方——要修得让插件追 OSC 7
+（Windows Terminal 的 `Terminal::SetWorkingDirectory`），那是改 mygo、重钉 `go.mod` 的事。跨行折行的网址、
+不按 `Ctrl` 也显下划线、`:12:3` 直接交给编辑器跳到那一行，同样在插件里，见 `docs/plan.md` 阶段 4 第 5 条。
+
+**测试**：`TestPlace`（`:12`/`:12:3` 的长度，盘符冒号不算）、`TestPrintedPath`、`TestIsURL`。

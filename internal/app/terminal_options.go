@@ -35,6 +35,9 @@ func (a *App) termOptions(p profile.Profile, dir string) terminal.Options {
 		}(),
 		OnTitle: func(string) { a.Do(a.syncTitle) },
 		OnExit:  func(int) { a.Do(a.syncTitle) },
+		// A path printed in a terminal is a link only because this window
+		// opens it, from the directory the program started in.
+		OpenLink: a.openLink(dir),
 	}
 }
 

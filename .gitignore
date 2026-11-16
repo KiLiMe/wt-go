@@ -12,3 +12,6 @@
 # for the flat layout.
 !/resources/windows-*/conpty/OpenConsole.exe
 /refs/
+# Our fork of mygo, worked on beside this program: go.mod's replace pins a
+# commit, and the checkout here is that commit (branch wt-go-pin).
+/mygo/
