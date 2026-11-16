@@ -3,7 +3,7 @@
   wt-go 构建脚本
     pwsh .\Scripts\build.ps1            -> mygo 打包到 build\windows-amd64\wt-go.exe（真机测试就用它）
     pwsh .\Scripts\build.ps1 -Test      -> 编译前先跑 go vet 与 go test
-    pwsh .\Scripts\build.ps1 -Clean     -> 先删掉 build 目录再编译
+    pwsh .\Scripts\build.ps1 -Clean     -> 先删掉 build 里的产物再编译（便携模式的 data\ 留着）
     pwsh .\Scripts\build.ps1 -Package   -> 只出分发包：go tool mygo build -o dist（不造安装器）
     pwsh .\Scripts\build.ps1 -Version 0.3.0
                                         -> 断言模式：mygo.json 里的版本必须是这一串（发版时对 tag 用）
@@ -57,12 +57,32 @@ if ($Version -and $Version -ne $target) {
 # 所以这里不带 -ldflags= 前缀。
 $env:MYGO_LDFLAGS = "-X wtgo/internal/cli.packagedVersion=$target"
 
-if ($Clean -and (Test-Path -LiteralPath $BuildDir)) {
-    Remove-Item -LiteralPath $BuildDir -Recurse -Force
-}
-
 Push-Location $Root
 try {
+    # 正在跑的实例占着 build 里的产物（conpty.dll 也一起被加载），Windows 会拒绝删除与覆盖：
+    # 先关掉它再动手，别让 -Clean 删到一半就出错。打到 dist 的那条路不查这条。
+    if (-not $Package) {
+        $busy = @(Get-Process -Name 'wt-go' -ErrorAction SilentlyContinue | Where-Object {
+            try { $_.Path -eq $Exe } catch { $false }
+        })
+        if ($busy.Count -gt 0) {
+            $ids = ($busy | ForEach-Object { $_.Id }) -join ', '
+            Write-Host "  [ERR] 正在运行的 wt-go.exe（PID $ids）占着输出文件：先关掉它的窗口再编译。" -ForegroundColor Red
+            exit 1
+        }
+    }
+
+    if ($Clean -and (Test-Path -LiteralPath $BuildDir)) {
+        # 便携模式的设置、会话与日志就写在 build\<os>-<arch>\data\ 里（ADR-83）：
+        # 只删产物，留着它，否则 -Clean 会顺手删掉用户改过的配置与日志。
+        Get-ChildItem -LiteralPath $BuildDir -Directory -Force | ForEach-Object {
+            Get-ChildItem -LiteralPath $_.FullName -Force |
+                Where-Object { $_.Name -ne 'data' } |
+                Remove-Item -Recurse -Force
+        }
+        Get-ChildItem -LiteralPath $BuildDir -File -Force | Remove-Item -Force
+    }
+
     if ($Test) {
         & go vet ./...
         if ($LASTEXITCODE -ne 0) { Write-Host '  [ERR] go vet 失败。' -ForegroundColor Red; exit $LASTEXITCODE }
@@ -86,21 +106,35 @@ try {
 
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Exe) | Out-Null
 
-    # 正在跑的测试实例占着输出文件，Windows 会拒绝覆盖：先关掉再编译。
-    $busy = @(Get-Process -Name 'wt-go' -ErrorAction SilentlyContinue | Where-Object {
-        try { $_.Path -eq $Exe } catch { $false }
-    })
-    if ($busy.Count -gt 0) {
-        $ids = ($busy | ForEach-Object { $_.Id }) -join ', '
-        Write-Host "  [ERR] 正在运行的 wt-go.exe（PID $ids）占着输出文件：先关掉它的窗口再编译。" -ForegroundColor Red
-        exit 1
+    # mygo 打包会先清空 build\<os>-<arch>\，便携模式的 data\ 也在里面：先挪到临时目录，
+    # 编完再并回去，免得每次编译都把你跑出来的设置、会话与日志一起清掉。
+    $DataDir = Join-Path (Split-Path -Parent $Exe) 'data'
+    $Stash = Join-Path ([System.IO.Path]::GetTempPath()) 'wt-go-build-data'
+    $stashed = $false
+    if (Test-Path -LiteralPath $DataDir) {
+        if (Test-Path -LiteralPath $Stash) { Remove-Item -LiteralPath $Stash -Recurse -Force }
+        Move-Item -LiteralPath $DataDir -Destination $Stash -Force
+        $stashed = $true
     }
-
-    # 图标、版本信息、manifest 与 libghostty-vt 都靠 mygo 打包时注入，
-    # go build 只会出一个没图标没版本号的裸 exe。mygo 自己按 out 写 build\<os>-<arch>\，
-    # 不另设中转目录，产物才与 .mygo-files 的清单一致。
-    & go tool mygo build -platform windows/amd64 -skip-installer -skip-dmg
-    if ($LASTEXITCODE -ne 0) { Write-Host '  [ERR] 编译失败。' -ForegroundColor Red; exit $LASTEXITCODE }
+    try {
+        # 图标、版本信息、manifest 与 libghostty-vt 都靠 mygo 打包时注入，
+        # go build 只会出一个没图标没版本号的裸 exe。mygo 自己按 out 写 build\<os>-<arch>\，
+        # 不另设中转目录，产物才与 .mygo-files 的清单一致。
+        & go tool mygo build -platform windows/amd64 -skip-installer -skip-dmg
+        if ($LASTEXITCODE -ne 0) { Write-Host '  [ERR] 编译失败。' -ForegroundColor Red; exit $LASTEXITCODE }
+    } finally {
+        if ($stashed) {
+            if (Test-Path -LiteralPath $DataDir) {
+                # 打包顺带写了 data\README.txt：挪走的配置与日志并进去，不覆盖它。
+                Get-ChildItem -LiteralPath $Stash -Force | ForEach-Object {
+                    Copy-Item -LiteralPath $_.FullName -Destination $DataDir -Recurse -Force
+                }
+                Remove-Item -LiteralPath $Stash -Recurse -Force
+            } else {
+                Move-Item -LiteralPath $Stash -Destination $DataDir -Force
+            }
+        }
+    }
 } finally {
     Pop-Location
 }
