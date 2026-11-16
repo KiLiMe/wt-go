@@ -67,23 +67,29 @@ func linkPath(link string) string {
 	if i := strings.Index(link, "://"); i > 0 && !strings.ContainsAny(link[:i], `/\`) {
 		return ""
 	}
-	link = sys.ExpandPath(link)
-	if n := place(link); n > 0 {
-		link = link[:len(link)-n]
-	}
-	return link
+	return pathWithoutPlace(sys.ExpandPath(link))
 }
 
-// place is the length of the ":line" or ":line:col" a path ends with, or 0:
-// the colon after a drive letter is not a place, or a path on C: would lose
-// its drive.
-func place(path string) int {
+// pathWithoutPlace is path with the ":line" or ":line:col" the terminal
+// appends to a file it finds taken off. The colon after a drive letter is no
+// place, or a path on C: would lose its drive.
+func pathWithoutPlace(path string) string {
 	i := strings.LastIndexByte(path, ':')
-	if i <= 1 || path[i+1:] == "" || !digits(path[i+1:]) {
-		return 0
+	if i <= 1 || path[i+1:] == "" || !allDigits(path[i+1:]) {
+		return path
 	}
-	if j := strings.LastIndexByte(path[:i], ':'); j > 1 && digits(path[j+1:i]) {
-		return len(path) - j
+	if j := strings.LastIndexByte(path[:i], ':'); j > 1 && allDigits(path[j+1:i]) {
+		return path[:j]
 	}
-	return len(path) - i
+	return path[:i]
+}
+
+// allDigits reports whether s is a run of decimal digits.
+func allDigits(s string) bool {
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }

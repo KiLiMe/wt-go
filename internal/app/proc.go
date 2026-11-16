@@ -42,15 +42,13 @@ func (a *App) newTerminal(opts terminal.Options) (*terminal.Terminal, error) {
 	// A path printed in a terminal is a link only because this window opens
 	// it, and from where: the directory the shell reported last (OSC 7) when
 	// it reports one, else the one the terminal started in.
-	var started *terminal.Terminal
-	opts.OpenLink = a.openLink(func() string { return linkDir(started, opts.Dir) })
+	var term *terminal.Terminal
+	opts.OpenLink = a.openLink(func() string { return linkDir(term, opts.Dir) })
 	before, berr := sys.Subtree(sys.OwnPID())
-	created, err := terminal.New(opts)
+	term, err := terminal.New(opts)
 	if err != nil {
 		return nil, err
 	}
-	term := created
-	started = created
 	if berr == nil {
 		// The plugin starts the program in a goroutine of its own, so the
 		// child is not there the moment New returns: wait for it off the UI

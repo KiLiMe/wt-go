@@ -1,6 +1,7 @@
 package app
 
 import (
+	"io"
 	"testing"
 
 	"github.com/egoist/mygo"
@@ -202,7 +203,16 @@ func TestCloseOtherTabsDropsTheSettingsTab(t *testing.T) {
 // tab can close without a shell of the machine behind it.
 func headlessTerminal(t *testing.T) *terminal.Terminal {
 	t.Helper()
-	term, err := terminal.New(terminal.Options{Conn: sink{}, NoExitMessage: true})
+	return headlessTerminalWith(t, sink{})
+}
+
+// headlessTerminalWith is a headless terminal whose other end is conn.
+func headlessTerminalWith(t *testing.T, conn io.ReadWriteCloser) *terminal.Terminal {
+	t.Helper()
+	if err := terminal.Load(); err != nil {
+		t.Skip(err)
+	}
+	term, err := terminal.New(terminal.Options{Conn: conn, NoExitMessage: true})
 	if err != nil {
 		t.Fatal(err)
 	}

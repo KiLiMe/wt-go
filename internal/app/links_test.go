@@ -13,9 +13,6 @@ import (
 // directory the shell reported last when it reports one, else the one the
 // terminal started in.
 func TestLinkDir(t *testing.T) {
-	if err := terminal.Load(); err != nil {
-		t.Skip(err)
-	}
 	if got := linkDir(nil, `C:\src`); got != `C:\src` {
 		t.Errorf("no terminal: linkDir = %q, want the start dir", got)
 	}
@@ -66,14 +63,7 @@ func TestLinkDirKeepsADriveWhole(t *testing.T) {
 // and then falls silent, as when it reports its directory.
 func reportingTerminal(t *testing.T, seq string) *terminal.Terminal {
 	t.Helper()
-	if err := terminal.Load(); err != nil {
-		t.Skip(err)
-	}
-	term, err := terminal.New(terminal.Options{Conn: &report{data: []byte(seq)}, NoExitMessage: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return term
+	return headlessTerminalWith(t, &report{data: []byte(seq)})
 }
 
 // awaitDir waits for the terminal to read a reported directory, and for the
@@ -107,27 +97,30 @@ func (r *report) Read(p []byte) (int, error) {
 func (r *report) Write(p []byte) (int, error) { return len(p), nil }
 func (r *report) Close() error                { return nil }
 
-// TestPlace covers the place in a file the terminal appends to a path it
-// finds: :line and :line:col come off, and what only looks like one stays.
-func TestPlace(t *testing.T) {
+// TestPathWithoutPlace covers the place in a file the terminal appends to a
+// path it finds: :line and :line:col come off, and the colon of a drive does
+// not.
+func TestPathWithoutPlace(t *testing.T) {
 	tests := []struct {
 		path string
-		want int
+		want string
 	}{
-		{"main.go", 0},
-		{"main.go:12", 3},
-		{"main.go:12:3", 5},
-		{`C:\src\main.go`, 0},
-		{`C:\src\main.go:12`, 3},
-		{"/usr/src/main.go:3:14", 5},
-		// A name that only looks like a place: nothing is there to open.
-		{"12:30", 3},
-		{"main.go:", 0},
-		{"", 0},
+		{"main.go", "main.go"},
+		{"main.go:12", "main.go"},
+		{"main.go:12:3", "main.go"},
+		{`C:\src\main.go`, `C:\src\main.go`},
+		{`C:\src\main.go:12`, `C:\src\main.go`},
+		{`C:\src\main.go:12:3`, `C:\src\main.go`},
+		{"/usr/src/main.go:3:14", "/usr/src/main.go"},
+		{"main.go:", "main.go:"},
+		{"", ""},
+		// A time is not a place, but it reads as one: the tail comes off,
+		// and the click opens nothing as no file is called 12.
+		{"12:30", "12"},
 	}
 	for _, tt := range tests {
-		if got := place(tt.path); got != tt.want {
-			t.Errorf("place(%q) = %d, want %d", tt.path, got, tt.want)
+		if got := pathWithoutPlace(tt.path); got != tt.want {
+			t.Errorf("pathWithoutPlace(%q) = %q, want %q", tt.path, got, tt.want)
 		}
 	}
 }

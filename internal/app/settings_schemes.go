@@ -128,21 +128,11 @@ func schemeBaseName(name string) string {
 		// What follows the mark is ")" or a number and ")", as
 		// customSchemeName writes them.
 		n := strings.TrimSpace(strings.TrimSuffix(name[i+len(customSuffix):], ")"))
-		if n != "" && !digits(n) {
+		if n != "" && !allDigits(n) {
 			return name
 		}
 		name = name[:i]
 	}
-}
-
-// digits reports whether s is a run of decimal digits.
-func digits(s string) bool {
-	for _, r := range s {
-		if r < '0' || r > '9' {
-			return false
-		}
-	}
-	return true
 }
 
 // customSchemeName is a name no scheme holds yet for a copy of the scheme
