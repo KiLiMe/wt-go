@@ -2417,9 +2417,16 @@ pty 层才对每个程序都成立：自己会开 VT 输入模式的（vim、hto
    变手型。开着时悬停即提示（不必按 `Ctrl`，Windows Terminal 的做法），关掉时两者都不做——没有「能点但不提示」的半开状态：
    那样设了也是给自己添疑惑。插件侧对应 `SetLinks`（`linkUnder` 一律答空）与 `SetLinkHoverHint`（`linkUnder` 不再要求修饰键），
    wt-go 在 `apply` 与 `newTerminal` 里用同一个值设两次。
+9. 网址也由 wt-go 自己打开（`sys.OpenURL`），不再留给插件。插件把 `Shell.OpenExternal` 的错误丢掉了
+   （`content.go` 起 goroutine 时 `done` 传的是 nil），于是「桌面没有程序处理这个协议」的唯一表现就是点了没反应，
+   日志里一个字也没有——2026-11-16 那次「点链接无效」正是这样：`HKCU` 的 https 关联指向一个已经不存在的
+   `I:\Applications\Helium-bin\chrome.exe`。Windows 上用 `ShellExecuteW`（返回码 ≤ 32 就是没找到程序，
+   且不会像 `explorer.exe` 那样只报「已启动」），其他平台与 `OpenPath` 一样走 `xdg-open` / `open`；失败记 `E209`，
+   钩子仍返回 `true` 表示「这个我接了」，插件不再插一手。
 
 **理由**：插件已经把钩子留好了，一个文件加 `termOptions` 一行就能让路径可点成为默认行为，不必先改 mygo
-再发一个 pseudo-version；网址留给插件，浏览器由桌面挑，wt-go 不该有自己的那份「默认浏览器」逻辑。
+再发一个 pseudo-version；网址交给桌面这件事没变，只是改由 `sys.OpenURL` 去交——wt-go 仍然不挑浏览器，
+它要的只是那个返回码。
 
 **代价**：相对路径靠 shell 自己报（OSC 7），而 Windows 上 PowerShell 默认不报，于是 `cd sub` 之后打印的相对
 路径仍按窗格启动目录解析。`linkDir` 只认绝对路径、不是就退回启动目录——这一层是防御：`file:///C:/src` 曾经
@@ -2439,4 +2446,5 @@ Windows 上回来的是绝对路径，拼出来的链接落在盘符下面）、
 写了 `{"open":false}` 时是关）；插件侧 `TestSetLinksOff`（关掉后指针下不下划线、不出手型、
 `HoveredLink` 为空、点一下什么都不打开，再打开又恢复）、`TestClickOpensLinksWithoutCommand`
 （不按 `Ctrl` 点网址与路径都打开，从链接上拖走则只选中、不打开）、
-`TestLinkHoverHintWithoutCommand`（提示打开后不按 `Ctrl` 也有下划线与手型，关掉又没了）。
+`TestLinkHoverHintWithoutCommand`（提示打开后不按 `Ctrl` 也有下划线与手型，关掉又没了）。`sys.OpenURL` 没有单测：
+拿一个没人注册的假协议去试会弹 Windows 的「找一个应用来打开这个链接」，不适合放进 `go test`。

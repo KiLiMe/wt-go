@@ -12,10 +12,11 @@ import (
 	"wtgo/internal/sys"
 )
 
-// openLink is what a click on a link in a terminal does, opened from dir: a
-// URL is left to the terminal, which opens it with the desktop; a file path
-// printed as text is a link only because this window answers for it (the
-// terminal's OpenLink), so it is opened here.
+// openLink is what a click on a link in a terminal does, opened from dir. A
+// file path printed as text is a link only because this window answers for it
+// (the terminal's OpenLink), so it is opened here; a URL is opened here too,
+// rather than left to the terminal, because the terminal drops the failure of
+// the desktop's program and a click that does nothing would say nothing either.
 //
 // Whether a click opens anything at all is not decided here: the terminal finds
 // no link while the setting says so (setLinks), which is also what keeps the
@@ -23,7 +24,13 @@ import (
 func (a *App) openLink(link, dir string) bool {
 	path := linkPath(link)
 	if path == "" {
-		return false
+		if link == "" {
+			return false
+		}
+		if err := sys.OpenURL(link); err != nil {
+			log.Printf("wt-go: %s", fault.Line(fault.OpenLink, err.Error()))
+		}
+		return true
 	}
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(dir, path)
