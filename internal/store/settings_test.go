@@ -57,19 +57,6 @@ func TestParseLinks(t *testing.T) {
 	if s.Links.Open {
 		t.Error("links turned off in the file stayed on")
 	}
-	if s.Links.Underline {
-		t.Error("no underline key: the hover hint is on, want the default of off")
-	}
-	s, err = Parse([]byte(`{"links":{"underline":true}}`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !s.Links.Underline {
-		t.Error("underline turned on in the file stayed off")
-	}
-	if !s.Links.Open {
-		t.Error("naming underline turned links off, want the default of on")
-	}
 }
 
 // TestParseKeepsDefaults covers a file that names some settings: the ones it

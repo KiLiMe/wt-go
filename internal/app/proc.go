@@ -52,7 +52,7 @@ func (a *App) newTerminal(opts terminal.Options) (*terminal.Terminal, error) {
 	// A tab opened while the setting says no links starts with them off, so
 	// that its first frame underlines nothing.
 	term.SetLinks(a.settings.Links.Open)
-	term.SetLinkHoverHint(a.settings.Links.Underline)
+	term.SetLinkHoverHint(a.settings.Links.Open)
 	if berr == nil {
 		// The plugin starts the program in a goroutine of its own, so the
 		// child is not there the moment New returns: wait for it off the UI

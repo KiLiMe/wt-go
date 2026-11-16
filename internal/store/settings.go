@@ -151,12 +151,11 @@ type Settings struct {
 // Links is what a click on a link in a terminal does, and what the pointer
 // shows of one.
 type Links struct {
-	// Open is whether a click opens a link.
+	// Open is whether a click opens a link, and whether the pointer shows one
+	// at all: on, a link is underlined and the hand shows as soon as the
+	// pointer is over it, as Windows Terminal does. Off, nothing is underlined
+	// and a click opens nothing.
 	Open bool `json:"open"`
-	// Underline is whether the pointer underlines a link on hover alone: on,
-	// it is Windows Terminal's hint (no Control to hold); off, Control is what
-	// shows the hint.
-	Underline bool `json:"underline"`
 }
 
 // Font is the font of a terminal's text.
