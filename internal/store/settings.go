@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 
 	"wtgo/internal/action"
@@ -313,15 +314,15 @@ func EqualSchemes(a, b []Scheme) bool {
 // form may edit it, and the file's copy stay as it was.
 func (s Settings) Clone() Settings {
 	out := s
-	out.Schemes = append([]Scheme{}, s.Schemes...)
+	out.Schemes = slices.Clone(s.Schemes)
 	for i := range out.Schemes {
-		out.Schemes[i].Palette = append([]string{}, s.Schemes[i].Palette...)
+		out.Schemes[i].Palette = slices.Clone(s.Schemes[i].Palette)
 	}
-	out.Profiles = append([]Profile{}, s.Profiles...)
+	out.Profiles = slices.Clone(s.Profiles)
 	for i := range out.Profiles {
-		out.Profiles[i].Args = append([]string{}, s.Profiles[i].Args...)
+		out.Profiles[i].Args = slices.Clone(s.Profiles[i].Args)
 	}
-	out.Keybindings = append([]Keybinding{}, s.Keybindings...)
+	out.Keybindings = slices.Clone(s.Keybindings)
 	// Extra is shared like the strings are: a form edits the settings, never
 	// the map of keys it does not know.
 	return out

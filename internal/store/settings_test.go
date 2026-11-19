@@ -505,3 +505,13 @@ func TestFillEmptyFont(t *testing.T) {
 		t.Errorf("a file that leaves the family empty reads as %q, want %q", read.Font.Family, EmptyFontFamily)
 	}
 }
+
+func TestClonePreservesEmptyLists(t *testing.T) {
+	for _, s := range []Settings{
+		{}, Default(), {Profiles: []Profile{{Args: nil}, {Args: []string{}}}, Schemes: []Scheme{{Palette: nil}, {Palette: []string{}}}},
+	} {
+		if !Equal(s, s.Clone()) {
+			t.Fatal("unchanged settings differ from their snapshot", s)
+		}
+	}
+}
