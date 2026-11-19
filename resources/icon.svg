@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="100%" height="100%">
+  <defs>
+    <filter id="outerShadow_winui3_local_terminal" x="-15%" y="-15%" width="135%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000000" flood-opacity="0.34" />
+    </filter>
+    <filter id="innerShadow_winui3_local_terminal" x="-18%" y="-18%" width="140%" height="145%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#000000" flood-opacity="0.46" />
+    </filter>
+    <linearGradient id="outerGrad_winui3_local_terminal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#264163" />
+      <stop offset="100%" stop-color="#16273D" />
+    </linearGradient>
+    <linearGradient id="innerGrad_winui3_local_terminal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1C2129" />
+      <stop offset="100%" stop-color="#12161C" />
+    </linearGradient>
+    <linearGradient id="accentGrad_winui3_local_terminal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60CDFF" />
+      <stop offset="100%" stop-color="#3898EC" />
+    </linearGradient>
+    <linearGradient id="topSpecular_winui3_local_terminal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.32" />
+      <stop offset="50%" stop-color="#FFFFFF" stop-opacity="0.06" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.2" />
+    </linearGradient>
+  </defs>
+
+  <g filter="url(#outerShadow_winui3_local_terminal)">
+    <rect x="24" y="24" width="208" height="208" rx="42"
+          fill="url(#outerGrad_winui3_local_terminal)" />
+    <rect x="25" y="25" width="206" height="206" rx="41"
+          fill="none" stroke="#4A7AB5" stroke-opacity="0.45" stroke-width="2" />
+  </g>
+
+  <g filter="url(#innerShadow_winui3_local_terminal)">
+    <rect x="40" y="40" width="176" height="176" rx="30"
+          fill="url(#innerGrad_winui3_local_terminal)" />
+    <rect x="41" y="41" width="174" height="174" rx="29"
+          fill="none" stroke="url(#topSpecular_winui3_local_terminal)" stroke-width="1.6" />
+    <g transform="translate(128, 128) scale(1) translate(-128, -128)">
+      <path d="M 76 92 L 120 128 L 76 164"
+            fill="none" stroke="url(#accentGrad_winui3_local_terminal)" stroke-width="19" stroke-linecap="round" stroke-linejoin="round" />
+      <rect x="132" y="151" width="48" height="18" rx="9" fill="#FFFFFF" />
+    </g>
+  </g>
+</svg>
