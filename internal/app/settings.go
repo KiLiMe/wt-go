@@ -68,6 +68,7 @@ func (a *App) settingsState() ui.Settings {
 		Profiles:      fileProfiles(a.settings),
 		ProfileFilter: &a.profileSearch,
 		Search:        &a.settingsSearch,
+		Reveal:        &a.reveal,
 		Known:         knownProfiles(a.profiles),
 		Device:        a.device.Name,
 		Schemes:       a.schemeList(),

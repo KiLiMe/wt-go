@@ -29,14 +29,14 @@ func schemePicker(c *myui.Context, s *store.Settings, st Settings, act Actions) 
 	}
 	t := c.Theme()
 	card(c, cardFace(t), cardLine(t), func() {
-		field(c, locales.Scheme(), locales.ColorSchemeNote(), func() {
+		field(c, "colorScheme", locales.Scheme(), locales.ColorSchemeNote(), func() {
 			myui.Row(c).AlignItems(myui.Center).Gap(10).Children(func() {
 				bg, fg := swatchOf(cache, st.Schemes, s.ColorScheme, t)
 				schemeSwatch(c, bg, fg, 16)
 				myui.Text(c, schemeNamed(*s)).FontSize(13).SingleLine().MaxWidth(220)
 				myui.Button(c, locales.SchemeCopy()).OnClick(act.CopyScheme)
 			})
-		})
+		}, st.Reveal)
 		myui.Column(c).Padding(10, 16).Gap(6).Children(func() {
 			names := searchSchemes(cache, st.Schemes, filter(st))
 			// A text input edits the string it is handed, so that string has to

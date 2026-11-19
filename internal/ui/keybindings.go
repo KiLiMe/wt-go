@@ -21,7 +21,7 @@ func actionsPage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
 	ks := pageKeys(st.KeysCache, s.Keybindings, st)
 	query := strings.ToLower(searchText(st.ActionFilter))
-	actionsToolbar(c, act, len(ks.changed), len(ks.clashing) > 0, st.OnlyChanged, st.ActionFilter)
+	actionsToolbar(c, act, len(ks.changed), len(ks.clashing) > 0, st.OnlyChanged, st.ActionFilter, st.Reveal)
 	listed := 0
 	for _, g := range ks.groups {
 		rows, folded, more := listedRows(g.rows, ks, st, query)
@@ -54,7 +54,8 @@ func actionsPage(c *myui.Context, st Settings, act Actions) {
 	}
 	card(c, cardFace(c.Theme()), cardLine(c.Theme()), func() {
 		row(c, func() {
-			myui.Button(c, locales.RestoreDefaults()).OnClick(act.ResetKeybindings)
+			btn := myui.Button(c, locales.RestoreDefaults()).OnClick(act.ResetKeybindings)
+			mark(c, btn, keyRestoreDefaults, st.Reveal)
 		})
 	})
 	if st.Recording != "" {
@@ -66,17 +67,19 @@ func actionsPage(c *myui.Context, st Settings, act Actions) {
 // its keys or its id match, the switch that keeps only the actions the file
 // binds on other keys than the catalog's, and the word that says some key runs
 // more than one action, which the page cannot settle for a person.
-func actionsToolbar(c *myui.Context, act Actions, changed int, conflict, onlyChanged bool, filter *string) {
+func actionsToolbar(c *myui.Context, act Actions, changed int, conflict, onlyChanged bool, filter *string, reveal *Reveal) {
 	t := c.Theme()
 	myui.Row(c).Gap(8).AlignItems(myui.Center).Padding(0, 0, 8, 0).Children(func() {
 		if filter != nil {
-			myui.TextInput(c, filter).Placeholder(locales.KeySearch()).Grow(1)
+			input := myui.TextInput(c, filter).Placeholder(locales.KeySearch()).Grow(1)
+			mark(c, input, keySearchActions, reveal)
 		}
 		btn := myui.Button(c, locales.OnlyChanged(changed)).FontSize(11)
 		if onlyChanged {
 			btn.Background(t.Accent).TextColor(t.AccentText)
 		}
 		btn.OnClick(func() { act.ToggleChangedKeys() })
+		mark(c, btn, keyOnlyChanged, reveal)
 		if conflict {
 			myui.Text(c, locales.KeysConflict()).FontSize(11).TextColor(t.Danger).SingleLine()
 		}
@@ -502,3 +505,9 @@ func captureMods() []myui.Modifiers {
 	}
 	return mods
 }
+
+const (
+	keyRestoreDefaults = "restoreDefaults"
+	keySearchActions   = "keySearch"
+	keyOnlyChanged     = "onlyChanged"
+)

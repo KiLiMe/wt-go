@@ -19,33 +19,33 @@ const (
 func advancedPage(c *myui.Context, st Settings, act Actions) {
 	t := c.Theme()
 	section(c, locales.Shells(), func() {
-		field(c, locales.ProbeAgain(),
+		field(c, "probe", locales.ProbeAgain(),
 			locales.ProbeAgainNote(),
 			func() {
 				myui.Button(c, locales.Probe()).OnClick(func() { act.AskAdvanced(AskRediscover) })
-			})
+			}, st.Reveal)
 	})
 	section(c, locales.Folders(), func() {
-		field(c, locales.SettingsFolder(),
+		field(c, "settingsFolder", locales.SettingsFolder(),
 			locales.SettingsFolderNote(),
 			func() {
 				myui.Button(c, locales.Open()).OnClick(act.OpenSettingsFolder)
-			})
-		field(c, locales.ProgramFolder(),
+			}, st.Reveal)
+		field(c, "programFolder", locales.ProgramFolder(),
 			locales.ProgramFolderNote(),
 			func() {
 				myui.Button(c, locales.Open()).OnClick(act.OpenProgramFolder)
-			})
+			}, st.Reveal)
 	})
 	// Last, and in the danger color: the row that starts over is the one a
 	// person comes to by mistake.
 	dangerSection(c, locales.Reset(), func() {
-		field(c, locales.DeleteSettings(),
+		field(c, "reset", locales.DeleteSettings(),
 			locales.DeleteSettingsNote(),
 			func() {
 				myui.Button(c, locales.DeleteAndRestart()).
 					Background(t.Danger).TextColor(myui.Hex("#ffffff")).
 					OnClick(func() { act.AskAdvanced(AskReset) })
-			})
+			}, st.Reveal)
 	})
 }

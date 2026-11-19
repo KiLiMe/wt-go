@@ -31,6 +31,9 @@ type Actions interface {
 	FocusTab(i int)
 	// ScrollTabs moves the tabs the strip shows by by DIPs.
 	ScrollTabs(by float32)
+	// OpenTabs lists every tab, which is how the strip names the ones it has
+	// no room to show.
+	OpenTabs()
 	// MinimizeWindow minimizes the window.
 	MinimizeWindow()
 	// ToggleMaximizeWindow maximizes the window, or restores it.
@@ -51,6 +54,10 @@ type Actions interface {
 	OpenSettings()
 	// SelectSettingsPage shows a page of the settings.
 	SelectSettingsPage(page string)
+	// RevealSetting shows the page a search found a setting on, and marks the
+	// setting itself, which the page scrolls into view: a search over the
+	// settings is a way to a setting, not a way to the page it lives on.
+	RevealSetting(page, key string)
 	// SaveSettings writes the settings to the file.
 	SaveSettings()
 	// SetDefaultProfile opens the profile with an id in the tab the window
@@ -289,6 +296,9 @@ type Settings struct {
 	// for. A page drawn without it lists the pages alone rather than give the
 	// box nowhere to write what is typed.
 	Search *string
+	// Reveal is the setting the search found and how far the mark over it has
+	// faded, nil when the search found nothing to mark.
+	Reveal *Reveal
 }
 
 // Where the terminals' console comes from, which the about dialog says.
@@ -394,6 +404,9 @@ type State struct {
 	About *About
 	// Palette is the command palette, nil while it is not open.
 	Palette *Palette
+	// TabsList is the list of every tab the strip opens when it has no room
+	// for them, nil while it is not open.
+	TabsList *TabsList
 	// Find is the bar that asks the terminal for text, nil while it is
 	// closed.
 	Find *Find
@@ -437,5 +450,6 @@ func View(c *myui.Context, st State, act Actions) {
 	about(c, st, act)
 	findBar(c, st, act)
 	palette(c, st, act)
+	tabsList(c, st, act)
 	frames(c, st)
 }

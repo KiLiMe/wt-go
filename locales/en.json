@@ -9,6 +9,9 @@
   "scrollTabsRight": "Scroll the tabs right",
   "noTabs": "No tabs open",
   "openTab": "Open a tab",
+  "allTabs": "All tabs",
+  "tabListPlaceholder": "Type the name of a tab",
+  "tabListNoMatch": "No tab matches.",
   "nextTab": "Next Tab",
   "previousTab": "Previous Tab",
   "switchToTab": "Switch to Tab {n}",
@@ -463,6 +466,16 @@
   },
   "findPrevious": "Previous match",
   "findNext": "Next match",
+  "findPreviousHint": "Previous match (Shift+Enter)",
+  "findNextHint": "Next match (Enter)",
+  "findInPane": "In {pane}",
+  "@findInPane": {
+    "placeholders": {
+      "pane": {
+        "type": "String"
+      }
+    }
+  },
   "findNone": "No matches",
   "findCount": "{count} found",
   "@findCount": {

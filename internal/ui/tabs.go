@@ -149,6 +149,11 @@ func stripTabs(c *myui.Context, st State, act Actions) {
 		viewport(c, st, act, room)
 		if scrolls {
 			stepButton(c, st, act, 1)
+			// The tabs past the edge are reached by scrolling or by name: the
+			// list names them, which is the way to a tab whose place in the
+			// strip a person does not know.
+			dividerSlot(c, true, stripDividerRoom)
+			allTabsButton(c, act)
 		}
 		// The buttons that open a tab sit past the tabs rather than in them:
 		// however many tabs there are, a tab is a press away rather than a
@@ -159,7 +164,8 @@ func stripTabs(c *myui.Context, st State, act Actions) {
 
 // tabsRoom is the room the tabs have: the window, less the strip's own padding,
 // the room that moves the window and the window's buttons, the buttons beside
-// the tabs and, when they show, the buttons that move the tabs.
+// the tabs and, when they show, the buttons that move the tabs and the one that
+// lists every tab.
 func tabsRoom(c *myui.Context, st State, scrolls bool) float32 {
 	w, _ := c.Size()
 	bar := c.TitleBar()
@@ -168,7 +174,7 @@ func tabsRoom(c *myui.Context, st State, scrolls bool) float32 {
 		room -= windowGroupWidth(len(b.Start)) + windowGroupWidth(len(b.End))
 	}
 	if scrolls {
-		room -= 2 * stepWidth
+		room -= 2*stepWidth + stripDividerRoom + stripButtonSize
 	}
 	return max(room, 0)
 }
@@ -480,6 +486,27 @@ func stripButton(c *myui.Context, el myui.Element) myui.Element {
 		return el.Background(c.Theme().SurfaceHover)
 	}
 	return el
+}
+
+// allTabsButton lists every tab, which the strip shows only while it has more
+// tabs than room: the arrow beside it moves the strip a tab at a time, and the
+// list is where a tab is found by the name it has.
+func allTabsButton(c *myui.Context, act Actions) myui.Element {
+	base := myui.Box(c).
+		Size(stripButtonSize, stripButtonSize).
+		Radius(6).
+		AlignItems(myui.Center).
+		Justify(myui.Center).
+		Cursor(myui.CursorPointer).
+		Label(locales.AllTabs()).
+		Tooltip(locales.AllTabs()).
+		OnClick(func() { act.OpenTabs() })
+	return stripButton(c, base).Children(func() {
+		// The same chevron the menu of the profiles wears: a mark that opens a
+		// list is the same mark wherever the list comes from, and the two are
+		// on opposite sides of the button that opens a tab.
+		myui.Icon(c, icons.Chevron.SVG).Size(14, 14).TextColor(c.Theme().Text)
+	})
 }
 
 // newTabButton opens a tab that runs the default profile.

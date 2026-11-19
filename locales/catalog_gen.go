@@ -134,6 +134,36 @@ func (msgs Messages) OpenTab() string {
 	return Catalog.Format(msgs.locale, "openTab", nil)
 }
 
+// AllTabs says "All tabs"
+// in the language the app shows.
+func AllTabs() string { return In(i18n.Locale()).AllTabs() }
+
+// AllTabs says "All tabs"
+// in the language of msgs.
+func (msgs Messages) AllTabs() string {
+	return Catalog.Format(msgs.locale, "allTabs", nil)
+}
+
+// TabListPlaceholder says "Type the name of a tab"
+// in the language the app shows.
+func TabListPlaceholder() string { return In(i18n.Locale()).TabListPlaceholder() }
+
+// TabListPlaceholder says "Type the name of a tab"
+// in the language of msgs.
+func (msgs Messages) TabListPlaceholder() string {
+	return Catalog.Format(msgs.locale, "tabListPlaceholder", nil)
+}
+
+// TabListNoMatch says "No tab matches."
+// in the language the app shows.
+func TabListNoMatch() string { return In(i18n.Locale()).TabListNoMatch() }
+
+// TabListNoMatch says "No tab matches."
+// in the language of msgs.
+func (msgs Messages) TabListNoMatch() string {
+	return Catalog.Format(msgs.locale, "tabListNoMatch", nil)
+}
+
 // NextTab says "Next Tab"
 // in the language the app shows.
 func NextTab() string { return In(i18n.Locale()).NextTab() }
@@ -3008,6 +3038,36 @@ func FindNext() string { return In(i18n.Locale()).FindNext() }
 // in the language of msgs.
 func (msgs Messages) FindNext() string {
 	return Catalog.Format(msgs.locale, "findNext", nil)
+}
+
+// FindPreviousHint says "Previous match (Shift+Enter)"
+// in the language the app shows.
+func FindPreviousHint() string { return In(i18n.Locale()).FindPreviousHint() }
+
+// FindPreviousHint says "Previous match (Shift+Enter)"
+// in the language of msgs.
+func (msgs Messages) FindPreviousHint() string {
+	return Catalog.Format(msgs.locale, "findPreviousHint", nil)
+}
+
+// FindNextHint says "Next match (Enter)"
+// in the language the app shows.
+func FindNextHint() string { return In(i18n.Locale()).FindNextHint() }
+
+// FindNextHint says "Next match (Enter)"
+// in the language of msgs.
+func (msgs Messages) FindNextHint() string {
+	return Catalog.Format(msgs.locale, "findNextHint", nil)
+}
+
+// FindInPane says "In {pane}"
+// in the language the app shows.
+func FindInPane(pane string) string { return In(i18n.Locale()).FindInPane(pane) }
+
+// FindInPane says "In {pane}"
+// in the language of msgs.
+func (msgs Messages) FindInPane(pane string) string {
+	return Catalog.Format(msgs.locale, "findInPane", map[string]any{"pane": pane})
 }
 
 // FindNone says "No matches"

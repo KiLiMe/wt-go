@@ -23,6 +23,9 @@ const (
 	overlayAbout
 	// overlayPalette is the command palette.
 	overlayPalette
+	// overlayTabs is the list of every tab, which the strip opens when it has
+	// no room for them.
+	overlayTabs
 	// overlayFind is the bar that asks the terminal for text. It is not
 	// modal, so it does not take the keyboard away from the pane: it takes
 	// the keys the pane would have taken, which is what makes Escape close
@@ -37,6 +40,8 @@ func (a *App) top() overlayKind {
 	switch {
 	case a.palette != nil:
 		return overlayPalette
+	case a.tabsList != nil:
+		return overlayTabs
 	case a.find != nil:
 		return overlayFind
 	case a.renaming != nil:
@@ -62,6 +67,8 @@ func (a *App) openOverlay(top overlayKind) {
 		a.renaming = &ui.Rename{Open: true}
 	case overlayPalette:
 		a.palette = &ui.Palette{Open: true}
+	case overlayTabs:
+		a.tabsList = &ui.TabsList{Open: true}
 	case overlayAbout:
 		a.about = &ui.About{Open: true}
 	case overlayFind:
@@ -90,6 +97,8 @@ func (a *App) closeOpen() {
 	switch a.top() {
 	case overlayPalette:
 		a.palette = nil
+	case overlayTabs:
+		a.tabsList = nil
 	case overlayFind:
 		a.find = nil
 	case overlayRename:
@@ -117,7 +126,8 @@ func (a *App) dismissed() bool {
 	return a.renaming != nil && !a.renaming.Open ||
 		a.confirm != nil && !a.confirm.Open ||
 		a.about != nil && !a.about.Open ||
-		a.palette != nil && !a.palette.Open
+		a.palette != nil && !a.palette.Open ||
+		a.tabsList != nil && !a.tabsList.Open
 }
 
 // dropClosed forgets the overlays the last frame closed.
@@ -132,6 +142,8 @@ func (a *App) dropClosed() {
 		a.about = nil
 	case a.palette != nil && !a.palette.Open:
 		a.palette = nil
+	case a.tabsList != nil && !a.tabsList.Open:
+		a.tabsList = nil
 	}
 }
 

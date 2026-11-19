@@ -14,16 +14,16 @@ func TestChoice(t *testing.T) {
 	family := "Cascadia Mono,monospace"
 	tt := myui.NewTester(func(c *myui.Context) {
 		myui.Form(c, func() {
-			field(c, "Cursor", "", func() {
+			field(c, "cursorShape", "Cursor", "", func() {
 				choice(c, &shape, []option{
 					{"bar", "Bar"},
 					{"block", "Block"},
 					{"underline", "Underline"},
 				})
-			})
-			field(c, "Font", "", func() {
+			}, nil)
+			field(c, "font", "Font", "", func() {
 				choice(c, &family, []option{{"monospace", "monospace"}})
-			})
+			}, nil)
 		})
 	}, 400, 200)
 
@@ -50,7 +50,7 @@ func TestCount(t *testing.T) {
 	n := 1
 	tt := myui.NewTester(func(c *myui.Context) {
 		myui.Form(c, func() {
-			field(c, "Panes", "", func() { count(c, &n, 0, 2) })
+			field(c, "maxPanes", "Panes", "", func() { count(c, &n, 0, 2) }, nil)
 		})
 	}, 400, 120)
 
@@ -77,7 +77,7 @@ func TestMeasureStep(t *testing.T) {
 	line := float32(1.2)
 	tt := myui.NewTester(func(c *myui.Context) {
 		myui.Form(c, func() {
-			field(c, "Line height", "", func() { measure(c, &line, 0.8, 2.4, 0.1) })
+			field(c, "font.lineHeight", "Line height", "", func() { measure(c, &line, 0.8, 2.4, 0.1) }, nil)
 		})
 	}, 400, 120)
 
@@ -95,9 +95,9 @@ func TestFieldDescription(t *testing.T) {
 	name := ""
 	tt := myui.NewTester(func(c *myui.Context) {
 		myui.Form(c, func() {
-			field(c, "Name", "The program the profile runs; empty runs the shell the system starts.", func() {
+			field(c, "name", "Name", "The program the profile runs; empty runs the shell the system starts.", func() {
 				myui.TextInput(c, &name)
-			})
+			}, nil)
 		})
 	}, 400, 200)
 
@@ -117,7 +117,7 @@ func TestCardDividesItsRows(t *testing.T) {
 		myui.Column(c).Padding(20).Children(func() {
 			section(c, "", func() {
 				for _, name := range []string{"One", "Two", "Three"} {
-					field(c, name, "", func() { myui.Box(c).Size(40, 20) })
+					field(c, "key", name, "", func() { myui.Box(c).Size(40, 20) }, nil)
 				}
 			})
 		})

@@ -50,6 +50,25 @@ func content(c *myui.Context, st State, act Actions, r layout.Rect) {
 	}
 }
 
+// paneRoom is the room the pane takes in the tab in front, and whether the tab
+// holds it: the find bar draws itself on the pane it searches, and so has to
+// know where that pane is before it draws itself.
+func paneRoom(c *myui.Context, st State, node *pane.Node) (layout.Rect, bool) {
+	if node == nil || st.Active < 0 || st.Active >= len(st.Tabs) {
+		return layout.Rect{}, false
+	}
+	tb := st.Tabs[st.Active]
+	if tb.Page != nil || tb.Panes == nil {
+		return layout.Rect{}, false
+	}
+	for _, p := range tb.Panes.Layout(Content(c)).Panes {
+		if p.Node == node {
+			return p.Rect, true
+		}
+	}
+	return layout.Rect{}, false
+}
+
 // paneAt is one pane: its terminal, and the keyboard it takes when the
 // pointer presses it.
 func paneAt(c *myui.Context, st State, act Actions, p pane.Place) {

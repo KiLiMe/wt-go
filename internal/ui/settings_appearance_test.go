@@ -82,9 +82,9 @@ func TestWeightIsKept(t *testing.T) {
 		s := store.Default()
 		s.Font.Weight = in
 		tt := myui.NewTester(func(c *myui.Context) {
-			fieldBlock(c, locales.FontWeight(), locales.FontWeightNote(), func() {
+			fieldBlock(c, "font.weight", locales.FontWeight(), locales.FontWeightNote(), func() {
 				choiceOf(c, &s.Font.Weight, weightOptions())
-			})
+			}, nil)
 		}, 600, 200)
 		tt.Frame()
 		want := in

@@ -12,7 +12,7 @@ import (
 func generalPage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
 	section(c, locales.GeneralStartup(), func() {
-		field(c, locales.DefaultProfile(), locales.DefaultProfileNote(), func() {
+		field(c, "defaultProfile", locales.DefaultProfile(), locales.DefaultProfileNote(), func() {
 			opts := make([]option, 0, len(st.Known)+1)
 			// The choice a person reads names the shell it runs, the way the
 			// strip's menu names it.
@@ -35,8 +35,8 @@ func generalPage(c *myui.Context, st Settings, act Actions) {
 			if picked != offered {
 				act.SetDefaultProfile(picked)
 			}
-		})
-		field(c, locales.Language(), "", func() {
+		}, st.Reveal)
+		field(c, "language", locales.Language(), "", func() {
 			langs := i18n.Languages()
 			opts := make([]option, 0, len(langs)+1)
 			opts = append(opts, option{"", locales.SystemLanguage()})
@@ -44,50 +44,50 @@ func generalPage(c *myui.Context, st Settings, act Actions) {
 				opts = append(opts, option{tag, i18n.Autonym(tag)})
 			}
 			choice(c, &s.Language, opts)
-		})
-		fieldBlock(c, locales.StartDirectory(), locales.StartDirectoryNote(), func() {
+		}, st.Reveal)
+		fieldBlock(c, "startDirectory", locales.StartDirectory(), locales.StartDirectoryNote(), func() {
 			myui.TextInput(c, &s.StartDirectory).Placeholder(store.DefaultHomeHint())
-		})
+		}, st.Reveal)
 	})
 	section(c, locales.GeneralWindow(), func() {
-		field(c, locales.NewTabPosition(), locales.NewTabPositionNote(), func() {
+		field(c, "newTabPosition", locales.NewTabPosition(), locales.NewTabPositionNote(), func() {
 			choice(c, &s.NewTabPosition, []option{
 				{"last", locales.AfterLastTab()},
 				{"first", locales.BeforeFirstTab()},
 			})
-		})
-		field(c, locales.TabWidth(), locales.TabWidthNote(), func() {
+		}, st.Reveal)
+		field(c, "tabWidth", locales.TabWidth(), locales.TabWidthNote(), func() {
 			choice(c, &s.TabWidth, []option{
 				{"compact", locales.AsWideAsName()},
 				{"equal", locales.AllTheSame()},
 			})
-		})
-		field(c, locales.TitleFollowsPane(), locales.TitleFollowsPaneNote(), func() {
+		}, st.Reveal)
+		field(c, "titleFromActiveTerminal", locales.TitleFollowsPane(), locales.TitleFollowsPaneNote(), func() {
 			myui.Switch(c, &s.TitleFromActiveTerminal)
-		})
-		field(c, locales.AlwaysOnTop(), locales.AlwaysOnTopNote(), func() {
+		}, st.Reveal)
+		field(c, "alwaysOnTop", locales.AlwaysOnTop(), locales.AlwaysOnTopNote(), func() {
 			myui.Switch(c, &s.AlwaysOnTop)
-		})
-		field(c, locales.PanesPerTab(), locales.PanesPerTabNote(), func() {
+		}, st.Reveal)
+		field(c, "maxPanes", locales.PanesPerTab(), locales.PanesPerTabNote(), func() {
 			count(c, &s.MaxPanes, 0, 32)
-		})
+		}, st.Reveal)
 	})
 	section(c, locales.GeneralClose(), func() {
-		field(c, locales.CloseOnLastTab(), locales.CloseOnLastTabNote(), func() {
+		field(c, "closeOnLastTab", locales.CloseOnLastTab(), locales.CloseOnLastTabNote(), func() {
 			myui.Switch(c, &s.CloseOnLastTab)
-		})
-		field(c, locales.ConfirmClose(), locales.ConfirmCloseNote(), func() {
+		}, st.Reveal)
+		field(c, "confirmClose", locales.ConfirmClose(), locales.ConfirmCloseNote(), func() {
 			choice(c, &s.ConfirmClose, []option{
 				{string(store.ConfirmRunning), locales.WhileProgramRuns()},
 				{string(store.ConfirmAlways), locales.Always()},
 				{string(store.ConfirmNever), locales.Never()},
 			})
-		})
+		}, st.Reveal)
 		// It asks about the way the window goes, which closes the tab above it
 		// too, so it follows that switch.
-		field(c, locales.ConfirmCloseWindow(), locales.ConfirmCloseWindowNote(), func() {
+		field(c, "confirmCloseWindow", locales.ConfirmCloseWindow(), locales.ConfirmCloseWindowNote(), func() {
 			myui.Switch(c, &s.ConfirmCloseWindow)
-		})
+		}, st.Reveal)
 	})
 }
 
@@ -106,48 +106,48 @@ func offers(profiles []Profile, id string) bool {
 func interactionPage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
 	section(c, locales.InteractionMouse(), func() {
-		field(c, locales.CopyOnSelect(), locales.CopyOnSelectNote(), func() {
+		field(c, "copyOnSelect", locales.CopyOnSelect(), locales.CopyOnSelectNote(), func() {
 			myui.Switch(c, &s.CopyOnSelect)
-		})
-		field(c, locales.RightClick(), locales.RightClickNote(), func() {
+		}, st.Reveal)
+		field(c, "rightClick", locales.RightClick(), locales.RightClickNote(), func() {
 			choice(c, &s.RightClick, []option{
 				{"copyOrPaste", locales.CopyOrPaste()},
 				{"paste", locales.Paste()},
 				{"menu", locales.Menu()},
 				{"nothing", locales.Nothing()},
 			})
-		})
-		field(c, locales.RightClickCopyPastePriority(), locales.RightClickCopyPastePriorityNote(), func() {
+		}, st.Reveal)
+		field(c, "rightClickCopyPastePriority", locales.RightClickCopyPastePriority(), locales.RightClickCopyPastePriorityNote(), func() {
 			myui.Switch(c, &s.RightClickCopyPastePriority)
-		})
-		field(c, locales.Links(), locales.LinksNote(), func() {
+		}, st.Reveal)
+		field(c, "links", locales.Links(), locales.LinksNote(), func() {
 			myui.Switch(c, &s.Links.Open)
-		})
-		field(c, locales.ScrollMultiplier(), locales.ScrollMultiplierNote(), func() {
+		}, st.Reveal)
+		field(c, "scrollMultiplier", locales.ScrollMultiplier(), locales.ScrollMultiplierNote(), func() {
 			measure(c, &s.ScrollMultiplier, 0.5, 5, 0.5)
-		})
+		}, st.Reveal)
 	})
 	section(c, locales.InteractionClipboard(), func() {
-		field(c, locales.ClipboardRead(), locales.ClipboardReadNote(), func() {
+		field(c, "clipboardRead", locales.ClipboardRead(), locales.ClipboardReadNote(), func() {
 			choice(c, &s.ClipboardRead, []option{
 				{"deny", locales.Deny()},
 				{"allow", locales.Allow()},
 				{"ask", locales.Ask()},
 			})
-		})
-		field(c, locales.ClipboardWrite(), locales.ClipboardWriteNote(), func() {
+		}, st.Reveal)
+		field(c, "clipboardWrite", locales.ClipboardWrite(), locales.ClipboardWriteNote(), func() {
 			choice(c, &s.ClipboardWrite, []option{
 				{"allow", locales.Allow()},
 				{"deny", locales.Deny()},
 			})
-		})
-		field(c, locales.PasteMultiline(), locales.PasteMultilineNote(), func() {
+		}, st.Reveal)
+		field(c, "pasteMultilineConfirm", locales.PasteMultiline(), locales.PasteMultilineNote(), func() {
 			myui.Switch(c, &s.PasteMultilineConfirm)
-		})
+		}, st.Reveal)
 	})
 	section(c, locales.InteractionBuffer(), func() {
-		field(c, locales.Scrollback(), locales.ScrollbackNote(), func() {
+		field(c, "scrollbackMB", locales.Scrollback(), locales.ScrollbackNote(), func() {
 			count(c, &s.ScrollbackMB, 0, 1024)
-		})
+		}, st.Reveal)
 	})
 }

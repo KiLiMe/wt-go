@@ -18,6 +18,7 @@ type navActions struct {
 	marks    []string
 	toggled  int
 	page     string
+	key      string
 	defaults []string
 }
 
@@ -30,6 +31,13 @@ func (a *navActions) ResetProfile(id string) { a.reset = append(a.reset, id) }
 func (a *navActions) ToggleChangedKeys() { a.toggled++ }
 
 func (a *navActions) SelectSettingsPage(page string) { a.page = page }
+
+// RevealSetting is what a hit of the search over the settings asks for: the
+// page that holds the setting, and the setting itself, which the page marks.
+func (a *navActions) RevealSetting(page, key string) {
+	a.page = page
+	a.key = key
+}
 
 func (a *navActions) SetDefaultProfile(id string) { a.defaults = append(a.defaults, id) }
 

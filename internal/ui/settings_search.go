@@ -8,11 +8,13 @@ import (
 )
 
 // settingHit is one setting the column searches: what the page labels it, the
-// page it is on, the page's name to say where it is, and the words that find
-// it besides its own name -- the field's key in settings.json, and the word a
-// person may know it by in either language.
+// setting itself by the name the file gives it, the page it is on, the page's
+// name to say where it is, and the words that find it besides its own name --
+// the field's key in settings.json, and the word a person may know it by in
+// either language.
 type settingHit struct {
 	name     string
+	key      string
 	page     string
 	pageName string
 	words    string
@@ -50,58 +52,61 @@ func settingsIndex() []settingHit {
 		}
 	}
 	var out []settingHit
-	add := func(p, name, words string) {
-		out = append(out, settingHit{name: name, page: p, pageName: page(p), words: words})
+	// key is the setting the file writes, which is how the page finds the row to
+	// mark and scroll to; "" is a setting the page holds as a whole, as its
+	// list of keybindings is.
+	add := func(p, key, name, words string) {
+		out = append(out, settingHit{name: name, key: key, page: p, pageName: page(p), words: words})
 	}
-	add(PageGeneral, locales.Language(), "language locale i18n 语言 界面")
-	add(PageGeneral, locales.DefaultProfile(), "profile shell startup default 默认 配置文件 启动")
-	add(PageGeneral, locales.StartDirectory(), "directory cwd folder start 起始目录 目录")
-	add(PageGeneral, locales.NewTabPosition(), "tab position order 新标签 位置")
-	add(PageGeneral, locales.TabWidth(), "tab width size 标签 宽度")
-	add(PageGeneral, locales.TitleFollowsPane(), "title rename terminal 标题 跟随")
-	add(PageGeneral, locales.AlwaysOnTop(), "window always on top 置顶 窗口")
-	add(PageGeneral, locales.PanesPerTab(), "pane split max count 窗格 上限")
-	add(PageGeneral, locales.CloseOnLastTab(), "close tab window 关闭 标签")
-	add(PageGeneral, locales.ConfirmClose(), "confirm close ask 确认 关闭")
-	add(PageGeneral, locales.ConfirmCloseWindow(), "confirm window close ask 确认 关闭 窗口")
+	add(PageGeneral, "language", locales.Language(), "language locale i18n 语言 界面")
+	add(PageGeneral, "defaultProfile", locales.DefaultProfile(), "profile shell startup default 默认 配置文件 启动")
+	add(PageGeneral, "startDirectory", locales.StartDirectory(), "directory cwd folder start 起始目录 目录")
+	add(PageGeneral, "newTabPosition", locales.NewTabPosition(), "tab position order 新标签 位置")
+	add(PageGeneral, "tabWidth", locales.TabWidth(), "tab width size 标签 宽度")
+	add(PageGeneral, "titleFromActiveTerminal", locales.TitleFollowsPane(), "title rename terminal 标题 跟随")
+	add(PageGeneral, "alwaysOnTop", locales.AlwaysOnTop(), "window always on top 置顶 窗口")
+	add(PageGeneral, "maxPanes", locales.PanesPerTab(), "pane split max count 窗格 上限")
+	add(PageGeneral, "closeOnLastTab", locales.CloseOnLastTab(), "close tab window 关闭 标签")
+	add(PageGeneral, "confirmClose", locales.ConfirmClose(), "confirm close ask 确认 关闭")
+	add(PageGeneral, "confirmCloseWindow", locales.ConfirmCloseWindow(), "confirm window close ask 确认 关闭 窗口")
 
-	add(PageAppearance, locales.Theme(), "theme dark light system 主题 界面")
-	add(PageAppearance, locales.BackgroundOpacity(), "opacity translucent transparency background 透明度 背景")
-	add(PageAppearance, locales.Font(), "font family typeface 字体")
-	add(PageAppearance, locales.FontSize(), "font size 字号 字体")
-	add(PageAppearance, locales.LineHeight(), "line height spacing 行高")
-	add(PageAppearance, locales.Padding(), "padding space 内边距")
-	add(PageAppearance, locales.PaddingColor(), "padding color 内边距 颜色")
-	add(PageAppearance, locales.Cursor(), "cursor shape blink 光标")
-	add(PageAppearance, locales.MinimumContrast(), "contrast 对比度")
-	add(PageAppearance, locales.Scheme(), "scheme color colours palette theme 配色 方案 颜色")
+	add(PageAppearance, "theme", locales.Theme(), "theme dark light system 主题 界面")
+	add(PageAppearance, "backgroundOpacity", locales.BackgroundOpacity(), "opacity translucent transparency background 透明度 背景")
+	add(PageAppearance, "font", locales.Font(), "font family typeface 字体")
+	add(PageAppearance, "font.size", locales.FontSize(), "font size 字号 字体")
+	add(PageAppearance, "font.lineHeight", locales.LineHeight(), "line height spacing 行高")
+	add(PageAppearance, "padding", locales.Padding(), "padding space 内边距")
+	add(PageAppearance, "paddingColor", locales.PaddingColor(), "padding color 内边距 颜色")
+	add(PageAppearance, "cursorShape", locales.Cursor(), "cursor shape blink 光标")
+	add(PageAppearance, "minimumContrast", locales.MinimumContrast(), "contrast 对比度")
+	add(PageAppearance, "colorScheme", locales.Scheme(), "scheme color colours palette theme 配色 方案 颜色")
 
-	add(PageInteraction, locales.CopyOnSelect(), "copy select mouse clipboard 复制 选中 鼠标")
-	add(PageInteraction, locales.RightClick(), "right click mouse menu paste 右键 鼠标")
-	add(PageInteraction, locales.RightClickCopyPastePriority(), "right click mouse tracking copy paste 右键 鼠标 上报 复制 粘贴")
-	add(PageInteraction, locales.Links(), "link ctrl click mouse open path url hover underline pointer 链接 打开 路径 网址 悬停 下划线 指针")
-	add(PageInteraction, locales.ScrollMultiplier(), "scroll wheel mouse speed 滚轮 滚动")
-	add(PageInteraction, locales.ClipboardRead(), "clipboard read paste osc52 剪贴板 读取 粘贴")
-	add(PageInteraction, locales.ClipboardWrite(), "clipboard write copy osc52 剪贴板 写入 复制")
-	add(PageInteraction, locales.PasteMultiline(), "paste multiline confirm clipboard 粘贴 多行")
-	add(PageInteraction, locales.Scrollback(), "scrollback buffer history lines 回滚 缓冲")
+	add(PageInteraction, "copyOnSelect", locales.CopyOnSelect(), "copy select mouse clipboard 复制 选中 鼠标")
+	add(PageInteraction, "rightClick", locales.RightClick(), "right click mouse menu paste 右键 鼠标")
+	add(PageInteraction, "rightClickCopyPastePriority", locales.RightClickCopyPastePriority(), "right click mouse tracking copy paste 右键 鼠标 上报 复制 粘贴")
+	add(PageInteraction, "links", locales.Links(), "link ctrl click mouse open path url hover underline pointer 链接 打开 路径 网址 悬停 下划线 指针")
+	add(PageInteraction, "scrollMultiplier", locales.ScrollMultiplier(), "scroll wheel mouse speed 滚轮 滚动")
+	add(PageInteraction, "clipboardRead", locales.ClipboardRead(), "clipboard read paste osc52 剪贴板 读取 粘贴")
+	add(PageInteraction, "clipboardWrite", locales.ClipboardWrite(), "clipboard write copy osc52 剪贴板 写入 复制")
+	add(PageInteraction, "pasteMultilineConfirm", locales.PasteMultiline(), "paste multiline confirm clipboard 粘贴 多行")
+	add(PageInteraction, "scrollbackMB", locales.Scrollback(), "scrollback buffer history lines 回滚 缓冲")
 
-	add(PageProfiles, locales.Profiles(), "profile shell command 配置文件")
-	add(PageProfiles, locales.Name(), "name rename profile 名称")
-	add(PageProfiles, locales.CommandLine(), "command line exec shell 命令行")
-	add(PageProfiles, locales.Arguments(), "arguments args 参数")
-	add(PageProfiles, locales.StartDirectory(), "directory cwd profile 起始目录")
-	add(PageProfiles, locales.IconColor(), "color icon 图标 颜色")
-	add(PageProfiles, locales.Hidden(), "hide hidden 隐藏")
+	add(PageProfiles, "", locales.Profiles(), "profile shell command 配置文件")
+	add(PageProfiles, "name", locales.Name(), "name rename profile 名称")
+	add(PageProfiles, "command", locales.CommandLine(), "command line exec shell 命令行")
+	add(PageProfiles, "args", locales.Arguments(), "arguments args 参数")
+	add(PageProfiles, "dir", locales.StartDirectory(), "directory cwd profile 起始目录")
+	add(PageProfiles, "color", locales.IconColor(), "color icon 图标 颜色")
+	add(PageProfiles, "hidden", locales.Hidden(), "hide hidden 隐藏")
 
-	add(PageActions, locales.KeySearch(), "keybinding shortcut key hotkey 快捷键 键位")
-	add(PageActions, locales.RestoreDefaults(), "reset keybindings restore default 恢复 重置 默认")
-	add(PageActions, locales.OnlyChanged(0), "changed modified 已修改")
+	add(PageActions, keySearchActions, locales.KeySearch(), "keybinding shortcut key hotkey 快捷键 键位")
+	add(PageActions, keyRestoreDefaults, locales.RestoreDefaults(), "reset keybindings restore default 恢复 重置 默认")
+	add(PageActions, keyOnlyChanged, locales.OnlyChanged(0), "changed modified 已修改")
 
-	add(PageAdvanced, locales.ProbeAgain(), "probe rediscover shell detect 重新探测 探测")
-	add(PageAdvanced, locales.SettingsFolder(), "settings folder file path 设置目录")
-	add(PageAdvanced, locales.ProgramFolder(), "program folder path 程序目录")
-	add(PageAdvanced, locales.Reset(), "reset delete settings 重置 删除")
+	add(PageAdvanced, "probe", locales.ProbeAgain(), "probe rediscover shell detect 重新探测 探测")
+	add(PageAdvanced, "settingsFolder", locales.SettingsFolder(), "settings folder file path 设置目录")
+	add(PageAdvanced, "programFolder", locales.ProgramFolder(), "program folder path 程序目录")
+	add(PageAdvanced, "reset", locales.Reset(), "reset delete settings 重置 删除")
 	return out
 }
 
@@ -145,11 +150,12 @@ func searchSettingsIndex(words string) []settingHit {
 }
 
 // settingsHitRow is one setting of the column while the search is on: what it
-// is called, the page that holds it under it, and a click that opens that page.
+// is called, the page that holds it under it, and a click that opens that page
+// and marks the setting on it.
 func settingsHitRow(c *myui.Context, h settingHit, act Actions) {
 	t := c.Theme()
 	el := myui.Column(c).Padding(4, 8).Gap(1).Radius(6).
-		Cursor(myui.CursorPointer).OnClick(func() { act.SelectSettingsPage(h.page) })
+		Cursor(myui.CursorPointer).OnClick(func() { act.RevealSetting(h.page, h.key) })
 	if el.Hovered() {
 		el.Background(t.SurfaceHover)
 	}

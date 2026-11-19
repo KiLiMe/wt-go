@@ -156,17 +156,17 @@ func profilePage(c *myui.Context, st Settings, act Actions, id string) {
 	// changed here would be a change the page could not keep.
 	readonly := p.Discovered
 	section(c, "", func() {
-		field(c, locales.Name(), "", func() {
+		field(c, "name", locales.Name(), "", func() {
 			myui.TextInput(c, &p.Name)
-		})
+		}, st.Reveal)
 		if readonly {
-			fieldBlock(c, locales.CommandLine(), locales.DiscoveredProfileNote(), func() {
+			fieldBlock(c, "command", locales.CommandLine(), locales.DiscoveredProfileNote(), func() {
 				myui.TextInput(c, &p.Command).ReadOnly(true)
-			})
+			}, st.Reveal)
 		} else {
-			fieldBlock(c, locales.CommandLine(), locales.CommandLineNote(), func() {
+			fieldBlock(c, "command", locales.CommandLine(), locales.CommandLineNote(), func() {
 				myui.TextInput(c, &p.Command).Placeholder(store.DefaultShellHint())
-			})
+			}, st.Reveal)
 			// Below the field rather than beside it: the note says what
 			// emptying the field does, and the hint says why the empty one a
 			// person just left is not what runs yet.
@@ -176,21 +176,21 @@ func profilePage(c *myui.Context, st Settings, act Actions, id string) {
 				})
 			}
 		}
-		fieldBlock(c, locales.Arguments(), locales.ArgumentsNote(), func() {
+		fieldBlock(c, "args", locales.Arguments(), locales.ArgumentsNote(), func() {
 			myui.TextArea(c, st.Args).Lines(2, 6)
-		})
-		fieldBlock(c, locales.StartDirectory(), locales.ProfileStartNote(), func() {
+		}, st.Reveal)
+		fieldBlock(c, "dir", locales.StartDirectory(), locales.ProfileStartNote(), func() {
 			myui.TextInput(c, &p.Dir).Placeholder(store.DefaultHomeHint())
-		})
-		fieldBlock(c, locales.Icon(), locales.IconNote(), func() {
+		}, st.Reveal)
+		fieldBlock(c, "icon", locales.Icon(), locales.IconNote(), func() {
 			iconField(c, st, act, p)
-		})
-		field(c, locales.IconColor(), locales.IconColorNote(), func() {
+		}, st.Reveal)
+		field(c, "color", locales.IconColor(), locales.IconColorNote(), func() {
 			colorField(c, &p.Color)
-		})
-		field(c, locales.Hidden(), locales.HiddenNote(), func() {
+		}, st.Reveal)
+		field(c, "hidden", locales.Hidden(), locales.HiddenNote(), func() {
 			myui.Switch(c, &p.Hidden)
-		})
+		}, st.Reveal)
 	})
 	// No line over this row: it stands under the card of fields rather than
 	// inside it, and a hairline there draws a second edge a few pixels under

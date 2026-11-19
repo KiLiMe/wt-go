@@ -21,19 +21,24 @@ type option struct {
 // control that sets it on the right, in a row of the card its section draws.
 // The label names the control, so that assistive technology reads the two
 // together, as a click on a form's label focuses its control.
-func field(c *myui.Context, title, description string, control func()) {
-	fieldRow(c, title, description, control, false)
+//
+// key is the setting the row holds, named the way the settings file names it:
+// it is what the search over the settings marks when it finds this one, so the
+// row is drawn from the same name the file writes. reveal is the mark to put
+// over that row, and nil when nothing was found.
+func field(c *myui.Context, key, title, description string, control func(), reveal *Reveal) {
+	fieldRow(c, key, title, description, control, false, reveal)
 }
 
 // fieldBlock is a field whose control goes under the words rather than beside
 // them: one that needs the whole width, as a command line does.
-func fieldBlock(c *myui.Context, title, description string, control func()) {
-	fieldRow(c, title, description, control, true)
+func fieldBlock(c *myui.Context, key, title, description string, control func(), reveal *Reveal) {
+	fieldRow(c, key, title, description, control, true, reveal)
 }
 
 // fieldRow is field and fieldBlock: the words of a setting, and its control
 // beside or under them.
-func fieldRow(c *myui.Context, title, description string, control func(), block bool) {
+func fieldRow(c *myui.Context, key, title, description string, control func(), block bool, reveal *Reveal) {
 	t := c.Theme()
 	words := func() {
 		myui.Column(c).Gap(3).MinWidth(0).Children(func() {
@@ -62,6 +67,7 @@ func fieldRow(c *myui.Context, title, description string, control func(), block 
 	// A row of words and a control is one group to a reader, as mygo names
 	// the field of a form: the label names the group.
 	cell.Role(myui.RoleGroup).Label(title)
+	mark(c, cell, key, reveal)
 }
 
 // controlWidth is as wide as the control of a field grows: past it the words

@@ -73,6 +73,11 @@ func TestSettingsSearchFindsTheFieldOfAPage(t *testing.T) {
 			if act.page != hits[0].page {
 				t.Fatalf("page = %q, want %q", act.page, hits[0].page)
 			}
+			// The click names the setting as well as the page, so the page
+			// opens on the row the hit is about rather than its head.
+			if act.key != hits[0].key {
+				t.Fatalf("key = %q, want %q", act.key, hits[0].key)
+			}
 		})
 	}
 }
@@ -171,5 +176,26 @@ func TestSettingsSearchKeepsWhatIsTyped(t *testing.T) {
 	}
 	if tt.HasText(locales.NoMatchingSettings()) {
 		t.Fatal("the column says nothing matches while it lists the pages")
+	}
+}
+
+func TestKeybindingSearchRevealsControl(t *testing.T) {
+	for _, tc := range []struct{ query, label, key string }{
+		{"hotkey", locales.KeySearch(), keySearchActions},
+		{"restore", locales.RestoreDefaults(), keyRestoreDefaults},
+		{"modified", locales.OnlyChanged(0), keyOnlyChanged},
+	} {
+		t.Run(tc.query, func(t *testing.T) {
+			query := tc.query
+			tt, act := settingsSearched(t, &query)
+			at, ok := tt.Find(tc.label)
+			if !ok {
+				t.Fatalf("missing search result %q", tc.label)
+			}
+			tt.ClickAt(at.X+at.W/2, at.Y+at.H/2)
+			if act.page != PageActions || act.key != tc.key || act.toggled != 0 {
+				t.Fatalf("unexpected navigation: page=%q key=%q toggled=%d", act.page, act.key, act.toggled)
+			}
+		})
 	}
 }

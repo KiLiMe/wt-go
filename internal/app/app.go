@@ -48,7 +48,8 @@ type App struct {
 	about      *ui.About
 	palette    *ui.Palette
 	find       *ui.Find
-	findTerm   *terminal.Terminal
+	findPane   *pane.Node
+	tabsList   *ui.TabsList
 	shownTitle string
 	// shells is the process each terminal runs, when the window learned it,
 	// which is how it tells a shell at its prompt from a program running.
@@ -163,6 +164,10 @@ type App struct {
 	actionSearch   string
 	profileSearch  string
 	settingsSearch string
+	// reveal is the setting the search over the column of pages found, and how
+	// far the mark over it has faded: the page scrolls to the setting on the
+	// first frame of it, and the mark goes over the frames after.
+	reveal ui.Reveal
 	// onlyChangedKeys is whether the actions page lists the actions the file
 	// binds on keys of its own alone, and numberedKeys whether it shows the
 	// numbered actions it folds away.
@@ -289,6 +294,7 @@ func (a *App) view(c *myui.Context) {
 	}
 	st.About = a.about
 	st.Palette = a.paletteState()
+	st.TabsList = a.tabsList
 	st.Find = a.findState()
 	if a.settingsTab != nil {
 		a.settingsShown = a.settingsState()
@@ -302,6 +308,10 @@ func (a *App) view(c *myui.Context) {
 		st.Frames = a.meter.frames()
 	}
 	ui.View(c, st, a)
+	// The mark over the setting the search found is one frame older than it
+	// was drawn: the frame that scrolls to the setting is the first one, and
+	// the fade is what the frames after it show.
+	a.revealFrame()
 	a.syncTitle()
 }
 

@@ -9,6 +9,9 @@
   "scrollTabsRight": "向右滚动标签",
   "noTabs": "没有打开的标签",
   "openTab": "新建标签",
+  "allTabs": "全部标签页",
+  "tabListPlaceholder": "输入标签页的名称",
+  "tabListNoMatch": "没有匹配的标签页。",
   "nextTab": "下一个标签",
   "previousTab": "上一个标签",
   "switchToTab": "切换到第 {n} 个标签",
@@ -463,6 +466,16 @@
   },
   "findPrevious": "上一个匹配",
   "findNext": "下一个匹配",
+  "findPreviousHint": "上一个匹配 (Shift+Enter)",
+  "findNextHint": "下一个匹配 (Enter)",
+  "findInPane": "在 {pane} 中",
+  "@findInPane": {
+    "placeholders": {
+      "pane": {
+        "type": "String"
+      }
+    }
+  },
   "findNone": "没有匹配",
   "findCount": "找到 {count} 个",
   "@findCount": {

@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/egoist/mygo/plugins/terminal"
 
+	"wtgo/internal/pane"
 	"wtgo/internal/ui"
 )
 
@@ -50,22 +51,24 @@ func (a *App) EndFind() {
 	a.redraw()
 }
 
-// endSearch stops the search the bar started, which may be on a terminal the
-// tab in front no longer shows.
+// endSearch stops the search the bar started, which may be on a pane the tab in
+// front no longer shows.
 func (a *App) endSearch() {
-	if a.findTerm == nil {
+	if a.findPane == nil {
 		return
 	}
-	a.findTerm.EndSearch()
-	a.findTerm = nil
+	if a.findPane.Term != nil {
+		a.findPane.Term.EndSearch()
+	}
+	a.findPane = nil
 }
 
 // searchTarget is the terminal the bar searches: the one it bound, or the one
 // in front while it has bound none. It does not rebind: findState does, so the
 // search stays on the tab the bar was opened on.
 func (a *App) searchTarget() *terminal.Terminal {
-	if a.findTerm != nil {
-		return a.findTerm
+	if a.findPane != nil {
+		return a.findPane.Term
 	}
 	return a.focusedTerm()
 }
@@ -76,8 +79,8 @@ func (a *App) findState() *ui.Find {
 	if a.find == nil {
 		return nil
 	}
-	term := a.focusedTerm()
-	if term == nil {
+	node := a.focusedPane()
+	if node == nil {
 		// The tab in front is not a terminal, as the settings: the bar
 		// has nothing to search, and the search it started goes. It is the
 		// bar that goes even when another overlay opened over it: a bar
@@ -86,22 +89,32 @@ func (a *App) findState() *ui.Find {
 		a.endSearch()
 		return nil
 	}
-	if term != a.findTerm {
+	if node != a.findPane {
 		// The bar follows the tab in front, and stops the search it
-		// started on the tab it left.
+		// started on the pane it left.
 		a.endSearch()
-		a.findTerm = term
+		a.findPane = node
 	}
-	a.find.Status = term.SearchStatus()
+	a.find.Pane = node
+	a.find.Status = node.Term.SearchStatus()
 	return a.find
+}
+
+// focusedPane is the pane the keys go to: the focused pane of the tab in
+// front, nil while that tab holds none.
+func (a *App) focusedPane() *pane.Node {
+	tab, ok := a.panes.Front()
+	if !ok || tab.Focus == nil {
+		return nil
+	}
+	return tab.Focus
 }
 
 // focusedTerm is the terminal the keys go to: the focused pane of the tab in
 // front, nil while that tab holds none.
 func (a *App) focusedTerm() *terminal.Terminal {
-	tab, ok := a.panes.Front()
-	if !ok || tab.Focus == nil {
-		return nil
+	if node := a.focusedPane(); node != nil {
+		return node.Term
 	}
-	return tab.Focus.Term
+	return nil
 }

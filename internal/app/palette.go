@@ -15,6 +15,13 @@ func (a *App) OpenPalette() {
 	a.redraw()
 }
 
+// OpenTabs lists every tab, which is where a tab is found by name when the
+// strip has more tabs than it has room for.
+func (a *App) OpenTabs() {
+	a.openOverlay(overlayTabs)
+	a.redraw()
+}
+
 // Run does the action the palette picked.
 func (a *App) Run(id string) {
 	a.closeOverlay(overlayPalette)
