@@ -101,11 +101,12 @@ type Settings struct {
 	// the program drew it, 4.5 is the ratio the guidelines call readable.
 	MinimumContrast float32 `json:"minimumContrast"`
 
-	CopyOnSelect          bool    `json:"copyOnSelect"`
-	RightClick            string  `json:"rightClick"`
-	PasteMultilineConfirm bool    `json:"pasteMultilineConfirm"`
-	ConfirmClose          Confirm `json:"confirmClose"`
-	CloseOnLastTab        bool    `json:"closeOnLastTab"`
+	CopyOnSelect                bool    `json:"copyOnSelect"`
+	RightClick                  string  `json:"rightClick"`
+	RightClickCopyPastePriority bool    `json:"rightClickCopyPastePriority"`
+	PasteMultilineConfirm       bool    `json:"pasteMultilineConfirm"`
+	ConfirmClose                Confirm `json:"confirmClose"`
+	CloseOnLastTab              bool    `json:"closeOnLastTab"`
 	// ConfirmCloseWindow is whether the window asks before it closes with the
 	// tabs it holds.
 	ConfirmCloseWindow bool `json:"confirmCloseWindow"`
@@ -381,8 +382,9 @@ var knownKeys = map[string]struct{}{
 	"cursorShape": {}, "cursorBlink": {}, "scrollbackMB": {},
 	"paddingColor": {}, "minimumContrast": {},
 
-	"copyOnSelect": {}, "rightClick": {}, "pasteMultilineConfirm": {},
-	"confirmClose": {}, "closeOnLastTab": {}, "confirmCloseWindow": {},
+	"copyOnSelect": {}, "rightClick": {}, "rightClickCopyPastePriority": {},
+	"pasteMultilineConfirm": {},
+	"confirmClose":          {}, "closeOnLastTab": {}, "confirmCloseWindow": {},
 	"scrollMultiplier": {}, "clipboardRead": {}, "clipboardWrite": {},
 	"links": {},
 

@@ -200,6 +200,8 @@
   "copyOnSelectNote": "Copy what a selection takes as it takes it.",
   "rightClick": "Right click",
   "rightClickNote": "What a right click does.",
+  "rightClickCopyPastePriority": "Prioritize right-click copy and paste",
+  "rightClickCopyPastePriorityNote": "Use the configured copy or paste action even when a program tracks the mouse. Takes effect in new tabs.",
   "links": "Links",
   "linksNote": "Whether a click opens a link: a path a program printed, a URL, or a hyperlink the program set. The pointer underlines one and shows the hand as soon as it is over it, the way Windows Terminal does, so Control is not needed; dragging off a link selects it instead. Off takes effect at once: nothing is underlined, and a click opens nothing.",
   "scrollMultiplier": "Scroll multiplier",

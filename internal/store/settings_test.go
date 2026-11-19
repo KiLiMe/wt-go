@@ -156,6 +156,22 @@ func TestMarshalRoundTrip(t *testing.T) {
 	}
 }
 
+func TestRightClickCopyPastePriority(t *testing.T) {
+	old, err := Parse([]byte(`{"rightClick":"copyOrPaste"}`))
+	if err != nil || old.RightClickCopyPastePriority {
+		t.Fatalf("reading settings without the new key turned it on or failed: %t, %v", old.RightClickCopyPastePriority, err)
+	}
+	old.RightClickCopyPastePriority = true
+	b, err := Marshal(old)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := Parse(b)
+	if err != nil || !got.RightClickCopyPastePriority {
+		t.Fatalf("round trip lost the enabled setting or failed: %t, %v", got.RightClickCopyPastePriority, err)
+	}
+}
+
 // TestKnownKeysAreTheFields covers the two lists of keys: one missing from
 // knownKeys is kept in Extra and written after its field, which would give a
 // file a key twice.

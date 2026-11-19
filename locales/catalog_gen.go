@@ -1554,6 +1554,28 @@ func (msgs Messages) RightClickNote() string {
 	return Catalog.Format(msgs.locale, "rightClickNote", nil)
 }
 
+// RightClickCopyPastePriority says "Prioritize right-click copy and paste"
+// in the language the app shows.
+func RightClickCopyPastePriority() string { return In(i18n.Locale()).RightClickCopyPastePriority() }
+
+// RightClickCopyPastePriority says "Prioritize right-click copy and paste"
+// in the language of msgs.
+func (msgs Messages) RightClickCopyPastePriority() string {
+	return Catalog.Format(msgs.locale, "rightClickCopyPastePriority", nil)
+}
+
+// RightClickCopyPastePriorityNote says "Use the configured copy or paste action even when a program tracks the mouse. Takes effect in new tabs."
+// in the language the app shows.
+func RightClickCopyPastePriorityNote() string {
+	return In(i18n.Locale()).RightClickCopyPastePriorityNote()
+}
+
+// RightClickCopyPastePriorityNote says "Use the configured copy or paste action even when a program tracks the mouse. Takes effect in new tabs."
+// in the language of msgs.
+func (msgs Messages) RightClickCopyPastePriorityNote() string {
+	return Catalog.Format(msgs.locale, "rightClickCopyPastePriorityNote", nil)
+}
+
 // Links says "Links"
 // in the language the app shows.
 func Links() string { return In(i18n.Locale()).Links() }

@@ -10,15 +10,16 @@ import (
 func (a *App) termOptions(p profile.Profile, dir string) terminal.Options {
 	s := a.settings
 	return terminal.Options{
-		Command:    p.CommandLine(),
-		Dir:        dir,
-		Font:       a.terminalFont(),
-		Theme:      theme.Terminal(s),
-		Cursor:     cursor(s.CursorShape),
-		NoBlink:    !s.CursorBlink,
-		Scrollback: s.ScrollbackMB << 20,
-		Padding:    terminal.Padding{X: s.Padding.X, Y: s.Padding.Y},
-		RightClick: rightClick(s.RightClick),
+		Command:                     p.CommandLine(),
+		Dir:                         dir,
+		Font:                        a.terminalFont(),
+		Theme:                       theme.Terminal(s),
+		Cursor:                      cursor(s.CursorShape),
+		NoBlink:                     !s.CursorBlink,
+		Scrollback:                  s.ScrollbackMB << 20,
+		Padding:                     terminal.Padding{X: s.Padding.X, Y: s.Padding.Y},
+		RightClick:                  rightClick(s.RightClick),
+		RightClickCopyPastePriority: s.RightClickCopyPastePriority,
 		// What the grid is surrounded by, and the read floor of its text,
 		// are fixed for the life of a terminal: they are set here, not in
 		// apply, and a change shows in the next tab.

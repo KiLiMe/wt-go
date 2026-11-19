@@ -78,6 +78,7 @@ func settingsIndex() []settingHit {
 
 	add(PageInteraction, locales.CopyOnSelect(), "copy select mouse clipboard 复制 选中 鼠标")
 	add(PageInteraction, locales.RightClick(), "right click mouse menu paste 右键 鼠标")
+	add(PageInteraction, locales.RightClickCopyPastePriority(), "right click mouse tracking copy paste 右键 鼠标 上报 复制 粘贴")
 	add(PageInteraction, locales.Links(), "link ctrl click mouse open path url hover underline pointer 链接 打开 路径 网址 悬停 下划线 指针")
 	add(PageInteraction, locales.ScrollMultiplier(), "scroll wheel mouse speed 滚轮 滚动")
 	add(PageInteraction, locales.ClipboardRead(), "clipboard read paste osc52 剪贴板 读取 粘贴")

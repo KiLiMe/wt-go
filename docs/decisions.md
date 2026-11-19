@@ -104,7 +104,7 @@
 - **内嵌图标（ADR-33）**：界面图标用嵌入 SVG（`internal/icons`）而非字形字体，不依赖系统装字体。
 
 ### Windows / ConPTY 与 Fork 边界（ADR-57, 72, 73, 81, 82, 84）
-- **Fork（`github.com/KiLiMe/mygo`，`wt-go-pin`）仅保留必要差异**：
+- `github.com/KiLiMe/mygo` 的 `my-go-custom` 分支维护 wt-go 所需的定制改动。
   1. **键位降级（ADR-57）**：`kittyKeyboard` 未开启或仅部分标志位启用时，将 ConPTY 无法透传的按键降为传统字节序列。
   2. **ConPTY 随包与静默策略（ADR-72/73/81/82）**：Windows 系统自带 `conhost` 会剥掉终端发回给程序的 OSC/CSI 回复且延后开启 `ENABLE_VIRTUAL_TERMINAL_INPUT`。wt-go 随包分发 MIT 许可的 `Microsoft.Windows.Console.ConPTY`（`resources/windows-<goarch>/conpty/`，哈希钉在 `Scripts/conpty.json`）并按 `MYGO_CONPTY → conpty/ → exe 同目录 → 系统 conhost` 选用；仅在未启用转发的系统 conhost 路径下开启 `setVTInput()`（ADR-81）并由 `writeReply` 整批静默回复（ADR-73/82）。随包 ConPTY 的 `ClearPseudoConsole` 不主动清屏，清屏后依赖 `wt-go` VT 层重绘。
   3. **链接控制与路径（ADR-84）**：fork 提供 `SetLinks`、`SetLinkHoverHint`（免 `Ctrl` 悬停提示与点击打开、拖动则选区）及 `file:///C:/...` 盘符修正；wt-go 在 `OpenLink` 钩子中通过 `sys.OpenURL`/`sys.OpenPath` 自行打开并捕获 `ShellExecuteW` 错误（`E209`），相对路径依次按 OSC 7 `Terminal.Dir()` 与窗格启动目录解析（暂不嗅探 PowerShell 的 OSC 9;9）。

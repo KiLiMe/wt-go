@@ -117,6 +117,9 @@ func interactionPage(c *myui.Context, st Settings, act Actions) {
 				{"nothing", locales.Nothing()},
 			})
 		})
+		field(c, locales.RightClickCopyPastePriority(), locales.RightClickCopyPastePriorityNote(), func() {
+			myui.Switch(c, &s.RightClickCopyPastePriority)
+		})
 		field(c, locales.Links(), locales.LinksNote(), func() {
 			myui.Switch(c, &s.Links.Open)
 		})
