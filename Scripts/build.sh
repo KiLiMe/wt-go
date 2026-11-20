@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # wt-go build script
 #   ./Scripts/build.sh            -> mygo packages build/<os>-<arch>/wt-go (real testing uses this)
-#   ./Scripts/build.sh --test     -> go vet and go test before building
+#   ./Scripts/build.sh --test     -> gofmt -l, go vet and go test before building
 #   ./Scripts/build.sh --clean    -> delete build/ first
 #   ./Scripts/build.sh --package  -> distribution only: go tool mygo build -o dist (no installer)
 #   ./Scripts/build.sh --expect 0.3.0
@@ -22,7 +22,7 @@ usage() {
     cat <<'EOF'
 用法：
   ./Scripts/build.sh            构建到 build/<os>-<arch>/wt-go（真机测试就用它）
-  ./Scripts/build.sh --test     编译前先跑 go vet 与 go test
+  ./Scripts/build.sh --test     编译前先跑 gofmt -l、go vet 与 go test
   ./Scripts/build.sh --clean    先删掉 build 目录再编译
   ./Scripts/build.sh --package  只出分发包：go tool mygo build -o dist（不造安装器）
   ./Scripts/build.sh --expect 0.3.0
@@ -106,6 +106,13 @@ fi
 cd -- "$root"
 
 if [ "$test" -eq 1 ]; then
+    # CI's first gate is gofmt. Only the files git tracks: refs/ is read-only
+    # reference material and would otherwise fail every local build.
+    unformatted=$(git ls-files -z -- '*.go' | xargs -0 gofmt -l)
+    if [ -n "$unformatted" ]; then
+        printf '  [ERR] 需要 gofmt：\n%s\n' "$unformatted" >&2
+        exit 1
+    fi
     go vet ./... || {
         printf '  [ERR] go vet 失败。\n' >&2
         exit 1

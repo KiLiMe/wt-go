@@ -2,7 +2,7 @@
 <#
   wt-go 构建脚本
     pwsh .\Scripts\build.ps1            -> mygo 打包到 build\windows-amd64\wt-go.exe（真机测试就用它）
-    pwsh .\Scripts\build.ps1 -Test      -> 编译前先跑 go vet 与 go test
+    pwsh .\Scripts\build.ps1 -Test      -> 编译前先跑 gofmt -l、go vet 与 go test
     pwsh .\Scripts\build.ps1 -Clean     -> 先删掉 build 里的产物再编译（便携模式的 data\ 留着）
     pwsh .\Scripts\build.ps1 -Package   -> 只出分发包：go tool mygo build -o dist（不造安装器）
     pwsh .\Scripts\build.ps1 -Version 0.3.0
@@ -84,6 +84,15 @@ try {
     }
 
     if ($Test) {
+        # CI 的第一道门就是 gofmt。查 git 里的文件：refs\ 这类只读参考不参与。
+        $sources = @(& git ls-files -- '*.go')
+        if ($LASTEXITCODE -ne 0) { Write-Host '  [ERR] git ls-files 失败。' -ForegroundColor Red; exit $LASTEXITCODE }
+        $unformatted = if ($sources.Count -gt 0) { @(& gofmt -l $sources) } else { @() }
+        if ($unformatted.Count -gt 0) {
+            Write-Host '  [ERR] 需要 gofmt：' -ForegroundColor Red
+            $unformatted | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+            exit 1
+        }
         & go vet ./...
         if ($LASTEXITCODE -ne 0) { Write-Host '  [ERR] go vet 失败。' -ForegroundColor Red; exit $LASTEXITCODE }
         # ./... 而不是 ./internal/...：locales 的覆盖测试也在 CI 里跑，本地不该少这一份。
