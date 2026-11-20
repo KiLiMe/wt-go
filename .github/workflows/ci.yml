@@ -150,13 +150,24 @@ jobs:
           mkdir -p out
           root="$PWD"
           zip="out/wt-go_${{ steps.version.outputs.version }}_linux-amd64_portable.zip"
-          (cd dist/linux-amd64 && zip -qr "$root/$zip" .)
+          # The names, not the directory: the stage also holds what install.sh
+          # and the packages want, and those made the archive three times the
+          # size of the Windows one. Same list as the Windows step.
+          (cd dist/linux-amd64 && zip -qr "$root/$zip" \
+            wt-go libghostty-vt.so LICENSE icon.png icon.svg data .mygo-files)
           # The archive has to hold the executable and the native library, or
           # it is not portable: fail rather than publish an empty one.
           unzip -l "$zip"
-          for need in wt-go libghostty-vt.so LICENSE; do
+          for need in wt-go libghostty-vt.so LICENSE .mygo-files; do
             unzip -Z1 "$zip" | grep -qx "$need" || { echo "::error::$zip has no $need"; exit 1; }
           done
+          # Nothing that installs the app instead of copying it, and nothing
+          # that packages the app again.
+          if unzip -Z1 "$zip" | grep -Eq '\.(deb|rpm|tar\.gz)$|PKGBUILD$'; then
+            echo "::error::$zip carries a package, not just the portable app"
+            exit 1
+          fi
+          du -h "$zip"
       - name: portable (windows)
         if: startsWith(matrix.os, 'windows')
         shell: pwsh
