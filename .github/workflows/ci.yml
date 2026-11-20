@@ -53,7 +53,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        # Windows runs the suite on every local build (-Test); macOS has no
+        # machine to run it on, so it is the one this job exists for.
+        os: [macos-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
@@ -172,8 +174,11 @@ jobs:
           # ConPTY it runs its terminals in, or it is not portable: fail rather
           # than publish one that quietly falls back to Windows' own console.
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $names = [IO.Compression.ZipFile]::OpenRead($zip).Entries | ForEach-Object FullName
-          foreach ($need in 'wt-go.exe', 'ghostty-vt.dll', 'conpty.dll', 'OpenConsole.exe', 'ConPTY-LICENSE.txt', 'LICENSE', '.mygo-files') {
+          # Compress-Archive names entries with the separator of the runtime that
+          # wrote them: compare in the one form the archive means either way.
+          $names = [IO.Compression.ZipFile]::OpenRead($zip).Entries | ForEach-Object { $_.FullName -replace '\\', '/' }
+          # The ConPTY sits beside the exe in conpty/ (ADR-82), not flat.
+          foreach ($need in 'wt-go.exe', 'ghostty-vt.dll', 'conpty/conpty.dll', 'conpty/OpenConsole.exe', 'conpty/ConPTY-LICENSE.txt', 'LICENSE', '.mygo-files') {
             if ($names -notcontains $need) { Write-Error "$zip has no $need"; exit 1 }
           }
           $names
