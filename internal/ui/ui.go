@@ -285,8 +285,9 @@ type Settings struct {
 	Glyph *string
 	// Schemes are the color schemes the color schemes page lists.
 	Schemes []Scheme
-	// FontFamilies are the installed families the terminal can draw with,
-	// which the font setting lists.
+	// FontFamilies are the families the font setting offers: what the machine
+	// advertises as monospaced, narrowed to the ones that measure as it once the
+	// census has run.
 	FontFamilies   []string
 	FontDiagnostic FontDiagnostic
 	// Search is what the box over the column of pages searches the settings

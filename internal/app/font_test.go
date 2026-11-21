@@ -41,12 +41,26 @@ func TestMonospaceFamilies(t *testing.T) {
 		{Name: "no-such-font-at-all", Monospaced: true},
 		{Name: "sans-serif", Monospaced: false},
 	}
-	got, mono := census(fs, 13)
+	got, mono := census(fs)
 	if want := []string{"monospace"}; !slices.Equal(got, want) {
 		t.Errorf("census() families = %v, want %v", got, want)
 	}
 	if len(mono) != 2 {
 		t.Errorf("census() measured %d families, want the two advertised as monospaced", len(mono))
+	}
+}
+
+// TestAdvertisedMono covers the list the picker holds before the census has
+// measured anything: the families the text engine calls monospaced, sorted,
+// and the others left out.
+func TestAdvertisedMono(t *testing.T) {
+	fs := []myui.FontFamily{
+		{Name: "Grid", Monospaced: true},
+		{Name: "Wide", Monospaced: false},
+		{Name: "Also", Monospaced: true},
+	}
+	if got, want := advertisedMono(fs), []string{"Also", "Grid"}; !slices.Equal(got, want) {
+		t.Errorf("advertisedMono() = %v, want %v", got, want)
 	}
 }
 
@@ -162,6 +176,16 @@ func TestSelectFontPreservesGlyphFallbacks(t *testing.T) {
 	got = a.selectFont("Wide, Missing", 13)
 	if got.family != "monospace" || !got.note.SystemFallback {
 		t.Errorf("selectFont() = %+v, want an implicit system fallback", got)
+	}
+}
+
+func TestSelectFontDropsARepeatedName(t *testing.T) {
+	a := &App{fonts: fontCensus{
+		installed: map[string]bool{"grid": true, "hack": true},
+		mono:      map[monoKey]bool{{"GRID", 13}: true},
+	}}
+	if got := a.selectFont("GRID, grid, Hack, hack", 13); got.family != "GRID, Hack" {
+		t.Errorf("selectFont() = %q, want each family once", got.family)
 	}
 }
 

@@ -109,20 +109,41 @@ func (a *App) isMonospace(family string, size float32) bool {
 	return ok
 }
 
+// advertisedMono is what the text engine calls monospaced, which is the list
+// the picker can show before anything is measured: listing a machine's families
+// is one call, and measuring each of them is a shape of the ASCII apiece, so a
+// menu waiting for the census would hold the word "monospace" alone until it
+// finished. The census is what narrows this list to the families that measure
+// as what they advertise.
+func advertisedMono(fs []myui.FontFamily) []string {
+	families := make([]string, 0, len(fs))
+	for _, f := range fs {
+		if f.Monospaced {
+			families = append(families, f.Name)
+		}
+	}
+	slices.Sort(families)
+	return families
+}
+
 // census verifies only the fonts advertised as monospaced for the picker.
 // It runs off the UI thread and returns measurements for the window's cache.
-func census(fs []myui.FontFamily, size float32) (families []string, mono map[monoKey]bool) {
-	mono = make(map[monoKey]bool)
-	for _, f := range fs {
-		if !f.Monospaced {
-			continue
-		}
-		family, at := fontOf(f.Name, size)
-		key := monoKey{family: family, size: at}
-		ok := monospace(family, at)
+//
+// What it answers is a property of the family and not of a size: the advance of
+// a monospace face is one cell at every size a terminal draws, and the sizes a
+// terminal does draw at are measured where they are asked for. A census that
+// took the settings' size would re-measure the whole machine each time a person
+// tried another one, and would answer under a key nothing else asks for.
+func census(fs []myui.FontFamily) (families []string, mono map[monoKey]bool) {
+	names := advertisedMono(fs)
+	mono = make(map[monoKey]bool, len(names))
+	for _, name := range names {
+		family, size := fontOf(name, 0)
+		key := monoKey{family: family, size: size}
+		ok := monospace(family, size)
 		mono[key] = ok
 		if ok {
-			families = append(families, f.Name)
+			families = append(families, name)
 		}
 	}
 	slices.Sort(families)
@@ -140,16 +161,18 @@ func (a *App) loadFontNames() {
 	}
 }
 
-// ensureFontFamilies defers measuring the entire picker until its first use.
-func (a *App) ensureFontFamilies(size float32) {
+// ensureFontFamilies defers measuring the entire picker until its first use:
+// what the machine advertises is listed at once, and the census narrows it.
+func (a *App) ensureFontFamilies() {
 	if a.fonts.asked {
 		return
 	}
 	a.loadFontNames()
 	a.fonts.asked = true
+	a.fonts.families = advertisedMono(a.fonts.available)
 	available := a.fonts.available
 	go func() {
-		families, mono := census(available, size)
+		families, mono := census(available)
 		a.Do(func() {
 			a.fonts.families = families
 			if a.fonts.mono == nil {
@@ -201,7 +224,12 @@ func (a *App) selectFont(family string, size float32) fontSelection {
 			}
 			continue
 		}
-		// Keep the rest for glyphs the primary font does not cover.
+		// Keep the rest for glyphs the primary font does not cover, each once: a
+		// hand-written list may name the same family twice, and a terminal told
+		// of it twice would look for glyphs in it twice.
+		if slices.ContainsFunc(candidates, func(c string) bool { return strings.EqualFold(c, name) }) {
+			continue
+		}
 		candidates = append(candidates, name)
 	}
 	if len(candidates) == 0 {

@@ -44,7 +44,7 @@ func (a *App) insertTab(tab *pane.Tab) {
 func (a *App) settingsState() ui.Settings {
 	var fontDiagnostic ui.FontDiagnostic
 	if a.settingsPage == ui.PageAppearance {
-		a.ensureFontFamilies(a.settings.Font.Size)
+		a.ensureFontFamilies()
 		fontDiagnostic = a.selectFont(a.settings.Font.Family, a.settings.Font.Size).note
 	}
 	return ui.Settings{
