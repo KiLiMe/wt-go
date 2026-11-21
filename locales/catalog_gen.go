@@ -2066,31 +2066,33 @@ func (msgs Messages) FontGeneric() string {
 	return Catalog.Format(msgs.locale, "fontGeneric", nil)
 }
 
-// FontMissing says "Not on this machine: {names}. The terminal skips them."
+// FontMissing says "Unavailable families: {names}. The terminal uses {primary} as its primary font."
 // in the language the app shows.
-func FontMissing(names string) string { return In(i18n.Locale()).FontMissing(names) }
-
-// FontMissing says "Not on this machine: {names}. The terminal skips them."
-// in the language of msgs.
-func (msgs Messages) FontMissing(names string) string {
-	return Catalog.Format(msgs.locale, "fontMissing", map[string]any{"names": names})
+func FontMissing(names string, primary string) string {
+	return In(i18n.Locale()).FontMissing(names, primary)
 }
 
-// FontNoneUsable says "This machine has none of these families: the terminal draws with monospace."
+// FontMissing says "Unavailable families: {names}. The terminal uses {primary} as its primary font."
+// in the language of msgs.
+func (msgs Messages) FontMissing(names string, primary string) string {
+	return Catalog.Format(msgs.locale, "fontMissing", map[string]any{"names": names, "primary": primary})
+}
+
+// FontNoneUsable says "The terminal could not find a usable family in the list. It uses the system monospace font."
 // in the language the app shows.
 func FontNoneUsable() string { return In(i18n.Locale()).FontNoneUsable() }
 
-// FontNoneUsable says "This machine has none of these families: the terminal draws with monospace."
+// FontNoneUsable says "The terminal could not find a usable family in the list. It uses the system monospace font."
 // in the language of msgs.
 func (msgs Messages) FontNoneUsable() string {
 	return Catalog.Format(msgs.locale, "fontNoneUsable", nil)
 }
 
-// FontNote says "The families a terminal tries, in the order the list holds them: the first one this machine has is what it draws with…"
+// FontNote says "The terminal uses the first available monospace family. Later families can supply missing glyphs. If no candidate is …"
 // in the language the app shows.
 func FontNote() string { return In(i18n.Locale()).FontNote() }
 
-// FontNote says "The families a terminal tries, in the order the list holds them: the first one this machine has is what it draws with…"
+// FontNote says "The terminal uses the first available monospace family. Later families can supply missing glyphs. If no candidate is …"
 // in the language of msgs.
 func (msgs Messages) FontNote() string {
 	return Catalog.Format(msgs.locale, "fontNote", nil)
@@ -2226,14 +2228,16 @@ func (msgs Messages) WeightBlack() string {
 	return Catalog.Format(msgs.locale, "weightBlack", nil)
 }
 
-// FontWideFirst says "{family} is the first one this machine has, and it is not monospace: the terminal draws with monospace instead, so th…"
+// FontWideFirst says "The terminal skips {family} because it is proportional and uses {primary} as its primary font."
 // in the language the app shows.
-func FontWideFirst(family string) string { return In(i18n.Locale()).FontWideFirst(family) }
+func FontWideFirst(family string, primary string) string {
+	return In(i18n.Locale()).FontWideFirst(family, primary)
+}
 
-// FontWideFirst says "{family} is the first one this machine has, and it is not monospace: the terminal draws with monospace instead, so th…"
+// FontWideFirst says "The terminal skips {family} because it is proportional and uses {primary} as its primary font."
 // in the language of msgs.
-func (msgs Messages) FontWideFirst(family string) string {
-	return Catalog.Format(msgs.locale, "fontWideFirst", map[string]any{"family": family})
+func (msgs Messages) FontWideFirst(family string, primary string) string {
+	return Catalog.Format(msgs.locale, "fontWideFirst", map[string]any{"family": family, "primary": primary})
 }
 
 // LineHeight says "Line height"

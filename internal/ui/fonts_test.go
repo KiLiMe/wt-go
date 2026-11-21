@@ -11,106 +11,41 @@ import (
 	"wtgo/locales"
 )
 
-// machine is what the tests say this machine has: two families a terminal can
-// draw a grid with, one it cannot, and nothing else.
-func machine() []InstalledFont {
-	return []InstalledFont{
-		{Name: "Cascadia Mono", Mono: true},
-		{Name: "Consolas", Mono: true},
-		{Name: "Arial", Mono: false},
-	}
-}
-
-// TestFontNoteSaysNothingWhenItDraws covers the quiet case: every name is one
-// the machine has and can draw a grid with, so the field needs no line under it.
-func TestFontNoteSaysNothingWhenItDraws(t *testing.T) {
+func TestFontNote(t *testing.T) {
 	speakIn(t, "en")
-	for _, list := range []string{"Cascadia Mono", "Cascadia Mono, monospace", "monospace", "'Consolas'"} {
-		if text, danger := fontNote(list, machine()); text != "" || danger {
-			t.Errorf("fontNote(%q) = %q, %v; want nothing", list, text, danger)
+	for _, tc := range []struct {
+		list   string
+		font   FontDiagnostic
+		want   string
+		danger bool
+	}{
+		{list: "Grid"},
+		{font: FontDiagnostic{Primary: "monospace", SystemFallback: true}},
+		{list: "Grid", font: FontDiagnostic{Primary: "Grid"}},
+		{
+			list: "Missing, Grid", font: FontDiagnostic{Primary: "Grid", Missing: []string{"Missing"}},
+			want: locales.FontMissing("Missing", "Grid"),
+		},
+		{
+			list: "Wide, Grid", font: FontDiagnostic{Primary: "Grid", Proportional: "Wide"},
+			want: locales.FontWideFirst("Wide", "Grid"), danger: true,
+		},
+		{
+			list: "Missing", font: FontDiagnostic{Primary: "monospace", SystemFallback: true},
+			want: locales.FontNoneUsable(), danger: true,
+		},
+	} {
+		if text, danger := fontNote(tc.list, tc.font); text != tc.want || danger != tc.danger {
+			t.Errorf("fontNote(%q, %+v) = %q, %v; want %q, %v", tc.list, tc.font, text, danger, tc.want, tc.danger)
 		}
 	}
-	// An empty list is the placeholder's business, and the window fills it in.
-	if text, danger := fontNote("", machine()); text != "" || danger {
-		t.Errorf("fontNote(\"\") = %q, %v; want nothing", text, danger)
-	}
 }
 
-// TestFontNoteSkipsTheNamesTheMachineLacks covers a list written on another
-// machine: the names this one does not have are skipped, which is worth a quiet
-// line, and the first one it has is what the terminal draws with.
-func TestFontNoteSkipsTheNamesTheMachineLacks(t *testing.T) {
-	speakIn(t, "en")
-	text, danger := fontNote("Monaco, no-such-font-at-all, Consolas", machine())
-	if danger {
-		t.Errorf("a list whose first usable family is monospace is not a problem: %q", text)
-	}
-	for _, name := range []string{"Monaco", "no-such-font-at-all"} {
-		if !strings.Contains(text, name) {
-			t.Errorf("the line %q does not say %q is missing", text, name)
-		}
-	}
-	if strings.Contains(text, "Consolas") {
-		t.Errorf("the line %q names a family the machine has", text)
-	}
-}
-
-// TestFontNoteLeavesTheDefaultsGuessesAlone covers a list the window ships: the
-// names in it are guesses about what a machine has, so a machine that has none
-// of them still draws with the generic one and needs no line about the guesses.
-// A name a person added is still said, since that one is a choice.
-func TestFontNoteLeavesTheDefaultsGuessesAlone(t *testing.T) {
-	speakIn(t, "en")
-	if text, danger := fontNote(store.DefaultFontFamily(), machine()); text != "" || danger {
-		t.Errorf("fontNote(default) = %q, %v; want nothing", text, danger)
-	}
-	text, danger := fontNote("Monaco, "+store.DefaultFontFamily(), machine())
-	if danger {
-		t.Fatalf("a first usable family that is monospace is not a problem: %q", text)
-	}
-	if !strings.Contains(text, "Monaco") {
-		t.Errorf("the line %q does not say %q is missing", text, "Monaco")
-	}
-	if strings.Contains(text, "DejaVu") {
-		t.Errorf("the line %q names a family the default list offers", text)
-	}
-}
-
-// TestFontNoteWarnsAboutAFirstFamilyThatIsNotMonospace is the case the line
-// exists for: the terminal draws with the first family the machine has, and a
-// proportional one spreads the letters out.
-func TestFontNoteWarnsAboutAFirstFamilyThatIsNotMonospace(t *testing.T) {
-	speakIn(t, "en")
-	text, danger := fontNote("Monaco, Arial, Cascadia Mono", machine())
-	if !danger {
-		t.Fatalf("a first usable family that is not monospace is a problem: %q", text)
-	}
-	if !strings.Contains(text, "Arial") {
-		t.Errorf("the line %q does not say which family it is", text)
-	}
-}
-
-// TestFontNoteWarnsWhenTheMachineHasNone covers a list of names this machine
-// does not have at all: the terminal draws with the generic family, which is
-// what the line says.
-func TestFontNoteWarnsWhenTheMachineHasNone(t *testing.T) {
-	speakIn(t, "en")
-	text, danger := fontNote("Monaco, no-such-font-at-all", machine())
-	if !danger || text != locales.FontNoneUsable() {
-		t.Fatalf("fontNote() = %q, %v; want %q", text, danger, locales.FontNoneUsable())
-	}
-}
-
-// TestFontNoteSpeaksTheLanguage covers the line in the language the window
-// speaks: the words are checked against the catalog, as a person reads them.
 func TestFontNoteSpeaksTheLanguage(t *testing.T) {
 	speakIn(t, "zh-Hans")
-	text, _ := fontNote("Monaco, Arial", machine())
-	if want := locales.FontWideFirst("Arial"); text != want {
-		t.Fatalf("fontNote() = %q, want %q", text, want)
-	}
-	if !strings.Contains(text, "\u5b83\u4e0d\u662f\u7b49\u5bbd") {
-		t.Errorf("the line is not the one the catalog holds: %q", text)
+	text, danger := fontNote("Arial, Consolas", FontDiagnostic{Primary: "Consolas", Proportional: "Arial"})
+	if !danger || !strings.Contains(text, "比例字体") || !strings.Contains(text, "Consolas") {
+		t.Errorf("fontNote() = %q, %v; want a Chinese warning naming the actual fallback", text, danger)
 	}
 }
 

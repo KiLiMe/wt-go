@@ -34,7 +34,7 @@ func appearancePage(c *myui.Context, st Settings, act Actions) {
 		fieldBlock(c, "font", locales.Font(), locales.FontNote(), func() {
 			myui.Column(c).Gap(8).MinWidth(0).Children(func() {
 				fontPicker(c, &s.Font.Family, st.FontFamilies)
-				if text, danger := fontNote(s.Font.Family, st.Fonts); text != "" {
+				if text, danger := fontNote(s.Font.Family, st.FontDiagnostic); text != "" {
 					color := c.Theme().TextMuted
 					if danger {
 						color = c.Theme().Danger

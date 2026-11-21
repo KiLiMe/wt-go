@@ -251,16 +251,19 @@
   "font": "Font",
   "fontAdd": "Add a family",
   "fontGeneric": "monospace (the system's)",
-  "fontMissing": "Not on this machine: {names}. The terminal skips them.",
+  "fontMissing": "Unavailable families: {names}. The terminal uses {primary} as its primary font.",
   "@fontMissing": {
     "placeholders": {
       "names": {
         "type": "String"
+      },
+      "primary": {
+        "type": "String"
       }
     }
   },
-  "fontNoneUsable": "This machine has none of these families: the terminal draws with monospace.",
-  "fontNote": "The families a terminal tries, in the order the list holds them: the first one this machine has is what it draws with, and the generic monospace stands in when it has none of them.",
+  "fontNoneUsable": "The terminal could not find a usable family in the list. It uses the system monospace font.",
+  "fontNote": "The terminal uses the first available monospace family. Later families can supply missing glyphs. If no candidate is suitable, the terminal uses the system monospace font.",
   "fontSize": "Font size",
   "fontSizeNote": "How tall the letters of a terminal are, in DIPs.",
   "fontWeight": "Weight",
@@ -274,10 +277,13 @@
   "weightBold": "Bold",
   "weightExtraBold": "Extra bold",
   "weightBlack": "Black",
-  "fontWideFirst": "{family} is the first one this machine has, and it is not monospace: the terminal draws with monospace instead, so that the columns line up.",
+  "fontWideFirst": "The terminal skips {family} because it is proportional and uses {primary} as its primary font.",
   "@fontWideFirst": {
     "placeholders": {
       "family": {
+        "type": "String"
+      },
+      "primary": {
         "type": "String"
       }
     }

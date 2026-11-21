@@ -7,34 +7,7 @@ import (
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/store"
-	"wtgo/internal/ui"
 )
-
-// TestInstalledFonts covers the list the font setting reads its names against:
-// every family this machine has, sorted, saying which of them a terminal can
-// draw a grid of cells with — a family the engine calls monospaced that does not
-// measure as one is no better than a proportional one.
-func TestInstalledFonts(t *testing.T) {
-	fs := []myui.FontFamily{
-		{Name: "monospace", Monospaced: true},
-		{Name: "no-such-font-at-all", Monospaced: true},
-		{Name: "sans-serif", Monospaced: false},
-	}
-	_, got, mono := census(fs, 13)
-	want := []ui.InstalledFont{
-		{Name: "monospace", Mono: true},
-		{Name: "no-such-font-at-all", Mono: false},
-		{Name: "sans-serif", Mono: false},
-	}
-	if !slices.Equal(got, want) {
-		t.Errorf("census() installed = %v, want %v", got, want)
-	}
-	// The measures come back for the window to keep: the two the text engine
-	// calls monospaced, since the third is measured nowhere.
-	if len(mono) != 2 {
-		t.Errorf("census() measured %d families, want the two monospaced ones", len(mono))
-	}
-}
 
 // TestMonospace covers the families a settings file names: a monospace one is
 // drawn as it is, and a proportional one, or a family the machine does not
@@ -68,9 +41,12 @@ func TestMonospaceFamilies(t *testing.T) {
 		{Name: "no-such-font-at-all", Monospaced: true},
 		{Name: "sans-serif", Monospaced: false},
 	}
-	got, _, _ := census(fs, 13)
+	got, mono := census(fs, 13)
 	if want := []string{"monospace"}; !slices.Equal(got, want) {
 		t.Errorf("census() families = %v, want %v", got, want)
+	}
+	if len(mono) != 2 {
+		t.Errorf("census() measured %d families, want the two advertised as monospaced", len(mono))
 	}
 }
 
@@ -164,5 +140,38 @@ func TestTerminalFontSkipsTheFamilyThatSpreads(t *testing.T) {
 	a.settings = s
 	if got := a.terminalFont(); got.Family != "monospace" || a.fontWarned != "" {
 		t.Errorf("family = %q, warned %q; want the list itself, once a list draws", got.Family, a.fontWarned)
+	}
+}
+
+func TestSelectFontPreservesGlyphFallbacks(t *testing.T) {
+	a := &App{fonts: fontCensus{
+		installed: map[string]bool{"wide": true, "grid": true, "cjk": true, "emoji": true},
+		mono: map[monoKey]bool{
+			{"Wide", 13}:    false,
+			{"Missing", 13}: true,
+			{"GRID", 13}:    true,
+		},
+	}}
+	got := a.selectFont("Wide, Missing, 'GRID', CJK, Absent, Emoji", 13)
+	if got.family != "GRID, CJK, Emoji" || got.note.Primary != "GRID" || got.note.Proportional != "Wide" || got.note.SystemFallback {
+		t.Errorf("selectFont() = %+v, want GRID with CJK and Emoji as glyph fallbacks", got)
+	}
+	if want := []string{"Missing", "Absent"}; !slices.Equal(got.note.Missing, want) {
+		t.Errorf("missing families = %v, want %v", got.note.Missing, want)
+	}
+	got = a.selectFont("Wide, Missing", 13)
+	if got.family != "monospace" || !got.note.SystemFallback {
+		t.Errorf("selectFont() = %+v, want an implicit system fallback", got)
+	}
+}
+
+func TestSelectFontReportsOnlyCustomMissingNames(t *testing.T) {
+	a := &App{fonts: fontCensus{
+		installed: map[string]bool{},
+		mono:      map[monoKey]bool{{"monospace", 13}: true},
+	}}
+	got := a.selectFont("Missing, "+store.DefaultFontFamily(), 13)
+	if got.family != "monospace" || got.note.SystemFallback || !slices.Equal(got.note.Missing, []string{"Missing"}) {
+		t.Errorf("selectFont() = %+v, want explicit monospace and only the custom missing name", got)
 	}
 }

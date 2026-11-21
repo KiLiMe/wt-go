@@ -49,23 +49,16 @@ func fontOf(family string, size float32) (string, float32) {
 	return family, size
 }
 
-// fontCensus is what the window learned about the machine's fonts: the
-// families the font setting offers, and what monospace said of a family at a
-// size. Listing the families and shaping the printable ASCII are the two
-// slowest measures the window makes, and both answers hold for the session:
-// the families a machine has do not change under a running window.
+// fontCensus keeps the installed names and the measurements shared by the
+// terminal and the appearance page.
 type fontCensus struct {
-	// families are the installed monospace families, and asked whether the
-	// window has asked for them: the list arrives a frame or two after the page
-	// that shows it opens.
-	families []string
-	// installed are every family the machine has and whether a terminal can draw
-	// a grid with it: the font setting says which of the names it holds are
-	// missing here, and which of the ones it has are not monospace.
-	installed []ui.InstalledFont
+	installed map[string]bool
+	available []myui.FontFamily
+	families  []string
 	asked     bool
-	// mono is what monospace said of a family at a size.
-	mono map[monoKey]bool
+	mono      map[monoKey]bool
+	lastKey   monoKey
+	last      fontSelection
 }
 
 // monoKey is a family measured at a size, which is what monospace answers for.
@@ -116,58 +109,49 @@ func (a *App) isMonospace(family string, size float32) bool {
 	return ok
 }
 
-// census is what the machine's families are to a terminal: the ones it can draw
-// a grid with, those the text engine calls monospaced that also shape the
-// printable ASCII at one advance, sorted, and every family with whether it can.
-// The font setting lists the first, so that a family it offers is one the
-// terminal takes as it is, and reads the names it is given against the second:
-// a family this machine is missing is said so, and one it has that cannot draw
-// a grid is one the terminal passes over.
-//
-// It shapes, which is the first frame's 23–26 ms when the page that lists them
-// opens, so it runs off the UI thread; it makes the measures itself and hands
-// them back for the window to keep, since the window's cache is the window's.
-func census(fs []myui.FontFamily, size float32) (families []string, installed []ui.InstalledFont, mono map[monoKey]bool) {
+// census verifies only the fonts advertised as monospaced for the picker.
+// It runs off the UI thread and returns measurements for the window's cache.
+func census(fs []myui.FontFamily, size float32) (families []string, mono map[monoKey]bool) {
 	mono = make(map[monoKey]bool)
-	isMono := func(family string) bool {
-		family, at := fontOf(family, size)
-		key := monoKey{family: family, size: at}
-		ok, known := mono[key]
-		if !known {
-			ok = monospace(family, at)
-			mono[key] = ok
-		}
-		return ok
-	}
-	installed = make([]ui.InstalledFont, 0, len(fs))
 	for _, f := range fs {
-		m := f.Monospaced && isMono(f.Name)
-		if m {
+		if !f.Monospaced {
+			continue
+		}
+		family, at := fontOf(f.Name, size)
+		key := monoKey{family: family, size: at}
+		ok := monospace(family, at)
+		mono[key] = ok
+		if ok {
 			families = append(families, f.Name)
 		}
-		installed = append(installed, ui.InstalledFont{Name: f.Name, Mono: m})
 	}
 	slices.Sort(families)
-	slices.SortFunc(installed, func(x, y ui.InstalledFont) int { return strings.Compare(x.Name, y.Name) })
-	return families, installed, mono
+	return families, mono
 }
 
-// ensureFontFamilies lists the families the font setting offers, which only the
-// page that lists them needs: enumerating the machine's fonts and shaping the
-// ASCII of each monospaced one costs the first frame 23–26 ms for a menu the
-// user may not open. The first ask starts the work, later ones keep it; the
-// shapes run off the UI thread, the text engine being the process's and locked,
-// and their answers join the window's cache when they arrive.
+func (a *App) loadFontNames() {
+	if a.fonts.installed != nil {
+		return
+	}
+	a.fonts.available = myui.FontFamilies()
+	a.fonts.installed = make(map[string]bool, len(a.fonts.available))
+	for _, f := range a.fonts.available {
+		a.fonts.installed[strings.ToLower(f.Name)] = true
+	}
+}
+
+// ensureFontFamilies defers measuring the entire picker until its first use.
 func (a *App) ensureFontFamilies(size float32) {
 	if a.fonts.asked {
 		return
 	}
+	a.loadFontNames()
 	a.fonts.asked = true
+	available := a.fonts.available
 	go func() {
-		fs := myui.FontFamilies()
-		families, installed, mono := census(fs, size)
+		families, mono := census(available, size)
 		a.Do(func() {
-			a.fonts.families, a.fonts.installed = families, installed
+			a.fonts.families = families
 			if a.fonts.mono == nil {
 				a.fonts.mono = make(map[monoKey]bool, len(mono))
 			}
@@ -179,41 +163,70 @@ func (a *App) ensureFontFamilies(size float32) {
 	}()
 }
 
-// terminalFont is the font the terminals draw with: the one the settings name,
-// except that a list whose first usable family is not monospace gives way to
-// the first family in it that is, and a list naming none gives way to the
-// generic family. Either change is logged once per list, so that a settings
-// file naming a font the machine does not have leaves a line behind.
-func (a *App) terminalFont() terminal.Font {
-	s := a.settings.Font
-	f := terminal.Font{Family: s.Family, Size: s.Size, LineHeight: s.LineHeight, Weight: weightOf(s.Weight)}
-	family := a.drawnFont(f.Family, f.Size)
-	if family == f.Family {
-		a.fontWarned = ""
-		return f
+// genericFont matches the generic family names accepted by MyGo's text engine.
+func genericFont(name string) bool {
+	switch name {
+	case "monospace", "ui-monospace", "serif", "ui-serif", "sans-serif", "system-ui", "ui-sans-serif", "-apple-system", "blinkmacsystemfont":
+		return true
 	}
-	if a.fontWarned != s.Family {
-		a.fontWarned = s.Family
-		log.Printf("wt-go: %s", fault.Line(fault.BadFont, fmt.Sprintf("%q is not monospace, drawing with %q", s.Family, family)))
-	}
-	f.Family = family
-	return f
+	return false
 }
 
-// drawnFont is what a list of families draws with: the list itself while it
-// shapes as monospace, which is what the terminal was asked for, and otherwise
-// the first name in it that does, since a terminal reads the list in order and
-// passes over the families it cannot draw a grid with. A list that names no
-// such family draws with the generic one, so that a grid of cells survives a
-// settings file that has nothing to give it.
-func (a *App) drawnFont(family string, size float32) string {
-	if a.isMonospace(family, size) {
-		return family
+type fontSelection struct {
+	family string
+	note   ui.FontDiagnostic
+}
+
+func (a *App) selectFont(family string, size float32) fontSelection {
+	family, size = fontOf(family, size)
+	key := monoKey{family: family, size: size}
+	if a.fonts.lastKey == key {
+		return a.fonts.last
 	}
+	a.loadFontNames()
+	var selected fontSelection
+	var candidates []string
+	defaults := store.FontNames(store.DefaultFontFamily())
 	for _, name := range store.FontNames(family) {
-		if a.isMonospace(name, size) {
-			return name
+		lower := strings.ToLower(name)
+		if !a.fonts.installed[lower] && !genericFont(lower) {
+			if !slices.ContainsFunc(defaults, func(guess string) bool { return strings.EqualFold(guess, name) }) {
+				selected.note.Missing = append(selected.note.Missing, name)
+			}
+			continue
 		}
+		if len(candidates) == 0 && !a.isMonospace(name, size) {
+			if selected.note.Proportional == "" {
+				selected.note.Proportional = name
+			}
+			continue
+		}
+		// Keep the rest for glyphs the primary font does not cover.
+		candidates = append(candidates, name)
 	}
-	return store.EmptyFontFamily
+	if len(candidates) == 0 {
+		candidates = []string{store.EmptyFontFamily}
+		selected.note.SystemFallback = true
+	}
+	selected.family = strings.Join(candidates, ", ")
+	selected.note.Primary = candidates[0]
+	a.fonts.lastKey, a.fonts.last = key, selected
+	return selected
+}
+
+func (a *App) terminalFont() terminal.Font {
+	s := a.settings.Font
+	selected := a.selectFont(s.Family, s.Size)
+	switch {
+	case selected.note.Proportional == "" && !selected.note.SystemFallback:
+		a.fontWarned = ""
+	case a.fontWarned != s.Family:
+		a.fontWarned = s.Family
+		reason := fmt.Sprintf("no usable monospace family in %q", s.Family)
+		if selected.note.Proportional != "" {
+			reason = fmt.Sprintf("skipped non-monospace family %q in %q", selected.note.Proportional, s.Family)
+		}
+		log.Printf("wt-go: %s %s, using %q as the primary font", fault.BadFont, reason, selected.note.Primary)
+	}
+	return terminal.Font{Family: selected.family, Size: s.Size, LineHeight: s.LineHeight, Weight: weightOf(s.Weight)}
 }

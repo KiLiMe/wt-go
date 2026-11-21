@@ -42,38 +42,37 @@ func (a *App) insertTab(tab *pane.Tab) {
 
 // settingsState is the settings tab as the window draws it.
 func (a *App) settingsState() ui.Settings {
-	// The list is a menu of the machine's fonts, so it is asked for when the
-	// page that shows it opens, not before the window does. The appearance
-	// page shows it too, since the font setting is part of how the window looks.
-	if a.settingsPage == ui.PageProfiles || a.settingsPage == ui.PageAppearance {
+	var fontDiagnostic ui.FontDiagnostic
+	if a.settingsPage == ui.PageAppearance {
 		a.ensureFontFamilies(a.settings.Font.Size)
+		fontDiagnostic = a.selectFont(a.settings.Font.Family, a.settings.Font.Size).note
 	}
 	return ui.Settings{
-		Page:          a.settingsPage,
-		KeysCache:     &a.keysDerived,
-		SchemesCache:  &a.schemesDerived,
-		Draft:         &a.settings,
-		Dirty:         a.dirty(),
-		Note:          a.settingsNote(),
-		Recording:     a.recording,
-		Capture:       &a.capture,
-		Validation:    a.validation,
-		Filter:        &a.filter,
-		ActionFilter:  &a.actionSearch,
-		OnlyChanged:   a.onlyChangedKeys,
-		KeysExpanded:  a.numberedKeys,
-		Profile:       a.editing,
-		Args:          &a.editingArgs,
-		Glyph:         &a.editingGlyph,
-		Profiles:      fileProfiles(a.settings),
-		ProfileFilter: &a.profileSearch,
-		Search:        &a.settingsSearch,
-		Reveal:        &a.reveal,
-		Known:         knownProfiles(a.profiles),
-		Device:        a.device.Name,
-		Schemes:       a.schemeList(),
-		FontFamilies:  a.fonts.families,
-		Fonts:         a.fonts.installed,
+		Page:           a.settingsPage,
+		KeysCache:      &a.keysDerived,
+		SchemesCache:   &a.schemesDerived,
+		Draft:          &a.settings,
+		Dirty:          a.dirty(),
+		Note:           a.settingsNote(),
+		Recording:      a.recording,
+		Capture:        &a.capture,
+		Validation:     a.validation,
+		Filter:         &a.filter,
+		ActionFilter:   &a.actionSearch,
+		OnlyChanged:    a.onlyChangedKeys,
+		KeysExpanded:   a.numberedKeys,
+		Profile:        a.editing,
+		Args:           &a.editingArgs,
+		Glyph:          &a.editingGlyph,
+		Profiles:       fileProfiles(a.settings),
+		ProfileFilter:  &a.profileSearch,
+		Search:         &a.settingsSearch,
+		Reveal:         &a.reveal,
+		Known:          knownProfiles(a.profiles),
+		Device:         a.device.Name,
+		Schemes:        a.schemeList(),
+		FontFamilies:   a.fonts.families,
+		FontDiagnostic: fontDiagnostic,
 	}
 }
 

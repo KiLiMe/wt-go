@@ -200,12 +200,12 @@ type Scheme struct {
 	Fg     myui.Color
 }
 
-// InstalledFont is a family this machine has, and whether a terminal can draw a
-// grid of cells with it: the font setting says which of the names it holds here
-// are missing, and which of the ones it has the terminal passes over.
-type InstalledFont struct {
-	Name string
-	Mono bool
+// FontDiagnostic describes how the terminal resolves the draft font list.
+type FontDiagnostic struct {
+	Primary        string
+	Proportional   string
+	Missing        []string
+	SystemFallback bool
 }
 
 // Rename is the dialog that renames a tab.
@@ -287,11 +287,8 @@ type Settings struct {
 	Schemes []Scheme
 	// FontFamilies are the installed families the terminal can draw with,
 	// which the font setting lists.
-	FontFamilies []string
-	// Fonts are every family this machine has, and whether a terminal can draw
-	// a grid of cells with it: the font setting says which of the names it
-	// holds this machine is missing, and which of those it has it cannot use.
-	Fonts []InstalledFont
+	FontFamilies   []string
+	FontDiagnostic FontDiagnostic
 	// Search is what the box over the column of pages searches the settings
 	// for. A page drawn without it lists the pages alone rather than give the
 	// box nowhere to write what is typed.
