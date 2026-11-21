@@ -76,20 +76,21 @@ func TestMonospaceFamilies(t *testing.T) {
 
 // TestIsMonospaceCaches covers the measure the window makes per tab and per
 // setting: the same family at the same size is measured once, and a family
-// written as the empty one is the generic family, which is already measured.
+// written as the empty one is the default families, which are measured under
+// the names they are written as.
 func TestIsMonospaceCaches(t *testing.T) {
 	a := &App{}
-	if !a.isMonospace("monospace", 13) {
-		t.Fatal("monospace(\"monospace\") = false")
+	if !a.isMonospace(store.DefaultFontFamily(), 13) {
+		t.Fatalf("monospace(%q) = false", store.DefaultFontFamily())
 	}
 	measured := len(a.fonts.mono)
 	if !a.isMonospace("", 13) {
-		t.Error("an empty family is the generic one, which is monospace")
+		t.Error("an empty family is the default families, which are monospace")
 	}
 	if got := len(a.fonts.mono); got != measured {
 		t.Errorf("the empty family was measured again: %d keys, want %d", got, measured)
 	}
-	a.isMonospace("monospace", 20)
+	a.isMonospace(store.DefaultFontFamily(), 20)
 	if got := len(a.fonts.mono); got != measured+1 {
 		t.Errorf("a size the window has not measured was not measured: %d keys, want %d", got, measured+1)
 	}
@@ -115,8 +116,8 @@ func TestTerminalFont(t *testing.T) {
 	s.Font.Family, s.Font.Size, s.Font.LineHeight = "no-such-font-at-all", 15, 1.4
 	a := &App{settings: s}
 	f := a.terminalFont()
-	if f.Family != fallbackFamily {
-		t.Errorf("family = %q, want the fallback %q", f.Family, fallbackFamily)
+	if f.Family != store.EmptyFontFamily {
+		t.Errorf("family = %q, want the fallback %q", f.Family, store.EmptyFontFamily)
 	}
 	if f.Size != 15 || f.LineHeight != 1.4 {
 		t.Errorf("font = %+v, want the size and the line height the settings name", f)
@@ -129,5 +130,39 @@ func TestTerminalFont(t *testing.T) {
 	a.settings = s
 	if got := a.terminalFont(); got.Family != "monospace" {
 		t.Errorf("family = %q, want the one the settings name", got.Family)
+	}
+}
+
+// TestTerminalFontSkipsTheFamilyThatSpreads covers a list whose first family is
+// proportional: the terminal passes over it and draws with the next one it can,
+// rather than giving up the rest of the list for the generic family.
+func TestTerminalFontSkipsTheFamilyThatSpreads(t *testing.T) {
+	// A family this machine has that a grid cannot be drawn with, which every
+	// machine has one of, and a generic that a grid can.
+	wide := ""
+	for _, f := range myui.FontFamilies() {
+		if !f.Monospaced && !monospace(f.Name, 13) {
+			wide = f.Name
+			break
+		}
+	}
+	if wide == "" {
+		t.Skip("this machine has no proportional family to pass over")
+	}
+	s := store.Default()
+	s.Font.Family = wide + ", monospace"
+	a := &App{settings: s}
+	if got := a.terminalFont(); got.Family != "monospace" {
+		t.Errorf("family = %q, want the family the terminal can draw a grid with", got.Family)
+	}
+	if a.fontWarned != s.Font.Family {
+		t.Errorf("warned about %q, want the list %q said once", a.fontWarned, s.Font.Family)
+	}
+	// The list itself is drawn with while it shapes as monospace, unread: a
+	// list of one family the machine aliases to a monospace font is one.
+	s.Font.Family = "monospace"
+	a.settings = s
+	if got := a.terminalFont(); got.Family != "monospace" || a.fontWarned != "" {
+		t.Errorf("family = %q, warned %q; want the list itself, once a list draws", got.Family, a.fontWarned)
 	}
 }

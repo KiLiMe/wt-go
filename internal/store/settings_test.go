@@ -8,11 +8,54 @@ import (
 	"testing"
 )
 
+// TestFontNames covers the names a family list holds: the engine splits the
+// list on commas and takes off the spaces and the quotes a name may wear, and
+// the field holds whatever the person typed, so the page reads it the same way.
+func TestFontNames(t *testing.T) {
+	cases := []struct {
+		list string
+		want []string
+	}{
+		{"", nil},
+		{"   ", nil},
+		{"Cascadia Mono", []string{"Cascadia Mono"}},
+		{"Cascadia Mono,monospace", []string{"Cascadia Mono", "monospace"}},
+		{" Cascadia Mono , monospace ", []string{"Cascadia Mono", "monospace"}},
+		{`"Cascadia Mono", 'monospace'`, []string{"Cascadia Mono", "monospace"}},
+		{"Cascadia Mono,,monospace,", []string{"Cascadia Mono", "monospace"}},
+	}
+	for _, tc := range cases {
+		if got := FontNames(tc.list); !slices.Equal(got, tc.want) {
+			t.Errorf("FontNames(%q) = %v, want %v", tc.list, got, tc.want)
+		}
+	}
+}
+
 // TestDefaultFontFamily covers the font a terminal draws with before the
 // settings name one, which the settings page also shows as its placeholder.
 func TestDefaultFontFamily(t *testing.T) {
 	if got := Default(); got.Font.Family != DefaultFontFamily() {
 		t.Errorf("default font family = %q, want %q", got.Font.Family, DefaultFontFamily())
+	}
+}
+
+// TestDefaultFontFamilyList covers the list a machine with none of the named
+// families falls through to: a named family before the generic one, so that
+// fontconfig is asked for a face rather than left to score a generic name by
+// the language of the session, and the generic name last, so that such a
+// machine still draws a grid of cells.
+func TestDefaultFontFamilyList(t *testing.T) {
+	names := strings.Split(DefaultFontFamily(), ",")
+	if len(names) < 2 {
+		t.Fatalf("default font family = %q, want a family named before the generic one", DefaultFontFamily())
+	}
+	if last := strings.TrimSpace(names[len(names)-1]); last != EmptyFontFamily {
+		t.Errorf("last family = %q, want %q", last, EmptyFontFamily)
+	}
+	for _, name := range names {
+		if strings.TrimSpace(name) == "" {
+			t.Errorf("default font family = %q holds an empty name", DefaultFontFamily())
+		}
 	}
 }
 
@@ -153,6 +196,36 @@ func TestMarshalRoundTrip(t *testing.T) {
 	}
 	if s.Font != Default().Font || len(s.Keybindings) != len(Default().Keybindings) {
 		t.Errorf("round trip changed the settings: %+v", s)
+	}
+}
+
+// TestMarshalLeavesTheDefaultFamiliesOut covers the file: the families the
+// window ships are not written, so that a machine drawing with the default list
+// follows the list the version it runs ships rather than the one it was first
+// opened with. A family a person named is written as it is, and a file without
+// the key reads as the default families, so the file says the same thing.
+func TestMarshalLeavesTheDefaultFamiliesOut(t *testing.T) {
+	data, err := Marshal(Default())
+	if err != nil {
+		t.Fatalf("Marshal() error: %v", err)
+	}
+	if strings.Contains(string(data), `"family"`) {
+		t.Errorf("the default families are written to the file:\n%s", data)
+	}
+	read, err := Parse(data)
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+	if read.Font.Family != DefaultFontFamily() {
+		t.Errorf("a file without the families reads as %q, want %q", read.Font.Family, DefaultFontFamily())
+	}
+	s := Default()
+	s.Font.Family = " Consolas , monospace "
+	if data, err = Marshal(s); err != nil {
+		t.Fatalf("Marshal() error: %v", err)
+	}
+	if !strings.Contains(string(data), "Consolas") {
+		t.Errorf("a family a person named was left out of the file:\n%s", data)
 	}
 }
 
@@ -483,13 +556,14 @@ func storeScheme(name, background string) Scheme {
 // TestFillEmptyFont covers a family the settings leave empty: an empty family
 // is not a font, and the file says what the window draws with instead of
 // leaving it to be read as the generic one. The window fills it in on save, and
-// a file read from disk that leaves it out is filled the same way.
+// a file read from disk that leaves it out is filled the same way: a family a
+// file emptied is a family it did not name.
 func TestFillEmptyFont(t *testing.T) {
 	s := Default()
 	s.Font.Family = "  "
 	s.FillEmptyFont()
-	if s.Font.Family != EmptyFontFamily {
-		t.Errorf("family = %q, want %q", s.Font.Family, EmptyFontFamily)
+	if s.Font.Family != DefaultFontFamily() {
+		t.Errorf("family = %q, want %q", s.Font.Family, DefaultFontFamily())
 	}
 	// A family the file names stays as it is, with the spaces a person wrote.
 	s.Font.Family = " Consolas , monospace "
@@ -501,8 +575,8 @@ func TestFillEmptyFont(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}
-	if read.Font.Family != EmptyFontFamily {
-		t.Errorf("a file that leaves the family empty reads as %q, want %q", read.Font.Family, EmptyFontFamily)
+	if read.Font.Family != DefaultFontFamily() {
+		t.Errorf("a file that leaves the family empty reads as %q, want %q", read.Font.Family, DefaultFontFamily())
 	}
 }
 

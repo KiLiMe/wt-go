@@ -40,30 +40,11 @@ type fontEntry struct {
 	kind fontKind
 }
 
-// fontNames are the names a family list holds, split as the text engine splits
-// them: on commas, with the spaces around a name and the quotes it may wear
-// taken off, and with the empty ones dropped.
-func fontNames(list string) []string {
-	var out []string
-	for _, f := range strings.Split(list, ",") {
-		f = strings.TrimSpace(f)
-		if len(f) > 1 {
-			if q := f[:1]; (q == `"` || q == `'`) && f[len(f)-1:] == q {
-				f = strings.TrimSpace(f[1 : len(f)-1])
-			}
-		}
-		if f != "" {
-			out = append(out, f)
-		}
-	}
-	return out
-}
-
 // fontEntries are the names of a family list and what this machine makes of
 // each.
 func fontEntries(list string, fonts []InstalledFont) []fontEntry {
 	known, mono := fontMaps(fonts)
-	names := fontNames(list)
+	names := store.FontNames(list)
 	out := make([]fontEntry, 0, len(names))
 	for _, name := range names {
 		switch {
@@ -137,7 +118,8 @@ func slicesContain(names []string, name string) bool {
 // not monospace is the one case worth a warning: the columns drift then, and
 // the window draws with the generic family instead. Names the machine does not
 // have are skipped without a word from the terminal, and said quietly here,
-// since a list written on another machine is bound to hold a few.
+// since a list written on another machine is bound to hold a few -- except the
+// ones the default list names too, which are guesses rather than choices.
 func fontNote(list string, fonts []InstalledFont) (text string, danger bool) {
 	entries := fontEntries(list, fonts)
 	if len(entries) == 0 {
@@ -145,11 +127,18 @@ func fontNote(list string, fonts []InstalledFont) (text string, danger bool) {
 		// the setting fills in as soon as it is submitted.
 		return "", false
 	}
+	guessed := store.FontNames(store.DefaultFontFamily())
 	var missing []string
 	var first *fontEntry
 	for i := range entries {
 		if entries[i].kind == fontMissing {
-			missing = append(missing, entries[i].name)
+			// A name the default list makes too is a guess about what a machine
+			// will have, and a machine that has none of the guesses is not
+			// missing anything a person asked for: the line is for the names a
+			// list of one's own holds.
+			if !slicesContain(guessed, entries[i].name) {
+				missing = append(missing, entries[i].name)
+			}
 			continue
 		}
 		if first == nil {
@@ -182,7 +171,7 @@ func fontChoices(families []string) []option {
 // front of it, since the family a terminal draws with is the first one the
 // machine has, and one the list does not hold is added there too.
 func pickFamily(list *string, name string) {
-	rest := fontNames(*list)
+	rest := store.FontNames(*list)
 	kept := make([]string, 0, len(rest)+1)
 	kept = append(kept, name)
 	for _, f := range rest {
@@ -193,12 +182,12 @@ func pickFamily(list *string, name string) {
 	*list = strings.Join(kept, ", ")
 }
 
-// fillFamily names the generic family where a submitted field holds none, which
-// is what the terminal draws with anyway: the field says it, so that the file
-// does not have to be read by a person to know.
+// fillFamily names the default families where a submitted field holds none,
+// which is what the terminal draws with anyway: the field says it, so that the
+// file does not have to be read by a person to know.
 func fillFamily(list *string) {
 	if strings.TrimSpace(*list) == "" {
-		*list = store.EmptyFontFamily
+		*list = store.DefaultFontFamily()
 	}
 }
 
@@ -209,13 +198,13 @@ func fontPicker(c *myui.Context, list *string, families []string) {
 	myui.Row(c).Gap(8).AlignItems(myui.Center).Children(func() {
 		myui.TextInput(c, list).
 			Width(controlWidth - 40).
-			Placeholder(store.EmptyFontFamily).
+			Placeholder(store.DefaultFontFamily()).
 			OnSubmit(func() { fillFamily(list) })
 		myui.MenuButton(c, "\uff0b", func(m *myui.Menu) {
 			for _, o := range fontChoices(families) {
 				it := m.Item(o.Label)
 				if o.Value != store.EmptyFontFamily {
-					it.Checked(slicesContain(fontNames(*list), o.Value))
+					it.Checked(slicesContain(store.FontNames(*list), o.Value))
 				}
 				if it.Chosen() {
 					pickFamily(list, o.Value)

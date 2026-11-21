@@ -90,8 +90,8 @@ func (s *Settings) fallbackUnknown() {
 	s.ClipboardWrite = known(s.ClipboardWrite, enumClipboardWrites, d.ClipboardWrite)
 	s.NewTabPosition = known(s.NewTabPosition, enumTabPositions, d.NewTabPosition)
 	s.TabWidth = known(s.TabWidth, enumTabWidths, d.TabWidth)
-	// A family the file leaves empty is the generic one, which is also what the
-	// window draws with: an empty setting would say nothing at all.
+	// A family the file leaves empty is the default families, which is also what
+	// the window draws with: an empty setting would say nothing at all.
 	s.FillEmptyFont()
 	// A weight the file leaves out is the regular one, which is what terminal
 	// text is drawn at: a zero says nothing, and the page has to show the face

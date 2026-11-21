@@ -162,7 +162,10 @@ type Links struct {
 
 // Font is the font of a terminal's text.
 type Font struct {
-	Family string `json:"family"`
+	// Family is the families a terminal tries, in order, and is left out of the
+	// file while it holds the families the window ships: Marshal drops it and
+	// FillEmptyFont names it again, so that \"\" and a missing key say one thing.
+	Family string `json:"family,omitempty"`
 	// Weight is how heavy the text is, from 100 to 900, of the weights the
 	// family has: 400 is the regular face. Bold text is drawn 300 heavier, and
 	// at least 700, which is what terminal.Font.Weight does.
@@ -171,19 +174,40 @@ type Font struct {
 	LineHeight float32 `json:"lineHeight"`
 }
 
-// EmptyFontFamily is what a font setting that names no family holds: the
-// generic name every system resolves to a monospace font. An empty family is
-// not a font, and the file says what the window draws with rather than leaving
-// the terminal to read it as the same thing.
+// EmptyFontFamily is the generic name every system resolves to a monospace
+// font: the last name of the default list, and the one the font field's menu
+// offers on its own for a person who wants fontconfig to choose.
 const EmptyFontFamily = "monospace"
 
-// FillEmptyFont names the generic family where the family is empty, which is
-// what a terminal draws with then: the settings page asks for it when a field
-// is submitted, and the window saves nothing without it.
+// FillEmptyFont names the default families where the family is empty, which is
+// what a terminal draws with then: a family the file left out reads as the
+// default, so a family the file emptied reads as it too. The settings page asks
+// for it when a field is submitted, and the window saves nothing without it.
 func (s *Settings) FillEmptyFont() {
 	if strings.TrimSpace(s.Font.Family) == "" {
-		s.Font.Family = EmptyFontFamily
+		s.Font.Family = DefaultFontFamily()
 	}
+}
+
+// FontNames are the names a family list holds, split as the text engine splits
+// them: on commas, with the spaces around a name and the quotes it may wear
+// taken off, and with the empty ones dropped. The terminal reads the list in
+// order and draws with the first name it can, so the order is what the list is
+// for, and the window walks it the same way.
+func FontNames(list string) []string {
+	var out []string
+	for _, f := range strings.Split(list, ",") {
+		f = strings.TrimSpace(f)
+		if len(f) > 1 {
+			if q := f[:1]; (q == `"` || q == `'`) && f[len(f)-1:] == q {
+				f = strings.TrimSpace(f[1 : len(f)-1])
+			}
+		}
+		if f != "" {
+			out = append(out, f)
+		}
+	}
+	return out
 }
 
 // Padding is the room around a terminal's grid, in DIPs.
@@ -400,8 +424,15 @@ var knownKeys = map[string]struct{}{
 // Marshal writes settings.json, with the keys Parse kept that no field names:
 // a file that a person extended by hand, or one a later version wrote, keeps
 // what this window does not understand. A key a field names is written as the
-// field now holds it.
+// field now holds it, except the families the window ships: those are left out,
+// since a file that leaves the family out reads as the default families, and a
+// machine drawing with the default list follows the list the version it runs
+// ships rather than the one it was first opened with. Every other setting is
+// written as it is, so that a file says what a window does.
 func Marshal(s Settings) ([]byte, error) {
+	if s.Font.Family == DefaultFontFamily() {
+		s.Font.Family = ""
+	}
 	b, err := json.Marshal(s)
 	if err != nil {
 		return nil, fmt.Errorf("settings: %w", err)

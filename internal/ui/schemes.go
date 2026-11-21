@@ -366,11 +366,12 @@ func previewLineHeight(s *store.Settings) float32 {
 	return min(max(s.Font.LineHeight, 0.8), 2.4)
 }
 
-// textFont is the family the preview draws with: the draft's, unless it names
-// a family this machine has not been asked for yet, which is none.
+// textFont is the family the preview draws with: the draft's, or the default
+// families where the draft names none, which is what the terminal draws with
+// then and what the field is filled in with.
 func textFont(s *store.Settings) string {
-	if s.Font.Family == "" {
-		return "monospace"
+	if strings.TrimSpace(s.Font.Family) == "" {
+		return store.DefaultFontFamily()
 	}
 	return s.Font.Family
 }

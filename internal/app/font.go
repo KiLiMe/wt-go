@@ -13,17 +13,13 @@ import (
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/fault"
+	"wtgo/internal/store"
 	"wtgo/internal/ui"
 )
 
 // asciiPrintable is what a terminal measures a cell with: the glyphs a shell
 // writes most, shaped the way mygo's own terminal shapes them.
 const asciiPrintable = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
-
-// fallbackFamily is what a terminal draws with when the settings name a family
-// that is not monospace: the generic one every system resolves to a monospace
-// font.
-const fallbackFamily = "monospace"
 
 // advanceSpread is how far the advances of a family may differ, in DIPs, and
 // still be one cell: a monospace font shapes them all the same, and hinting
@@ -41,11 +37,11 @@ func weightOf(weight int) int {
 }
 
 // fontOf is the family and size the terminal would draw with, which is what a
-// measure is about: mygo draws an empty family with the generic one, and a
-// size of zero at 13.
+// measure is about: a family the settings leave empty is the default families,
+// which is what a terminal draws with then, and a size of zero is 13.
 func fontOf(family string, size float32) (string, float32) {
 	if strings.TrimSpace(family) == "" {
-		family = fallbackFamily
+		family = store.DefaultFontFamily()
 	}
 	if size <= 0 {
 		size = 13
@@ -82,10 +78,11 @@ type monoKey struct {
 // at size, which is what a grid of cells needs. The measure is at the regular
 // face, since that is where a family is a family: the weights of a monospaced
 // one keep the advance of the regular face, and a weight the machine lacks is
-// drawn with the nearest one it has. A family that is not installed
-// answers for the font the terminal would draw with instead: the system picks a
-// proportional one, and every cell then takes the width of its widest glyph,
-// which spreads the letters out and makes the columns drift.
+// drawn with the nearest one it has. What a name the machine does not have
+// answers is what fontconfig aliases it to, which may be a monospace font or a
+// proportional one, so a missing family is not a family that measures false:
+// the census is what says which names a machine has, and this says of a name it
+// draws with whether the cells of a grid hold.
 func monospace(family string, size float32) bool {
 	family, size = fontOf(family, size)
 	glyphs := myui.Shape(asciiPrintable, myui.Font{Family: family, Size: size})
@@ -183,20 +180,40 @@ func (a *App) ensureFontFamilies(size float32) {
 }
 
 // terminalFont is the font the terminals draw with: the one the settings name,
-// except that a family which is not monospace gives way to the fallback, which
-// the log says once per family so that a settings file naming a font the
-// machine does not have leaves a line behind.
+// except that a list whose first usable family is not monospace gives way to
+// the first family in it that is, and a list naming none gives way to the
+// generic family. Either change is logged once per list, so that a settings
+// file naming a font the machine does not have leaves a line behind.
 func (a *App) terminalFont() terminal.Font {
 	s := a.settings.Font
 	f := terminal.Font{Family: s.Family, Size: s.Size, LineHeight: s.LineHeight, Weight: weightOf(s.Weight)}
-	if a.isMonospace(f.Family, f.Size) {
+	family := a.drawnFont(f.Family, f.Size)
+	if family == f.Family {
 		a.fontWarned = ""
 		return f
 	}
 	if a.fontWarned != s.Family {
 		a.fontWarned = s.Family
-		log.Printf("wt-go: %s", fault.Line(fault.BadFont, fmt.Sprintf("%q is not monospace, drawing with %q", s.Family, fallbackFamily)))
+		log.Printf("wt-go: %s", fault.Line(fault.BadFont, fmt.Sprintf("%q is not monospace, drawing with %q", s.Family, family)))
 	}
-	f.Family = fallbackFamily
+	f.Family = family
 	return f
+}
+
+// drawnFont is what a list of families draws with: the list itself while it
+// shapes as monospace, which is what the terminal was asked for, and otherwise
+// the first name in it that does, since a terminal reads the list in order and
+// passes over the families it cannot draw a grid with. A list that names no
+// such family draws with the generic one, so that a grid of cells survives a
+// settings file that has nothing to give it.
+func (a *App) drawnFont(family string, size float32) string {
+	if a.isMonospace(family, size) {
+		return family
+	}
+	for _, name := range store.FontNames(family) {
+		if a.isMonospace(name, size) {
+			return name
+		}
+	}
+	return store.EmptyFontFamily
 }

@@ -7,6 +7,7 @@ import (
 
 	myui "github.com/egoist/mygo/ui"
 
+	"wtgo/internal/store"
 	"wtgo/locales"
 )
 
@@ -17,29 +18,6 @@ func machine() []InstalledFont {
 		{Name: "Cascadia Mono", Mono: true},
 		{Name: "Consolas", Mono: true},
 		{Name: "Arial", Mono: false},
-	}
-}
-
-// TestFontNames covers the names a family list holds: the engine splits the
-// list on commas and takes off the spaces and the quotes a name may wear, and
-// the field holds whatever the person typed, so the page reads it the same way.
-func TestFontNames(t *testing.T) {
-	cases := []struct {
-		list string
-		want []string
-	}{
-		{"", nil},
-		{"   ", nil},
-		{"Cascadia Mono", []string{"Cascadia Mono"}},
-		{"Cascadia Mono,monospace", []string{"Cascadia Mono", "monospace"}},
-		{" Cascadia Mono , monospace ", []string{"Cascadia Mono", "monospace"}},
-		{`"Cascadia Mono", 'monospace'`, []string{"Cascadia Mono", "monospace"}},
-		{"Cascadia Mono,,monospace,", []string{"Cascadia Mono", "monospace"}},
-	}
-	for _, tc := range cases {
-		if got := fontNames(tc.list); !slices.Equal(got, tc.want) {
-			t.Errorf("fontNames(%q) = %v, want %v", tc.list, got, tc.want)
-		}
 	}
 }
 
@@ -74,6 +52,27 @@ func TestFontNoteSkipsTheNamesTheMachineLacks(t *testing.T) {
 	}
 	if strings.Contains(text, "Consolas") {
 		t.Errorf("the line %q names a family the machine has", text)
+	}
+}
+
+// TestFontNoteLeavesTheDefaultsGuessesAlone covers a list the window ships: the
+// names in it are guesses about what a machine has, so a machine that has none
+// of them still draws with the generic one and needs no line about the guesses.
+// A name a person added is still said, since that one is a choice.
+func TestFontNoteLeavesTheDefaultsGuessesAlone(t *testing.T) {
+	speakIn(t, "en")
+	if text, danger := fontNote(store.DefaultFontFamily(), machine()); text != "" || danger {
+		t.Errorf("fontNote(default) = %q, %v; want nothing", text, danger)
+	}
+	text, danger := fontNote("Monaco, "+store.DefaultFontFamily(), machine())
+	if danger {
+		t.Fatalf("a first usable family that is monospace is not a problem: %q", text)
+	}
+	if !strings.Contains(text, "Monaco") {
+		t.Errorf("the line %q does not say %q is missing", text, "Monaco")
+	}
+	if strings.Contains(text, "DejaVu") {
+		t.Errorf("the line %q names a family the default list offers", text)
 	}
 }
 
@@ -139,14 +138,14 @@ func TestPickFamily(t *testing.T) {
 	}
 }
 
-// TestFillFamily covers a submitted field that holds nothing: the generic
-// family is what the terminal draws with then, and the file says it.
+// TestFillFamily covers a submitted field that holds nothing: the default
+// families are what the terminal draws with then, and the file says them.
 func TestFillFamily(t *testing.T) {
 	for _, list := range []string{"", "   "} {
 		got := list
 		fillFamily(&got)
-		if got != "monospace" {
-			t.Errorf("fillFamily(%q) = %q, want %q", list, got, "monospace")
+		if got != store.DefaultFontFamily() {
+			t.Errorf("fillFamily(%q) = %q, want %q", list, got, store.DefaultFontFamily())
 		}
 	}
 	if got := "Consolas"; func() string { fillFamily(&got); return got }() != "Consolas" {
