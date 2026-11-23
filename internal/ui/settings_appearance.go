@@ -79,6 +79,12 @@ func appearancePage(c *myui.Context, st Settings, act Actions) {
 				myui.Text(c, locales.Blink()).TextColor(c.Theme().TextMuted)
 			})
 		}, st.Reveal)
+		field(c, "pointerText", locales.Pointer(), locales.PointerNote(), func() {
+			myui.Row(c).AlignItems(myui.Center).Gap(8).Children(func() {
+				myui.Switch(c, &s.PointerText)
+				myui.Text(c, locales.PointerIBeam()).TextColor(c.Theme().TextMuted)
+			})
+		}, st.Reveal)
 		field(c, "minimumContrast", locales.MinimumContrast(), locales.MinimumContrastNote(), func() {
 			measure(c, &s.MinimumContrast, 0, 21, 0.5)
 		}, st.Reveal)

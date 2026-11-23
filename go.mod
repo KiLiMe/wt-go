@@ -29,4 +29,4 @@ tool github.com/egoist/mygo/cmd/mygo
 // one it is, Windows' own keeping the replies and needing its input mode set
 // before it forwards the mouse (ADR-81); keys go as the plain forms while a
 // program has CSI u on (ADR-57).
-replace github.com/egoist/mygo => github.com/KiLiMe/mygo v0.9.1-0.20261123031826-ee2f244731c5
+replace github.com/egoist/mygo => github.com/KiLiMe/mygo v0.9.1-0.20261123042851-b0c458a31459

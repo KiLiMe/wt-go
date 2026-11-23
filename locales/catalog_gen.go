@@ -2280,6 +2280,36 @@ func (msgs Messages) CursorNote() string {
 	return Catalog.Format(msgs.locale, "cursorNote", nil)
 }
 
+// Pointer says "Pointer"
+// in the language the app shows.
+func Pointer() string { return In(i18n.Locale()).Pointer() }
+
+// Pointer says "Pointer"
+// in the language of msgs.
+func (msgs Messages) Pointer() string {
+	return Catalog.Format(msgs.locale, "pointer", nil)
+}
+
+// PointerNote says "Over a terminal, the arrow, as Windows Terminal shows it, or the I-beam, as Ghostty does, while no program asks for a…"
+// in the language the app shows.
+func PointerNote() string { return In(i18n.Locale()).PointerNote() }
+
+// PointerNote says "Over a terminal, the arrow, as Windows Terminal shows it, or the I-beam, as Ghostty does, while no program asks for a…"
+// in the language of msgs.
+func (msgs Messages) PointerNote() string {
+	return Catalog.Format(msgs.locale, "pointerNote", nil)
+}
+
+// PointerIBeam says "I-beam"
+// in the language the app shows.
+func PointerIBeam() string { return In(i18n.Locale()).PointerIBeam() }
+
+// PointerIBeam says "I-beam"
+// in the language of msgs.
+func (msgs Messages) PointerIBeam() string {
+	return Catalog.Format(msgs.locale, "pointerIBeam", nil)
+}
+
 // Padding says "Padding"
 // in the language the app shows.
 func Padding() string { return In(i18n.Locale()).Padding() }

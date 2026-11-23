@@ -90,7 +90,11 @@ type Settings struct {
 	BackgroundOpacity float64 `json:"backgroundOpacity"`
 	CursorShape       string  `json:"cursorShape"`
 	CursorBlink       bool    `json:"cursorBlink"`
-	ScrollbackMB      int     `json:"scrollbackMB"`
+	// PointerText gives the pointer of a terminal the I-beam while no
+	// program asks for one, as Ghostty shows it; off, it is the arrow, as
+	// Windows Terminal shows it. Read when a tab is made, like the cursor.
+	PointerText  bool `json:"pointerText"`
+	ScrollbackMB int  `json:"scrollbackMB"`
 
 	// PaddingColor is what the room around a terminal's grid shows:
 	// "background" is the window's, "extend" the cells nearest to it, so
@@ -404,7 +408,7 @@ var knownKeys = map[string]struct{}{
 	"startDirectory": {},
 
 	"font": {}, "colorScheme": {}, "padding": {}, "backgroundOpacity": {},
-	"cursorShape": {}, "cursorBlink": {}, "scrollbackMB": {},
+	"cursorShape": {}, "cursorBlink": {}, "pointerText": {}, "scrollbackMB": {},
 	"paddingColor": {}, "minimumContrast": {},
 
 	"copyOnSelect": {}, "rightClick": {}, "rightClickCopyPastePriority": {},

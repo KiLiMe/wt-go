@@ -16,6 +16,7 @@ func (a *App) termOptions(p profile.Profile, dir string) terminal.Options {
 		Theme:                       theme.Terminal(s),
 		Cursor:                      cursor(s.CursorShape),
 		NoBlink:                     !s.CursorBlink,
+		PointerText:                 s.PointerText,
 		Scrollback:                  s.ScrollbackMB << 20,
 		Padding:                     terminal.Padding{X: s.Padding.X, Y: s.Padding.Y},
 		RightClick:                  rightClick(s.RightClick),

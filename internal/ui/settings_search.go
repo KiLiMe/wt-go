@@ -78,6 +78,7 @@ func settingsIndex() []settingHit {
 	add(PageAppearance, "padding", locales.Padding(), "padding space 内边距")
 	add(PageAppearance, "paddingColor", locales.PaddingColor(), "padding color 内边距 颜色")
 	add(PageAppearance, "cursorShape", locales.Cursor(), "cursor shape blink 光标")
+	add(PageAppearance, "pointerText", locales.Pointer(), "pointer cursor arrow ibeam text 指针 箭头 光标")
 	add(PageAppearance, "minimumContrast", locales.MinimumContrast(), "contrast 对比度")
 	add(PageAppearance, "colorScheme", locales.Scheme(), "scheme color colours palette theme 配色 方案 颜色")
 
