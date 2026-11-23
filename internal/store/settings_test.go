@@ -84,15 +84,15 @@ func TestDefault(t *testing.T) {
 }
 
 // TestParseLinks covers the switches on links: a file that leaves them out
-// keeps the defaults -- a click opens a link, a program's hyperlink and a
-// printed URL are links, a guessed path is not, and the pointer leaves a link
+// keeps the defaults -- a click opens nothing, a program's hyperlink and a
+// printed path are links, a printed URL is not, and the pointer leaves a link
 // to Control -- and a file that names them has its say.
 func TestParseLinks(t *testing.T) {
 	s, err := Parse([]byte(`{}`))
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := Links{Open: true, Program: true, URL: true}
+	want := Links{Program: true, Path: true}
 	if s.Links != want {
 		t.Errorf("no links key: links are %+v, want %+v", s.Links, want)
 	}
@@ -103,14 +103,14 @@ func TestParseLinks(t *testing.T) {
 	if s.Links.Open {
 		t.Error("links turned off in the file stayed on")
 	}
-	s, err = Parse([]byte(`{"links":{"hover":true,"path":true,"program":false}}`))
+	s, err = Parse([]byte(`{"links":{"hover":true,"open":true,"url":true}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !s.Links.Hover || !s.Links.Path || s.Links.Program {
+	if !s.Links.Hover || !s.Links.Open || !s.Links.URL {
 		t.Errorf("the make-links key names three settings the file set, links are %+v", s.Links)
 	}
-	if !s.Links.Open || !s.Links.URL {
+	if !s.Links.Program || !s.Links.Path {
 		t.Errorf("switches the file left out changed: %+v", s.Links)
 	}
 }

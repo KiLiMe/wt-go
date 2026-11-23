@@ -162,18 +162,20 @@ type Settings struct {
 // into a hand over.
 type Links struct {
 	// Open is the switch over the three below, and over a click: off, a click
-	// opens nothing and nothing is underlined, whatever they say.
+	// opens nothing and nothing is underlined, whatever they say. Off by
+	// default: a click that hands a path to another program is the user's to
+	// ask for, not something the first stray click finds out.
 	Open bool `json:"open"`
 	// Program is a hyperlink the program set (OSC 8). Nothing is guessed: the
 	// program says the text is a link, to a file or a place in a web page.
 	Program bool `json:"program"`
 	// URL is a URL printed as text, which the terminal's pattern finds: what a
-	// program printed it meant to be read.
+	// program printed it meant to be read. Off by default, so that turning
+	// clicks on is a decision about the one kind the user asked for.
 	URL bool `json:"url"`
 	// Path is a file path printed as text, which the terminal guesses at -- a
 	// word with an extension or a slash, and the place in the file after it.
-	// Off by default: a guess that lights up under the pointer wherever it
-	// rests is one to turn on rather than off.
+	// On by default: grep and a compiler name files in a form a click can use.
 	Path bool `json:"path"`
 	// Hover is whether the pointer underlines a link and shows the hand as
 	// soon as it is over one, as Windows Terminal does. Off, Control has to be
@@ -293,7 +295,7 @@ func Default() Settings {
 		ScrollMultiplier:      1,
 		ClipboardRead:         "deny",
 		ClipboardWrite:        "allow",
-		Links:                 Links{Open: true, Program: true, URL: true},
+		Links:                 Links{Program: true, Path: true},
 		RightClick:            "copyOrPaste",
 		PasteMultilineConfirm: true,
 		ConfirmClose:          ConfirmRunning,
