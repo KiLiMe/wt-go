@@ -68,7 +68,7 @@ func faceChanges(now, was store.Settings, first bool) faceChange {
 		font:         now.Font != was.Font,
 		colors:       now.ColorScheme != was.ColorScheme || now.Theme != was.Theme || !store.EqualSchemes(now.Schemes, was.Schemes),
 		copyOnSelect: now.CopyOnSelect != was.CopyOnSelect,
-		links:        now.Links.Open != was.Links.Open,
+		links:        now.Links != was.Links,
 		scroll:       now.ScrollMultiplier != was.ScrollMultiplier,
 		contrast:     now.MinimumContrast != was.MinimumContrast,
 	}
@@ -120,7 +120,7 @@ func (a *App) applyWindow(s store.Settings) {
 				term.SetCopyOnSelect(copyOnSelect)
 			}
 			if change.links {
-				setLinks(term, s.Links.Open)
+				setLinks(term, s.Links.Open, s.Links.Hover)
 			}
 			if change.scroll {
 				term.SetScrollMultiplier(multiplier)

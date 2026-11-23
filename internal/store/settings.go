@@ -127,9 +127,9 @@ type Settings struct {
 	ClipboardRead  string `json:"clipboardRead"`
 	ClipboardWrite string `json:"clipboardWrite"`
 
-	// Links is whether a click on a link in a terminal opens it: a path a
-	// program printed, a URL, or a hyperlink the program set (OSC 8). Control
-	// is not needed, and dragging off a link selects it instead.
+	// Links is what a link in a terminal is: a path a program printed, a URL,
+	// or a hyperlink the program set (OSC 8), and what a click and the pointer
+	// do with one.
 	Links Links `json:"links"`
 
 	// NewTabPosition is where a tab opens: "last" or "first". TabWidth is
@@ -155,13 +155,19 @@ type Settings struct {
 }
 
 // Links is what a click on a link in a terminal does, and what the pointer
-// shows of one.
+// shows of one. It is two settings because the two halves are worth apart:
+// opening a link on a click is what a terminal is for, while a pointer that
+// turns into a hand over any word the plugin read as a path is a taste, and
+// one Ghostty does not share.
 type Links struct {
-	// Open is whether a click opens a link, and whether the pointer shows one
-	// at all: on, a link is underlined and the hand shows as soon as the
-	// pointer is over it, as Windows Terminal does. Off, nothing is underlined
-	// and a click opens nothing.
+	// Open is whether a click opens a link. Off, a click opens nothing, and
+	// nothing is underlined either: there is no link to show.
 	Open bool `json:"open"`
+	// Hover is whether the pointer underlines a link and shows the hand as
+	// soon as it is over one, as Windows Terminal does. Off, Control has to be
+	// held, as in Ghostty: a path the plugin guessed at is then underlined on
+	// a deliberate gesture rather than wherever the pointer happens to rest.
+	Hover bool `json:"hover"`
 }
 
 // Font is the font of a terminal's text.

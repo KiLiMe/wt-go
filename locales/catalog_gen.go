@@ -1616,14 +1616,34 @@ func (msgs Messages) Links() string {
 	return Catalog.Format(msgs.locale, "links", nil)
 }
 
-// LinksNote says "Whether a click opens a link: a path a program printed, a URL, or a hyperlink the program set. The pointer underlines…"
+// LinksNote says "Whether a click opens a link: a path a program printed, a URL, or a hyperlink the program set. Dragging off a link se…"
 // in the language the app shows.
 func LinksNote() string { return In(i18n.Locale()).LinksNote() }
 
-// LinksNote says "Whether a click opens a link: a path a program printed, a URL, or a hyperlink the program set. The pointer underlines…"
+// LinksNote says "Whether a click opens a link: a path a program printed, a URL, or a hyperlink the program set. Dragging off a link se…"
 // in the language of msgs.
 func (msgs Messages) LinksNote() string {
 	return Catalog.Format(msgs.locale, "linksNote", nil)
+}
+
+// LinksHover says "Highlight on hover"
+// in the language the app shows.
+func LinksHover() string { return In(i18n.Locale()).LinksHover() }
+
+// LinksHover says "Highlight on hover"
+// in the language of msgs.
+func (msgs Messages) LinksHover() string {
+	return Catalog.Format(msgs.locale, "linksHover", nil)
+}
+
+// LinksHoverNote says "Whether the pointer underlines a link and shows the hand as soon as it is over one, the way Windows Terminal does, or…"
+// in the language the app shows.
+func LinksHoverNote() string { return In(i18n.Locale()).LinksHoverNote() }
+
+// LinksHoverNote says "Whether the pointer underlines a link and shows the hand as soon as it is over one, the way Windows Terminal does, or…"
+// in the language of msgs.
+func (msgs Messages) LinksHoverNote() string {
+	return Catalog.Format(msgs.locale, "linksHoverNote", nil)
 }
 
 // ScrollMultiplier says "Scroll multiplier"

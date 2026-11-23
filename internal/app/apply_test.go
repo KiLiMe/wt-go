@@ -40,6 +40,11 @@ func TestFaceChanges(t *testing.T) {
 			with(func(s *store.Settings) { s.Links.Open = !base.Links.Open }),
 			faceChange{links: true},
 		},
+		{
+			"the links' hover hint",
+			with(func(s *store.Settings) { s.Links.Hover = !base.Links.Hover }),
+			faceChange{links: true},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

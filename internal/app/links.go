@@ -49,11 +49,13 @@ func (a *App) openLink(link, dir string) bool {
 	return true
 }
 
-// setLinks hands the one setting to the two knobs the plugin has: whether a
-// click opens a link, and whether the pointer shows one at all.
-func setLinks(term *terminal.Terminal, open bool) {
+// setLinks hands the settings to the two knobs the plugin has: whether a click
+// opens a link, and whether the pointer shows one on a hover alone. The hint
+// follows the pointer setting but not the click one: links off have nothing to
+// underline, so the hint goes with them.
+func setLinks(term *terminal.Terminal, open, hover bool) {
 	term.SetLinks(open)
-	term.SetLinkHoverHint(open)
+	term.SetLinkHoverHint(open && hover)
 }
 
 // linkDir is the directory a printed path is opened from: the one the shell

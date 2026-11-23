@@ -83,8 +83,9 @@ func TestDefault(t *testing.T) {
 	}
 }
 
-// TestParseLinks covers the switch on links: a file that leaves it out keeps
-// the default of opening them, and one that turns it off says so.
+// TestParseLinks covers the two switches on links: a file that leaves them out
+// keeps the default of opening a link on a click and of leaving it to Control
+// whether the pointer shows one, and a file that names them has its say.
 func TestParseLinks(t *testing.T) {
 	s, err := Parse([]byte(`{}`))
 	if err != nil {
@@ -93,12 +94,25 @@ func TestParseLinks(t *testing.T) {
 	if !s.Links.Open {
 		t.Error("no links key: links are off, want the default of on")
 	}
+	if s.Links.Hover {
+		t.Error("no links key: the pointer shows a link on a hover, want the default of Control")
+	}
 	s, err = Parse([]byte(`{"links":{"open":false}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if s.Links.Open {
 		t.Error("links turned off in the file stayed on")
+	}
+	s, err = Parse([]byte(`{"links":{"hover":true}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !s.Links.Hover {
+		t.Error("the hover hint turned on in the file stayed off")
+	}
+	if !s.Links.Open {
+		t.Error("the hover hint turned on turned the click off")
 	}
 }
 

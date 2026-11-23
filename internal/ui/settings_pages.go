@@ -123,6 +123,9 @@ func interactionPage(c *myui.Context, st Settings, act Actions) {
 		field(c, "links", locales.Links(), locales.LinksNote(), func() {
 			myui.Switch(c, &s.Links.Open)
 		}, st.Reveal)
+		field(c, "linksHover", locales.LinksHover(), locales.LinksHoverNote(), func() {
+			myui.Switch(c, &s.Links.Hover)
+		}, st.Reveal)
 		field(c, "scrollMultiplier", locales.ScrollMultiplier(), locales.ScrollMultiplierNote(), func() {
 			measure(c, &s.ScrollMultiplier, 0.5, 5, 0.5)
 		}, st.Reveal)
