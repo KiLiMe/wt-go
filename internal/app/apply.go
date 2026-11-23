@@ -120,7 +120,7 @@ func (a *App) applyWindow(s store.Settings) {
 				term.SetCopyOnSelect(copyOnSelect)
 			}
 			if change.links {
-				setLinks(term, s.Links.Open, s.Links.Hover)
+				setLinks(term, s.Links)
 			}
 			if change.scroll {
 				term.SetScrollMultiplier(multiplier)

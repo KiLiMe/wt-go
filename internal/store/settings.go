@@ -154,19 +154,31 @@ type Settings struct {
 	Extra map[string]json.RawMessage `json:"-"`
 }
 
-// Links is what a click on a link in a terminal does, and what the pointer
-// shows of one. It is two settings because the two halves are worth apart:
-// opening a link on a click is what a terminal is for, while a pointer that
-// turns into a hand over any word the plugin read as a path is a taste, and
-// one Ghostty does not share.
+// Links is what a link in a terminal is, what a click does with one, and what
+// the pointer shows of one. A link comes from three places, and they are worth
+// telling apart: a program that says this text is a link, a URL printed as
+// text, and a file path the terminal guesses at from the words on the screen.
+// The last is the loosest, and the one a pointer resting on build output turns
+// into a hand over.
 type Links struct {
-	// Open is whether a click opens a link. Off, a click opens nothing, and
-	// nothing is underlined either: there is no link to show.
+	// Open is the switch over the three below, and over a click: off, a click
+	// opens nothing and nothing is underlined, whatever they say.
 	Open bool `json:"open"`
+	// Program is a hyperlink the program set (OSC 8). Nothing is guessed: the
+	// program says the text is a link, to a file or a place in a web page.
+	Program bool `json:"program"`
+	// URL is a URL printed as text, which the terminal's pattern finds: what a
+	// program printed it meant to be read.
+	URL bool `json:"url"`
+	// Path is a file path printed as text, which the terminal guesses at -- a
+	// word with an extension or a slash, and the place in the file after it.
+	// Off by default: a guess that lights up under the pointer wherever it
+	// rests is one to turn on rather than off.
+	Path bool `json:"path"`
 	// Hover is whether the pointer underlines a link and shows the hand as
 	// soon as it is over one, as Windows Terminal does. Off, Control has to be
-	// held, as in Ghostty: a path the plugin guessed at is then underlined on
-	// a deliberate gesture rather than wherever the pointer happens to rest.
+	// held, as in Ghostty: a link is then underlined on a deliberate gesture
+	// rather than wherever the pointer happens to rest.
 	Hover bool `json:"hover"`
 }
 
@@ -281,7 +293,7 @@ func Default() Settings {
 		ScrollMultiplier:      1,
 		ClipboardRead:         "deny",
 		ClipboardWrite:        "allow",
-		Links:                 Links{Open: true},
+		Links:                 Links{Open: true, Program: true, URL: true},
 		RightClick:            "copyOrPaste",
 		PasteMultilineConfirm: true,
 		ConfirmClose:          ConfirmRunning,

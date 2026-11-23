@@ -123,6 +123,15 @@ func interactionPage(c *myui.Context, st Settings, act Actions) {
 		field(c, "links", locales.Links(), locales.LinksNote(), func() {
 			myui.Switch(c, &s.Links.Open)
 		}, st.Reveal)
+		field(c, "linksProgram", locales.LinksProgram(), locales.LinksProgramNote(), func() {
+			myui.Switch(c, &s.Links.Program)
+		}, st.Reveal)
+		field(c, "linksURL", locales.LinksURL(), locales.LinksURLNote(), func() {
+			myui.Switch(c, &s.Links.URL)
+		}, st.Reveal)
+		field(c, "linksPath", locales.LinksPath(), locales.LinksPathNote(), func() {
+			myui.Switch(c, &s.Links.Path)
+		}, st.Reveal)
 		field(c, "linksHover", locales.LinksHover(), locales.LinksHoverNote(), func() {
 			myui.Switch(c, &s.Links.Hover)
 		}, st.Reveal)

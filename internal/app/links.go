@@ -9,6 +9,7 @@ import (
 	"github.com/egoist/mygo/plugins/terminal"
 
 	"wtgo/internal/fault"
+	"wtgo/internal/store"
 	"wtgo/internal/sys"
 )
 
@@ -49,13 +50,14 @@ func (a *App) openLink(link, dir string) bool {
 	return true
 }
 
-// setLinks hands the settings to the two knobs the plugin has: whether a click
-// opens a link, and whether the pointer shows one on a hover alone. The hint
-// follows the pointer setting but not the click one: links off have nothing to
-// underline, so the hint goes with them.
-func setLinks(term *terminal.Terminal, open, hover bool) {
-	term.SetLinks(open)
-	term.SetLinkHoverHint(open && hover)
+// setLinks hands the settings to the plugin's knobs: the switch a click and
+// every kind answer to, which kinds of link are one, and whether the pointer
+// shows a link on a hover alone. The hint follows the switch: links off have
+// nothing to underline, so the kinds are moot and the hint goes with them.
+func setLinks(term *terminal.Terminal, l store.Links) {
+	term.SetLinks(l.Open)
+	term.SetLinkKinds(terminal.LinkKinds{Program: l.Program, URL: l.URL, Path: l.Path})
+	term.SetLinkHoverHint(l.Open && l.Hover)
 }
 
 // linkDir is the directory a printed path is opened from: the one the shell

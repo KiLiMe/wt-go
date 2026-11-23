@@ -1616,14 +1616,74 @@ func (msgs Messages) Links() string {
 	return Catalog.Format(msgs.locale, "links", nil)
 }
 
-// LinksNote says "Whether a click opens a link: a path a program printed, a URL, or a hyperlink the program set. Dragging off a link se…"
+// LinksNote says "Whether a click opens a link. Dragging off a link selects it instead. Off takes effect at once: a click opens nothing…"
 // in the language the app shows.
 func LinksNote() string { return In(i18n.Locale()).LinksNote() }
 
-// LinksNote says "Whether a click opens a link: a path a program printed, a URL, or a hyperlink the program set. Dragging off a link se…"
+// LinksNote says "Whether a click opens a link. Dragging off a link selects it instead. Off takes effect at once: a click opens nothing…"
 // in the language of msgs.
 func (msgs Messages) LinksNote() string {
 	return Catalog.Format(msgs.locale, "linksNote", nil)
+}
+
+// LinksProgram says "Hyperlinks a program sets"
+// in the language the app shows.
+func LinksProgram() string { return In(i18n.Locale()).LinksProgram() }
+
+// LinksProgram says "Hyperlinks a program sets"
+// in the language of msgs.
+func (msgs Messages) LinksProgram() string {
+	return Catalog.Format(msgs.locale, "linksProgram", nil)
+}
+
+// LinksProgramNote says "Text the program itself marked as a link (OSC 8), to a file or a place in a web page. Nothing is guessed here: the pr…"
+// in the language the app shows.
+func LinksProgramNote() string { return In(i18n.Locale()).LinksProgramNote() }
+
+// LinksProgramNote says "Text the program itself marked as a link (OSC 8), to a file or a place in a web page. Nothing is guessed here: the pr…"
+// in the language of msgs.
+func (msgs Messages) LinksProgramNote() string {
+	return Catalog.Format(msgs.locale, "linksProgramNote", nil)
+}
+
+// LinksURL says "URLs printed as text"
+// in the language the app shows.
+func LinksURL() string { return In(i18n.Locale()).LinksURL() }
+
+// LinksURL says "URLs printed as text"
+// in the language of msgs.
+func (msgs Messages) LinksURL() string {
+	return Catalog.Format(msgs.locale, "linksURL", nil)
+}
+
+// LinksURLNote says "A URL the terminal finds in what a program printed (http://, ftp://, mailto:). A program rarely prints a URL it did n…"
+// in the language the app shows.
+func LinksURLNote() string { return In(i18n.Locale()).LinksURLNote() }
+
+// LinksURLNote says "A URL the terminal finds in what a program printed (http://, ftp://, mailto:). A program rarely prints a URL it did n…"
+// in the language of msgs.
+func (msgs Messages) LinksURLNote() string {
+	return Catalog.Format(msgs.locale, "linksURLNote", nil)
+}
+
+// LinksPath says "File paths printed as text"
+// in the language the app shows.
+func LinksPath() string { return In(i18n.Locale()).LinksPath() }
+
+// LinksPath says "File paths printed as text"
+// in the language of msgs.
+func (msgs Messages) LinksPath() string {
+	return Catalog.Format(msgs.locale, "linksPath", nil)
+}
+
+// LinksPathNote says "A path the terminal guesses at: a word with an extension or a slash, and the place in the file after it, as grep and …"
+// in the language the app shows.
+func LinksPathNote() string { return In(i18n.Locale()).LinksPathNote() }
+
+// LinksPathNote says "A path the terminal guesses at: a word with an extension or a slash, and the place in the file after it, as grep and …"
+// in the language of msgs.
+func (msgs Messages) LinksPathNote() string {
+	return Catalog.Format(msgs.locale, "linksPathNote", nil)
 }
 
 // LinksHover says "Highlight on hover"
