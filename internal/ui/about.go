@@ -11,6 +11,9 @@ import (
 // about is the dialog that says what the program is: the name, the build that
 // answered, what it was built from and what it is licensed under, which is what
 // a person looks for when a bug report asks which build they run.
+//
+// The button that closes it takes the focus as it opens, so that Enter closes
+// it and Escape keeps closing it: a dialog one reads, not one to fill in.
 func about(c *myui.Context, st State, act Actions) {
 	a := st.About
 	if a == nil {
@@ -58,7 +61,7 @@ func about(c *myui.Context, st State, act Actions) {
 			}
 			myui.Row(c).Gap(8).Justify(myui.End).Children(func() {
 				myui.Button(c, locales.ProjectPage()).OnClick(act.OpenProjectPage)
-				myui.PrimaryButton(c, locales.Close()).OnClick(act.CloseAbout)
+				myui.PrimaryButton(c, locales.Close()).AutoFocus().OnClick(act.CloseAbout)
 			})
 		})
 	})

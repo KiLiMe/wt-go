@@ -6,6 +6,10 @@ import (
 
 // confirm is the dialog that asks before the window does something it cannot
 // take back. Dismissing it is the same as its no.
+//
+// The yes takes the focus as the dialog opens, so that Enter is the answer to
+// the question: the keys that opened the dialog are still under the fingers,
+// and Tab reaching the other answer is one press away either way.
 func confirm(c *myui.Context, st State, act Actions) {
 	if st.Confirm == nil {
 		return
@@ -23,7 +27,7 @@ func confirm(c *myui.Context, st State, act Actions) {
 					Justify(myui.End).
 					Children(func() {
 						myui.Button(c, q.No).OnClick(act.ConfirmNo)
-						myui.PrimaryButton(c, q.Yes).OnClick(act.ConfirmYes)
+						myui.PrimaryButton(c, q.Yes).AutoFocus().OnClick(act.ConfirmYes)
 					})
 			})
 	})
