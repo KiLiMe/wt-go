@@ -58,8 +58,8 @@ func generalPage(c *myui.Context, st Settings, act Actions) {
 		}, st.Reveal)
 		field(c, "tabWidth", locales.TabWidth(), locales.TabWidthNote(), func() {
 			choice(c, &s.TabWidth, []option{
-				{"compact", locales.AsWideAsName()},
 				{"equal", locales.AllTheSame()},
+				{"compact", locales.AsWideAsName()},
 			})
 		}, st.Reveal)
 		field(c, "titleFromActiveTerminal", locales.TitleFollowsPane(), locales.TitleFollowsPaneNote(), func() {

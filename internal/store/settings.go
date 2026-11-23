@@ -278,7 +278,7 @@ func Default() Settings {
 		CloseOnLastTab:        true,
 		ConfirmCloseWindow:    true,
 		NewTabPosition:        "last",
-		TabWidth:              "compact",
+		TabWidth:              "equal",
 		MaxPanes:              4,
 		Keybindings:           DefaultKeybindings(),
 		// A list the file may leave out is still a list: an empty one writes
