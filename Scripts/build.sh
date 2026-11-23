@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # wt-go build script
-#   ./Scripts/build.sh            -> mygo packages build/<os>-<arch>/wt-go (real testing uses this)
+#   ./Scripts/build.sh            -> mygo packages build/<os>-<arch>/wt-go (real testing uses this),
+#                                    and the packages beside it are dropped: only the app stays
 #   ./Scripts/build.sh --test     -> gofmt -l, go vet and go test before building
 #   ./Scripts/build.sh --clean    -> delete build/ first
 #   ./Scripts/build.sh --package  -> distribution only: go tool mygo build -o dist (no installer)
@@ -21,7 +22,8 @@ set -euo pipefail
 usage() {
     cat <<'EOF'
 用法：
-  ./Scripts/build.sh            构建到 build/<os>-<arch>/wt-go（真机测试就用它）
+  ./Scripts/build.sh            构建到 build/<os>-<arch>/wt-go（真机测试就用它），
+                                只留运行要的文件，.deb/.rpm/压缩包/安装脚本删掉
   ./Scripts/build.sh --test     编译前先跑 gofmt -l、go vet 与 go test
   ./Scripts/build.sh --clean    先删掉 build 目录再编译
   ./Scripts/build.sh --package  只出分发包：go tool mygo build -o dist（不造安装器）
@@ -166,6 +168,18 @@ go tool mygo build -platform "$platform" -skip-installer -skip-dmg || {
     printf '  [ERR] 编译失败。\n' >&2
     exit 1
 }
+
+# What a package or an archive wants is a release's, and --package writes it
+# into dist/; a local build keeps the app itself, as .mygo-files lists it. mygo
+# writes the rest either way, so they are removed here rather than shipped
+# beside the binary that a test run starts.
+(
+    cd -- "$(dirname -- "$exe")" || exit 0
+    rm -f -- ./*.deb ./*.rpm ./*.tar.gz ./PKGBUILD ./install.sh
+    for png in ./*-[0-9]*x[0-9]*.png; do
+        [ -e "$png" ] && rm -f -- "$png"
+    done
+)
 
 bytes=$(wc -c <"$exe" | tr -d ' ')
 printf '  [OK] %s v%s (%d MB)\n' "$exe" "$target" "$((bytes / 1048576))"
