@@ -108,7 +108,7 @@
   "profileSearch": "搜索配置文件",
   "profileNone": "没有匹配的配置文件。",
   "searchSettings": "搜索设置",
-  "noMatchingSettings": "没有匹配的设置。",
+  "noMatchingSettings": "没有匹配的设置。少打几个字，或换个说法试试。",
   "restoreDefaults": "恢复默认",
   "pressKey": "按一个键…",
   "keySearch": "搜索操作名或快捷键",

@@ -108,7 +108,7 @@
   "profileSearch": "Search profiles",
   "profileNone": "No profile matches.",
   "searchSettings": "Search settings",
-  "noMatchingSettings": "No matching settings.",
+  "noMatchingSettings": "No matching settings. Try fewer letters, or another word for it.",
   "restoreDefaults": "Restore the defaults",
   "pressKey": "Press a key…",
   "keySearch": "Search actions or keys",

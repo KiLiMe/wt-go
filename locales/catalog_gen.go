@@ -844,11 +844,11 @@ func (msgs Messages) SearchSettings() string {
 	return Catalog.Format(msgs.locale, "searchSettings", nil)
 }
 
-// NoMatchingSettings says "No matching settings."
+// NoMatchingSettings says "No matching settings. Try fewer letters, or another word for it."
 // in the language the app shows.
 func NoMatchingSettings() string { return In(i18n.Locale()).NoMatchingSettings() }
 
-// NoMatchingSettings says "No matching settings."
+// NoMatchingSettings says "No matching settings. Try fewer letters, or another word for it."
 // in the language of msgs.
 func (msgs Messages) NoMatchingSettings() string {
 	return Catalog.Format(msgs.locale, "noMatchingSettings", nil)
