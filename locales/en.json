@@ -512,5 +512,6 @@
         "type": "int"
       }
     }
-  }
+  },
+  "mygo.appDescription": "A Windows Terminal-style terminal: tabs, panes, profiles, color schemes"
 }

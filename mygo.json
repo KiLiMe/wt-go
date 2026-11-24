@@ -9,6 +9,6 @@
   "linux": {
     "depends": [],
     "webview": false,
-    "comment": "Terminal multiplexer in one window"
+    "comment": "A Windows Terminal-style terminal: tabs, panes, profiles, color schemes"
   }
 }
