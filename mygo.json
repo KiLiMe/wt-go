@@ -6,5 +6,9 @@
   "out": "build",
   "resources": ["LICENSE"],
   "i18n": { "dir": "locales", "source": "en" },
-  "linux": { "depends": [], "webview": false }
+  "linux": {
+    "depends": [],
+    "webview": false,
+    "comment": "Terminal multiplexer in one window"
+  }
 }

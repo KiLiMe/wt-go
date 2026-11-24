@@ -5,6 +5,8 @@
 #   ./Scripts/build.sh --test     -> gofmt -l, go vet and go test before building
 #   ./Scripts/build.sh --clean    -> delete build/ first
 #   ./Scripts/build.sh --package  -> distribution only: go tool mygo build -o dist (no installer)
+#   ./Scripts/build.sh --install  -> also put it where a Linux desktop keeps apps:
+#                                    ~/.local/opt/wt-go and a menu entry, keeping data/
 #   ./Scripts/build.sh --expect 0.3.0
 #                                 -> assert mygo.json's version is that string (releases check the tag)
 #
@@ -27,6 +29,8 @@ usage() {
   ./Scripts/build.sh --test     编译前先跑 gofmt -l、go vet 与 go test
   ./Scripts/build.sh --clean    先删掉 build 目录再编译
   ./Scripts/build.sh --package  只出分发包：go tool mygo build -o dist（不造安装器）
+  ./Scripts/build.sh --install  再装到本机（Linux 桌面）：~/.local/opt/wt-go 与菜单项，
+                                升级不碰 data/（设置就存在里面）
   ./Scripts/build.sh --expect 0.3.0
                                 断言 mygo.json 里的版本就是这一串（发版时对 tag 用）
 
@@ -37,12 +41,14 @@ EOF
 clean=0
 test=0
 package=0
+install=0
 expect=''
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --clean) clean=1 ;;
         --test) test=1 ;;
         --package) package=1 ;;
+        --install) install=1 ;;
         --expect)
             if [ "$#" -lt 2 ]; then
                 printf '  [ERR] --expect 后面要跟版本号（不带 v）。\n' >&2
@@ -89,6 +95,12 @@ fi
 if [ -n "$expect" ] && [ "$expect" != "$target" ]; then
     printf '  [ERR] 版本对不上：--expect 是 %s，mygo.json 里是 %s。\n' "$expect" "$target" >&2
     exit 1
+fi
+# --package stops at dist/, so a box that asked for both would silently not
+# install: say which flag it is answering.
+if [ "$package" -eq 1 ] && [ "$install" -eq 1 ]; then
+    printf '  [ERR] --package 只出分发包，--install 装到本机：只能挑一个。\n' >&2
+    exit 2
 fi
 
 # So `wt-go version` names the release as well as the build: mygo appends this
@@ -183,3 +195,57 @@ go tool mygo build -platform "$platform" -skip-installer -skip-dmg || {
 
 bytes=$(wc -c <"$exe" | tr -d ' ')
 printf '  [OK] %s v%s (%d MB)\n' "$exe" "$target" "$((bytes / 1048576))"
+
+# --install puts this build where a Linux desktop already keeps an app: one
+# directory of files under ~/.local/opt, plus its menu entry.
+if [ "$install" -eq 1 ]; then
+    # macOS ships a signed .app and Windows an NSIS installer; neither is a
+    # directory of files beside a binary, so this is a Linux desktop's layout.
+    if [ "$goos" != linux ]; then
+        printf '  [ERR] --install 只装 Linux 桌面（macOS 出 .app，Windows 出安装器）。\n' >&2
+        exit 1
+    fi
+    src=$(dirname -- "$exe")
+    app_dir="$HOME/.local/opt/wt-go"
+    menu_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+    manifest="$src/.mygo-files"
+    if [ ! -f "$manifest" ]; then
+        printf '  [ERR] 找不到 %s：安装清单由 mygo 写在产物旁边。\n' "$manifest" >&2
+        exit 1
+    fi
+    mkdir -p -- "$app_dir" "$menu_dir"
+    # The manifest, not a file list kept here as well: mygo's own installer
+    # copies the same set for an upgrade, so the two cannot drift apart.
+    while IFS= read -r entry; do
+        case "$entry" in
+            # data/ is the settings directory, handled below; the menu entry is
+            # rewritten with absolute paths, also below.
+            '' | data | wt-go.desktop) continue ;;
+        esac
+        [ -e "$src/$entry" ] || continue
+        # Rename over the old file instead of writing it: a running wt-go holds
+        # the binary open and Linux refuses in-place writes (ETXTBSY), while
+        # replacing the name is always allowed.
+        cp -f -- "$src/$entry" "$app_dir/$entry.new"
+        mv -f -- "$app_dir/$entry.new" "$app_dir/$entry"
+    done <"$manifest"
+    # data/ is what makes the copy portable, and settings.json lives in it:
+    # create it when missing, never replace it, so an upgrade keeps settings.
+    if [ ! -d "$app_dir/data" ]; then
+        mkdir -p -- "$app_dir/data"
+        if [ -f "$src/data/README.txt" ]; then
+            cp -f -- "$src/data/README.txt" "$app_dir/data/README.txt"
+        fi
+    fi
+    # The entry mygo writes names the binary by name, which only resolves from
+    # inside its directory; the installed copy names the paths it installed.
+    sed -e "s|^Exec=.*|Exec=\"$app_dir/wt-go\"|" \
+        -e "s|^Icon=.*|Icon=$app_dir/icon.png|" \
+        -- "$src/wt-go.desktop" >"$app_dir/wt-go.desktop"
+    cp -f -- "$app_dir/wt-go.desktop" "$menu_dir/wt-go.desktop"
+    # Menus cache their entries; without this the new one can wait for a login.
+    if command -v update-desktop-database >/dev/null 2>&1; then
+        update-desktop-database "$menu_dir" >/dev/null 2>&1 || true
+    fi
+    printf '  [OK] 已装 v%s 到 %s（菜单项 %s）\n' "$target" "$app_dir" "$menu_dir/wt-go.desktop"
+fi

@@ -30,7 +30,7 @@
 | `resources/icon.svg` / `resources/icon.png` | 应用图标源文件与 1024×1024 PNG，`mygo build` 将 PNG 打包进 exe |
 | `resources/windows-<goarch>/conpty/` | 随包 ConPTY（`conpty.dll` / `OpenConsole.exe` / `ConPTY-LICENSE.txt`，ADR-82）；哈希钉在 `Scripts/conpty.json`，`conpty_test.go` 校验 |
 | `resources/data/README.txt` | 装出来是 exe 旁的 `data/README.txt`：同目录存在 `data` 目录即走便携模式（ADR-83） |
-| `Scripts/build.ps1` / `build.sh` | 日常构建与打包（`-Test`/`--test`、`-Clean`/`--clean`、`-Package`/`--package`、`-Version`/`--expect <版本>`） |
+| `Scripts/build.ps1` / `build.sh` | 日常构建与打包（`-Test`/`--test`、`-Clean`/`--clean`、`-Package`/`--package`、`--install` 仅 Linux：装到 `~/.local/opt`、`-Version`/`--expect <版本>`） |
 | `docs/` | `使用说明.md` / `配置参考.md` / `故障排查.md` / `代码导读.md` / `decisions.md` |
 | `mygo.json` | `go tool mygo build` 的包名、版本与打包信息 |
 | `refs/` | 只读参考项目（`.gitignore`），清单见 `refs/AGENTS.md` |

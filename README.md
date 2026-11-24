@@ -11,7 +11,7 @@ pwsh ./Scripts/build.ps1                                  # 2 构建（Linux/mac
 ```
 
 发布页每个平台一个便携 zip：Windows 含 `wt-go.exe`、`ghostty-vt.dll`、`conpty\` 与 `data\`（便携模式），Linux 含 `wt-go`、`libghostty-vt.so`、`data/` 与 `wt-go.desktop`，均带 `LICENSE`；解压即用，没有安装器或 `.deb`。
-构建脚本参数：`-Test` / `--test` 先跑 gofmt 与 vet、测试，`-Clean` / `--clean` 清掉 `build/`，`-Package` / `--package` 只出 `dist/`。
+构建脚本参数：`-Test` / `--test` 先跑 gofmt 与 vet、测试，`-Clean` / `--clean` 清掉 `build/`，`-Package` / `--package` 只出 `dist/`，`--install` 装到本机（Linux：`~/.local/opt/wt-go` 与菜单项，`data/` 原样保留）。
 
 ## 依赖环境
 
