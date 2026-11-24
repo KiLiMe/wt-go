@@ -34,9 +34,11 @@ func SettingsTab(c *myui.Context, st Settings, act Actions) myui.Element {
 			myui.Column(c).Grow(1).Children(func() {
 				banner(c, st)
 				myui.Scroll(c).Grow(1).Children(func() {
-					myui.Column(c).Padding(24, 24, 16, 24).Gap(24).Children(func() {
-						pageIntro(c, st)
-						page(c, st, act)
+					myui.Column(c).Padding(24, 24, 16, 24).Children(func() {
+						myui.Column(c).MaxWidth(readingWidth).Gap(24).Children(func() {
+							pageIntro(c, st)
+							page(c, st, act)
+						})
 					})
 				})
 			})
@@ -48,6 +50,12 @@ func SettingsTab(c *myui.Context, st Settings, act Actions) myui.Element {
 // navWidth is how wide the column of pages is, and where the page's own room
 // starts.
 const navWidth = 220
+
+// readingWidth caps the page at a width the eye can follow. A field puts its
+// label at the left of the row and its control at the right, so on a wide
+// window the space between them grew until the row was two things far apart
+// rather than one row, and the labels of a page ran the width of the window.
+const readingWidth = 880
 
 // nav is the column that lists the pages: the box that searches the settings
 // over it, and the pages, or what the search finds on them.
