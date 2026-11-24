@@ -2,6 +2,7 @@ package app
 
 import (
 	"github.com/egoist/mygo/plugins/terminal"
+
 	"wtgo/internal/profile"
 	"wtgo/internal/theme"
 )

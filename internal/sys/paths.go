@@ -56,15 +56,6 @@ func DataDir() string {
 // under the user's application data.
 func Portable() bool { return DataDir() != "" }
 
-// Dir is the directory wt-go keeps its files in: DataDir() of a portable copy,
-// the platform's application data directory otherwise.
-func Dir() (string, error) {
-	if d := DataDir(); d != "" {
-		return d, nil
-	}
-	return defaultDir()
-}
-
 // ConfigDir is where settings.json and window-state.json live: data\config in
 // a portable copy. An installed copy predates the split and keeps the files
 // loose in Dir(), which is also where an upgrade finds them.
@@ -90,8 +81,13 @@ func PortableConfigDir() string {
 	return filepath.Join(d, configName)
 }
 
+// Dir is the directory wt-go keeps its files in: a portable copy's data
+// directory, or the place this system keeps a program's files.
+func Dir() (string, error) { return dataSubDir("") }
+
 // dataSubDir is the named subdirectory of a portable copy's data directory,
-// and Dir() itself for an installed copy.
+// and the place this system keeps a program's files for an installed copy,
+// which has no data directory of its own to name.
 func dataSubDir(name string) (string, error) {
 	if d := DataDir(); d != "" {
 		return filepath.Join(d, name), nil

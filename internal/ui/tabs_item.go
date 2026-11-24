@@ -154,13 +154,5 @@ func dividerSlot(c *myui.Context, drawn bool, room float32) {
 		myui.Box(c).Width(room).Height(16)
 		return
 	}
-	stripDivider(c).Margin(0, (room-1)/2)
-}
-
-// stripDivider is the line the strip draws between two tabs, and beside the
-// button that opens one: a DIP wide and as high as a tab's mark, centered in
-// the strip, out of the border color between two surfaces. Windows Terminal
-// draws the same line in both places.
-func stripDivider(c *myui.Context) myui.Element {
-	return myui.Box(c).Width(1).Height(16).Background(c.Theme().Border)
+	myui.Box(c).Width(1).Height(16).Background(c.Theme().Border).Margin(0, (room-1)/2)
 }

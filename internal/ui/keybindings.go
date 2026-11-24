@@ -24,7 +24,7 @@ import (
 func actionsPage(c *myui.Context, st Settings, act Actions) {
 	s := st.Draft
 	ks := pageKeys(st.KeysCache, s.Keybindings, st)
-	query := strings.ToLower(searchText(st.ActionFilter))
+	query := strings.ToLower(text(st.ActionFilter))
 	actionsToolbar(c, act, len(ks.changed), len(ks.clashing) > 0, st.OnlyChanged, st.ActionFilter, st.Reveal)
 	listed := 0
 	for _, g := range ks.groups {
@@ -88,14 +88,6 @@ func actionsToolbar(c *myui.Context, act Actions, changed int, conflict, onlyCha
 			myui.Text(c, locales.KeysConflict()).FontSize(11).TextColor(t.Danger).SingleLine()
 		}
 	})
-}
-
-// searchText is what the actions page searches for, "" for nothing.
-func searchText(filter *string) string {
-	if filter == nil {
-		return ""
-	}
-	return *filter
 }
 
 // keybindingRow is one row of the page: the keys that run the action, which a

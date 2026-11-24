@@ -11,17 +11,10 @@ const (
 	PageGeneral     = "general"
 	PageInteraction = "interaction"
 	PageAppearance  = "appearance"
-	PageSchemes     = "schemes"
 	PageActions     = "actions"
 	PageAdvanced    = "advanced"
 	PageProfiles    = "profiles"
 )
-
-// PageStartup is the name the page of the window's own behavior had before it
-// took in the tabs and the closing questions: the window still opens there by
-// default, and a page kept across a build would name it, so both names show
-// the same page.
-const PageStartup = PageGeneral
 
 // profilePrefix starts the id of the page that edits a profile.
 const profilePrefix = "profile:"
@@ -123,21 +116,6 @@ func navItem(c *myui.Context, page, target, label string, act Actions) {
 	})
 }
 
-// navAction is a row under the pages that does something instead of opening a
-// page, so it sits where the list ends rather than on the page it acts on.
-func navAction(c *myui.Context, icon *myui.SVG, label string, onClick func()) {
-	t := c.Theme()
-	el := myui.Row(c).Height(30).Padding(0, 6).Gap(8).AlignItems(myui.Center).Radius(6).
-		Cursor(myui.CursorPointer).OnClick(onClick)
-	if el.Hovered() {
-		el.Background(t.SurfaceHover)
-	}
-	el.Children(func() {
-		myui.Icon(c, icon).Size(14, 14).TextColor(t.TextMuted)
-		myui.Text(c, label).FontSize(13).SingleLine()
-	})
-}
-
 // banner is why the last save refused the draft, above the page it refused it
 // on: the footer's note scrolls with nothing and cuts a long reason at the
 // width of the row, when what is wrong is the thing to correct.
@@ -167,7 +145,7 @@ func footer(c *myui.Context, st Settings, act Actions) myui.Element {
 		case st.Validation != "":
 			// The banner carries the reason itself, so the row says what to do
 			// about it, which is what a person reads at the button they pressed.
-			myui.Text(c, st.SaveRefusedNote()).FontSize(11).TextColor(t.Danger).SingleLine().MaxWidth(420)
+			myui.Text(c, locales.SaveRefusedNote()).FontSize(11).TextColor(t.Danger).SingleLine().MaxWidth(420)
 		case st.Dirty:
 			myui.Text(c, locales.UnsavedChanges()).FontSize(11).TextColor(t.TextMuted).SingleLine().MaxWidth(420)
 		}
@@ -175,13 +153,6 @@ func footer(c *myui.Context, st Settings, act Actions) myui.Element {
 		myui.Button(c, locales.Discard()).Disabled(!st.Dirty).Opacity(dimmed(st.Dirty)).OnClick(act.DiscardSettings)
 		myui.PrimaryButton(c, locales.Save()).Disabled(!st.Dirty).Opacity(dimmed(st.Dirty)).OnClick(act.SaveSettings)
 	})
-}
-
-// SaveRefusedNote is what the foot of the settings page says once a save
-// refused the draft: whatever went wrong is the banner's to name, and this is
-// the way out of it.
-func (st Settings) SaveRefusedNote() string {
-	return locales.SaveRefusedNote()
 }
 
 // dimmed is how much of a button that does nothing shows: the theme does not
@@ -195,33 +166,50 @@ func dimmed(live bool) float32 {
 
 // pageIntro is the name of the page in front and what the page is for.
 func pageIntro(c *myui.Context, st Settings) {
-	switch st.Page {
-	case PageGeneral:
-		intro(c, locales.General(), locales.GeneralNote())
-	case PageInteraction:
-		intro(c, locales.Interaction(), locales.InteractionNote())
-	case PageAppearance:
-		intro(c, locales.Appearance(), locales.AppearanceNote())
-	case PageSchemes:
-		// The color schemes are a section of the appearance page now, and a
-		// page kept across a build still names the page they had of their own:
-		// it shows where they went rather than nothing.
-		intro(c, locales.Appearance(), locales.AppearanceNote())
-	case PageActions:
-		intro(c, locales.Actions(), locales.ActionsNote())
-	case PageAdvanced:
-		intro(c, locales.Advanced(), locales.AdvancedNote())
-	case PageProfiles:
-		// The profiles are one page with the profile in front named above the
-		// fields of that one, not a list of profiles and a page each.
-		if st.Profile != nil && st.Page == ProfilePage(st.Profile.ID) {
-			intro(c, st.Profile.Name, "")
-			return
-		}
-		intro(c, locales.Profiles(), locales.DefaultsNote())
-	default:
-		intro(c, locales.Profiles(), locales.DefaultsNote())
+	// The profiles are one page with the profile in front named above the
+	// fields of that one, not a list of profiles and a page each.
+	if st.Page == PageProfiles && st.Profile != nil && st.Page == ProfilePage(st.Profile.ID) {
+		intro(c, st.Profile.Name, "")
+		return
 	}
+	intro(c, pageTitle(st.Page), pageNote(st.Page))
+}
+
+// pageTitle is what the column calls a page, and what the settings index lists
+// its settings under: one name for a page, wherever it is said.
+func pageTitle(page string) string {
+	switch page {
+	case PageGeneral:
+		return locales.General()
+	case PageInteraction:
+		return locales.Interaction()
+	case PageAppearance:
+		return locales.Appearance()
+	case PageActions:
+		return locales.Actions()
+	case PageAdvanced:
+		return locales.Advanced()
+	}
+	return locales.Profiles()
+}
+
+// pageNote is what a page is for, in the line under its name. The profile
+// pages say it is where the defaults are edited, since the fields under them
+// are one profile's.
+func pageNote(page string) string {
+	switch page {
+	case PageGeneral:
+		return locales.GeneralNote()
+	case PageInteraction:
+		return locales.InteractionNote()
+	case PageAppearance:
+		return locales.AppearanceNote()
+	case PageActions:
+		return locales.ActionsNote()
+	case PageAdvanced:
+		return locales.AdvancedNote()
+	}
+	return locales.DefaultsNote()
 }
 
 // page is the fields of the page in front.
@@ -235,10 +223,6 @@ func page(c *myui.Context, st Settings, act Actions) {
 	case PageInteraction:
 		interactionPage(c, st, act)
 	case PageAppearance:
-		appearancePage(c, st, act)
-	case PageSchemes:
-		// The name the color schemes were a page of their own: what they hold
-		// is the last section of the appearance page, so both names show it.
 		appearancePage(c, st, act)
 	case PageActions:
 		actionsPage(c, st, act)

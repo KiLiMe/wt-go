@@ -102,17 +102,6 @@ func TestMove(t *testing.T) {
 	}
 }
 
-// TestFind covers finding the tab that runs a profile.
-func TestFind(t *testing.T) {
-	s := newSet(2)
-	if tab, ok := s.Find("b"); !ok || tab != s.Tabs[1] {
-		t.Errorf("found = %v, %v", tab, ok)
-	}
-	if _, ok := s.Find("zzz"); ok {
-		t.Error("found a missing profile")
-	}
-}
-
 func ids(s *Set) string {
 	var b []rune
 	for _, t := range s.Tabs {

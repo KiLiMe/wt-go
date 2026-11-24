@@ -107,8 +107,7 @@ func profiles(found []ShellReport, settingsOK bool) []ProfileReport {
 	return out
 }
 
-// checks are the questions a diagnostic asks, in the order the window meets
-// them.
+// crashes are the crash logs the program left, newest first.
 func crashes() []CrashReport {
 	paths, err := sys.CrashLogs()
 	if err != nil {

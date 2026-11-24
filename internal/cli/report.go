@@ -5,9 +5,8 @@
 package cli
 
 import (
-	"encoding/json"
-	"runtime"
 	"wtgo/internal/fault"
+	"wtgo/internal/mcp"
 	"wtgo/internal/sys"
 )
 
@@ -18,12 +17,10 @@ import (
 // Report is what wt-go knows about itself from outside: a fresh process
 // reading the files the window reads.
 type Report struct {
-	Program    string `json:"program"`
-	Version    string `json:"version"`
-	Revision   string `json:"revision,omitempty"`
-	Packaged   string `json:"packaged,omitempty"`
-	Go         string `json:"go"`
-	Platform   string `json:"platform"`
+	Program string `json:"program"`
+	// The five lines the program says about itself are Self's, embedded rather
+	// than repeated, so that a field cannot land in one and not the other.
+	Self
 	Executable string `json:"executable,omitempty"`
 	// Portable says this copy keeps its files beside the executable, and Data
 	// is the directory they are in: the two decide what the paths below point
@@ -112,13 +109,7 @@ type Check struct {
 
 // Collect is wt-go as the files on disk say it is.
 func Collect() Report {
-	r := Report{
-		Program:  "wt-go",
-		Go:       runtime.Version(),
-		Platform: runtime.GOOS + "/" + runtime.GOARCH,
-	}
-	r.Version, r.Revision = buildInfo()
-	r.Packaged = packagedVersion
+	r := Report{Program: "wt-go", Self: About()}
 	if exe, err := sys.Executable(); err == nil {
 		r.Executable = exe
 	}
@@ -138,10 +129,18 @@ func Collect() Report {
 }
 
 // JSON is the report as a tool or a script reads it.
-func (r Report) JSON() (string, error) {
-	b, err := json.MarshalIndent(r, "", "  ")
-	if err != nil {
-		return "", err
+func (r Report) JSON() (string, error) { return mcp.JSON(r) }
+
+// fileChecks are what the diagnostic asks about settings.json: where it is, and
+// whether it parses. They are picked by code rather than by place, so that the
+// order the checks are asked in stays the report's alone.
+func (r Report) fileChecks() []Check {
+	out := make([]Check, 0, 2)
+	for _, c := range r.Checks {
+		switch c.Code {
+		case fault.NoConfigDir, fault.BadSettings, fault.BadField:
+			out = append(out, c)
+		}
 	}
-	return string(b), nil
+	return out
 }

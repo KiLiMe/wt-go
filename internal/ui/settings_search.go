@@ -1,10 +1,11 @@
 package ui
 
 import (
-	myui "github.com/egoist/mygo/ui"
 	"sort"
 	"strings"
 	"wtgo/locales"
+
+	myui "github.com/egoist/mygo/ui"
 )
 
 // settingHit is one setting the column searches: what the page labels it, the
@@ -20,14 +21,19 @@ type settingHit struct {
 	words    string
 }
 
-// searchSettings is what the settings page searches for, "" for nothing.
+// text is what an optional text holds, "" for one that is not there: the
+// searches of the three pages say nothing when the box over them is empty.
+func text(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
+}
+
 // searchSettings is what the box over the column searches by, lowered and
 // trimmed so that a stray space or a capital letter does not hide a setting.
 func searchSettings(st Settings) string {
-	if st.Search == nil {
-		return ""
-	}
-	return strings.ToLower(strings.TrimSpace(*st.Search))
+	return strings.ToLower(strings.TrimSpace(text(st.Search)))
 }
 
 // settingsIndex is every setting the column searches: what it is called, the
@@ -35,28 +41,12 @@ func searchSettings(st Settings) string {
 // label the fields with, made here rather than at the call of the search, so
 // that a language switch renames the index with the pages.
 func settingsIndex() []settingHit {
-	page := func(p string) string {
-		switch p {
-		case PageGeneral:
-			return locales.General()
-		case PageInteraction:
-			return locales.Interaction()
-		case PageAppearance:
-			return locales.Appearance()
-		case PageActions:
-			return locales.Actions()
-		case PageAdvanced:
-			return locales.Advanced()
-		default:
-			return locales.Profiles()
-		}
-	}
 	var out []settingHit
 	// key is the setting the file writes, which is how the page finds the row to
 	// mark and scroll to; "" is a setting the page holds as a whole, as its
 	// list of keybindings is.
 	add := func(p, key, name, words string) {
-		out = append(out, settingHit{name: name, key: key, page: p, pageName: page(p), words: words})
+		out = append(out, settingHit{name: name, key: key, page: p, pageName: pageTitle(p), words: words})
 	}
 	add(PageGeneral, "language", locales.Language(), "language locale i18n 语言 界面")
 	add(PageGeneral, "defaultProfile", locales.DefaultProfile(), "profile shell startup default 默认 配置文件 启动")

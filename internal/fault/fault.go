@@ -83,7 +83,7 @@ func (c Code) Known() bool {
 	return ok
 }
 
-// All is every code, in order, for the tests and the doc.
+// All is every code, in order: the tests hold the table to it.
 func All() []Code {
 	out := make([]Code, 0, len(about))
 	for c := range about {

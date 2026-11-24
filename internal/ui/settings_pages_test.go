@@ -17,7 +17,7 @@ func TestStartupPageShowsTheSystemForAProfileThatIsGone(t *testing.T) {
 	act := &navActions{}
 	known := []Profile{{ID: "pwsh7", Name: "PowerShell 7"}}
 	tt := myui.NewTester(func(c *myui.Context) {
-		SettingsTab(c, Settings{Draft: &s, Page: PageStartup, Known: known}, act)
+		SettingsTab(c, Settings{Draft: &s, Page: PageGeneral, Known: known}, act)
 	}, 900, 700)
 	tt.Frame()
 	if tt.HasText("gone") {
@@ -66,7 +66,7 @@ func TestStartupPageAsksBeforeTheWindowCloses(t *testing.T) {
 	s := store.Default()
 	s.ConfirmCloseWindow = false
 	tt := myui.NewTester(func(c *myui.Context) {
-		SettingsTab(c, Settings{Draft: &s, Page: PageStartup}, &navActions{})
+		SettingsTab(c, Settings{Draft: &s, Page: PageGeneral}, &navActions{})
 		// Tall enough for the group the two switches sit in: the sections of
 		// the window above it put them past the default height.
 	}, 900, 1400)

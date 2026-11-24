@@ -15,7 +15,7 @@ import (
 // a new one. The terminal's overlays go: the settings tab is not a terminal, so
 // a bar that asks the one in front for text has nothing left to ask.
 func (a *App) OpenSettings() {
-	a.closeOverlays()
+	a.closeOpen()
 	if a.settingsTab == nil {
 		a.settingsTab = &pane.Tab{Name: locales.Settings()}
 		a.settingsPage = ui.PageGeneral
@@ -84,10 +84,7 @@ func (a *App) settingsState() ui.Settings {
 // until the read is done, so a file that is still not settings does not open a
 // second tab behind the caller.
 func (a *App) closeSettingsTab() {
-	a.settings = a.saved.Clone()
-	a.note = ""
-	a.validation = ""
-	a.recording = ""
+	a.resetDraft()
 	a.editNone()
 	a.refreshSettings()
 	a.settingsTab = nil
@@ -96,10 +93,7 @@ func (a *App) closeSettingsTab() {
 // DiscardSettings goes back to the settings the file holds, and reads the file
 // again: a change the watcher held back while the draft was dirty is taken now.
 func (a *App) DiscardSettings() {
-	a.settings = a.saved.Clone()
-	a.note = ""
-	a.validation = ""
-	a.recording = ""
+	a.resetDraft()
 	if a.editing != nil {
 		a.editProfile(a.editing.ID)
 		if a.editing == nil {
@@ -110,6 +104,16 @@ func (a *App) DiscardSettings() {
 	}
 	a.refreshSettings()
 	a.redraw()
+}
+
+// resetDraft goes back to the settings the file holds, and drops what the page
+// was saying about the draft: what the last action did, which field it
+// complained about, and the key it was waiting to record.
+func (a *App) resetDraft() {
+	a.settings = a.saved.Clone()
+	a.note = ""
+	a.validation = ""
+	a.recording = ""
 }
 
 // refreshSettings reads settings.json now, as discarding a draft does, because

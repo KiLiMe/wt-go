@@ -1,11 +1,13 @@
 package app
 
 import (
-	"github.com/egoist/mygo/plugins/terminal"
-	"github.com/egoist/mygo/transfer"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/egoist/mygo/plugins/terminal"
+	"github.com/egoist/mygo/transfer"
+
 	"wtgo/internal/fault"
 	"wtgo/internal/pane"
 	"wtgo/internal/profile"
@@ -13,8 +15,6 @@ import (
 	"wtgo/internal/sys"
 )
 
-// load reads the settings, and writes the defaults where there are none. It
-// answers with the bytes the file holds, which the window watches.
 // load reads settings.json, writing the defaults when there is no file, and
 // reports whether it wrote them: that first file is the only one the window
 // probes the machine for.
@@ -48,13 +48,6 @@ func found() []profile.Found {
 	return out
 }
 
-// adopt writes the shells the machine has into the settings, the way the
-// settings page would: a shell the file does not name is added below the ones
-// it does, so that the strip lists what can be started without a person
-// typing a path, and editing the command line of a discovered profile
-// afterwards keeps the edit. A discovered profile whose program is gone is
-// hidden rather than dropped, so that installing the program again is all it
-// takes to bring it back.
 // adoptWrite puts the settings the window adopted into the file, and keeps the
 // copy the window compares against.
 func (a *App) adoptWrite() {

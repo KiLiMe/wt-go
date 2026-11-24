@@ -28,10 +28,11 @@ func checks(r Report) []Check {
 	// One profile that cannot start is a tab that opens empty, which the user
 	// asked for: the check fails and names it.
 	why := missing(r.Profiles)
+	start := len(r.Profiles) > 0 && why == ""
 	if why == "" {
 		why = count(len(r.Profiles), "profile") + " can start"
 	}
-	add(fault.ChildFailed, len(r.Profiles) > 0 && missing(r.Profiles) == "", why)
+	add(fault.ChildFailed, start, why)
 	if len(r.Crashes) > 0 {
 		c := r.Crashes[0]
 		// Any crash log is a crash, whether or not it carries a fault code: a

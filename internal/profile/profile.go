@@ -60,10 +60,15 @@ func Name(id, command string) string {
 	if k, ok := known[id]; ok {
 		return k.Name
 	}
+	return strings.TrimSuffix(strings.TrimSuffix(baseName(command), ".exe"), ".EXE")
+}
+
+// baseName is command as it is called: what a path ends in, as a shell is
+// called by its own name in the strip and wears the mark of that name.
+func baseName(command string) string {
 	if i := strings.LastIndexAny(command, `\/`); i >= 0 {
-		command = command[i+1:]
+		return command[i+1:]
 	}
-	command = strings.TrimSuffix(strings.TrimSuffix(command, ".exe"), ".EXE")
 	return command
 }
 
@@ -107,12 +112,8 @@ func Resolve(configured []store.Profile, found []Found) []Profile {
 			Discovered: true,
 		})
 	}
-	seen := make(map[string]bool, len(profiles))
-	for _, p := range profiles {
-		seen[p.ID] = true
-	}
 	for _, p := range configured {
-		if p.ID == "" || used[p.ID] || seen[p.ID] {
+		if p.ID == "" || used[p.ID] {
 			continue
 		}
 		profiles = append(profiles, fromStore(p))

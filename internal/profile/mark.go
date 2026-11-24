@@ -72,10 +72,7 @@ func presetByKey(key string) (Preset, bool) {
 // for "pwsh" gets the mark without naming one, and a profile that names a path
 // into a shell's own directory gets it too.
 func GuessIcon(command string) string {
-	if i := strings.LastIndexAny(command, `\/`); i >= 0 {
-		command = command[i+1:]
-	}
-	command = strings.ToLower(strings.TrimSuffix(strings.TrimSuffix(command, ".exe"), ".exe"))
+	command = strings.ToLower(strings.TrimSuffix(strings.TrimSuffix(baseName(command), ".exe"), ".exe"))
 	switch command {
 	case "pwsh", "pwsh7", "pwsh-preview":
 		return "pwsh7:official"

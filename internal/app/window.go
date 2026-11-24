@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/egoist/mygo"
 	myui "github.com/egoist/mygo/ui"
+
 	"wtgo/internal/theme"
 	"wtgo/internal/ui"
 )

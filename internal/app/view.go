@@ -1,9 +1,11 @@
 package app
 
 import (
+	"time"
+
 	"github.com/egoist/mygo/plugins/terminal"
 	myui "github.com/egoist/mygo/ui"
-	"time"
+
 	"wtgo/internal/pane"
 	"wtgo/internal/ui"
 )

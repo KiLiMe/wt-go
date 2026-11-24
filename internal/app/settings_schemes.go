@@ -1,10 +1,12 @@
 package app
 
 import (
-	myui "github.com/egoist/mygo/ui"
 	"strconv"
 	"strings"
 	"sync"
+
+	myui "github.com/egoist/mygo/ui"
+
 	"wtgo/internal/store"
 	"wtgo/internal/theme"
 	"wtgo/internal/ui"

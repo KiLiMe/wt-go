@@ -98,7 +98,7 @@ const (
 // previewLineHeight is the draft's line height, held to what the control that
 // sets it offers.
 func previewLineHeight(s *store.Settings) float32 {
-	return min(max(s.Font.LineHeight, 0.8), 2.4)
+	return min(max(s.Font.LineHeight, LineHeightMin), LineHeightMax)
 }
 
 // textFont is the family the preview draws with: the draft's, or the default

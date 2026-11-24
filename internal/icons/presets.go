@@ -62,10 +62,6 @@ const bashShape = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"
 // presets holds the marks a tab can wear by name, "shape:palette".
 var presets = map[string]*Icon{}
 
-// presetOrder is the presets in the order the settings page lists them: by
-// shape, the palettes of a shape together.
-var presetOrder []string
-
 func init() {
 	for _, p := range []struct {
 		key    string
@@ -85,15 +81,10 @@ func init() {
 		{"bash:ubuntu", bashShape, []any{"#5e2750", "#2c001e", "#ffffff", "#e95420"}},
 		{"bash:arch", bashShape, []any{"#1e293b", "#0f172a", "#f8fafc", "#1793d1"}},
 	} {
-		presets[p.key] = &Icon{Name: p.key, SVG: ui.MustParseSVG([]byte(fmt.Sprintf(p.shape, p.colors...)))}
-		presetOrder = append(presetOrder, p.key)
+		presets[p.key] = &Icon{SVG: ui.MustParseSVG([]byte(fmt.Sprintf(p.shape, p.colors...)))}
 	}
 }
 
 // Preset is the mark a tab wears by name, nil for a name this package does not
 // draw: a settings file may hold a mark a later build took away.
 func Preset(key string) *Icon { return presets[key] }
-
-// Presets are the names of the marks, in the order the settings page lists
-// them.
-func Presets() []string { return append([]string(nil), presetOrder...) }

@@ -2,6 +2,7 @@ package app
 
 import (
 	"testing"
+
 	"wtgo/internal/pane"
 	"wtgo/internal/profile"
 	"wtgo/internal/store"

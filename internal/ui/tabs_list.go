@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -35,7 +36,6 @@ type TabsList struct {
 	matched []int
 	filter  string
 	names   []string
-	known   bool
 }
 
 // matchedTabs is the tabs that answer the filter, by their place in the strip.
@@ -44,33 +44,14 @@ func (l *TabsList) matchedTabs(st State) []int {
 	for i, tb := range st.Tabs {
 		names[i] = tb.Name
 	}
-	if l.known && l.filter == l.Filter && sameNames(l.names, names) {
+	if l.matched != nil && l.filter == l.Filter && slices.Equal(l.names, names) {
 		return l.matched
 	}
 	items := MatchTabs(l.Filter, names)
-	if items == nil {
-		// nil stands for an answer never found, and the next frame still finds
-		// it here.
-		items = []int{}
-	}
 	l.matched = items
 	l.filter = l.Filter
 	l.names = append(l.names[:0], names...)
-	l.known = true
 	return items
-}
-
-// sameNames reports whether two lists name the same tabs, in the same order.
-func sameNames(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 // MatchTabs is the tabs that answer a filter, by their place in the strip: the

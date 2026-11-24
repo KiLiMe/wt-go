@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"wtgo/internal/action"
+	"wtgo/internal/i18n"
 )
 
 // TestCatalog covers the actions the window has: unique ids, a title and a
@@ -98,5 +99,16 @@ func TestGotoAction(t *testing.T) {
 	}
 	if _, ok := action.ProfileIndex("profile.x"); ok {
 		t.Error("ProfileIndex(profile.x) found a profile")
+	}
+}
+
+// TestTitlesExist covers what a catalog must hold for the actions: every action
+// has words for its title, since a key the catalog lacks is a menu that shows
+// the key itself instead of what the action does.
+func TestTitlesExist(t *testing.T) {
+	for _, a := range action.All() {
+		if !i18n.Has(a.TitleKey) {
+			t.Errorf("%s is called %q, which no catalog names", a.ID, a.TitleKey)
+		}
 	}
 }

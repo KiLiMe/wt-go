@@ -25,9 +25,9 @@ func (s Settings) Validate() error {
 	check("scrollbackMB", between(float64(s.ScrollbackMB), 0, 1024), "between 0 and 1024")
 	check("scrollMultiplier", between(float64(s.ScrollMultiplier), 0.1, 10), "between 0.1 and 10")
 	check("minimumContrast", between(float64(s.MinimumContrast), 0, 21), "between 0 and 21")
-	check("paddingColor", oneOf(s.PaddingColor, "background", "extend", "always"), `"background", "extend" or "always"`)
-	check("clipboardRead", oneOf(s.ClipboardRead, "deny", "allow", "ask"), `"deny", "allow" or "ask"`)
-	check("clipboardWrite", oneOf(s.ClipboardWrite, "allow", "deny"), `"allow" or "deny"`)
+	check("paddingColor", oneOf(s.PaddingColor, enumPaddingColors...), `"background", "extend" or "always"`)
+	check("clipboardRead", oneOf(s.ClipboardRead, enumClipboardReads...), `"deny", "allow" or "ask"`)
+	check("clipboardWrite", oneOf(s.ClipboardWrite, enumClipboardWrites...), `"allow" or "deny"`)
 	check("maxPanes", between(float64(s.MaxPanes), 0, 64), "between 0 and 64")
 	check("confirmClose", s.ConfirmClose.Valid(), `"running", "always" or "never"`)
 	if len(bad) == 0 {
@@ -96,7 +96,7 @@ func (s *Settings) fallbackUnknown() {
 	// text is drawn at: a zero says nothing, and the page has to show the face
 	// the terminal draws with rather than a weight no family has.
 	if s.Font.Weight == 0 {
-		s.Font.Weight = 400
+		s.Font.Weight = d.Font.Weight
 	}
 	if !s.ConfirmClose.Valid() {
 		s.ConfirmClose = d.ConfirmClose

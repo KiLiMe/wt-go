@@ -216,25 +216,20 @@ func Number(id string) (int, bool) {
 func ProfileAction(n int) string { return Profile + strconv.Itoa(n) }
 
 // ProfileIndex reads the profile an action opens, counting from zero.
-func ProfileIndex(id string) (int, bool) {
-	rest, ok := strings.CutPrefix(id, Profile)
-	if !ok {
-		return 0, false
-	}
-	n, err := strconv.Atoi(rest)
-	if err != nil || n < 1 {
-		return 0, false
-	}
-	return n - 1, true
-}
+func ProfileIndex(id string) (int, bool) { return index(id, Profile) }
 
 // GotoAction is the action that brings the nth tab in front, counting from
 // one.
 func GotoAction(n int) string { return TabGoto + strconv.Itoa(n) }
 
 // GotoIndex reads the tab an action brings in front, counting from zero.
-func GotoIndex(id string) (int, bool) {
-	rest, ok := strings.CutPrefix(id, TabGoto)
+func GotoIndex(id string) (int, bool) { return index(id, TabGoto) }
+
+// index reads the number an action of the prefix carries, counting from zero:
+// the places in tab.goto.3 and profile.2 are counted from one, as a reader
+// counts them, and none of the actions is numbered from zero.
+func index(id, prefix string) (int, bool) {
+	rest, ok := strings.CutPrefix(id, prefix)
 	if !ok {
 		return 0, false
 	}

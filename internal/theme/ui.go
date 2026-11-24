@@ -28,8 +28,10 @@ var uiThemes = []string{
 	"Solarized Light",
 }
 
-// UIThemes are the names of the themes the settings page offers.
-func UIThemes() []string { return uiThemes }
+// UIThemes are the names of the themes the settings page offers, and its own
+// copy to keep: the page lists them, and a page that sorted the list it was
+// handed would leave the next page with the last one's order.
+func UIThemes() []string { return append([]string(nil), uiThemes...) }
 
 // UITheme is the theme the window draws with when the settings name one: the
 // colors of the scheme called name, with the surfaces, borders and muted text
@@ -68,10 +70,7 @@ func window(th *terminal.Theme) *myui.Theme {
 	bg, fg := th.Background, th.Foreground
 	accent := accentOf(th)
 	dark := luminance(bg) < 0.5
-	t := *myui.LightTheme()
-	if dark {
-		t = *myui.DarkTheme()
-	}
+	t := *Native(dark)
 	t.Dark = dark
 	t.Background = bg
 	// The surfaces are far enough from the background to read as surfaces:
@@ -119,15 +118,16 @@ func colored(c myui.Color) bool {
 // ink is the color of text on top of c: the window's background or its text,
 // whichever reads better there.
 func ink(c, bg, fg myui.Color) myui.Color {
-	if contrast(c, bg) >= contrast(c, fg) {
+	if Contrast(c, bg) >= Contrast(c, fg) {
 		return bg
 	}
 	return fg
 }
 
-// contrast is how far apart two colors are, as WCAG writes it: 1 for the same
-// color, 21 for black and white.
-func contrast(a, b myui.Color) float32 {
+// Contrast is how far apart two colors are, as WCAG writes it: 1 for the same
+// color, 21 for black and white. The window and the text it draws a mark on
+// ask the same question of a color, so they ask it here.
+func Contrast(a, b myui.Color) float64 {
 	la, lb := luminance(a), luminance(b)
 	if la < lb {
 		la, lb = lb, la
@@ -136,16 +136,16 @@ func contrast(a, b myui.Color) float32 {
 }
 
 // luminance is how bright c is, from 0 for black to 1 for white.
-func luminance(c myui.Color) float32 {
+func luminance(c myui.Color) float64 {
 	return 0.2126*linear(c.R) + 0.7152*linear(c.G) + 0.0722*linear(c.B)
 }
 
 // linear is one channel of a color as light adds up, rather than as it is
 // stored.
-func linear(v uint8) float32 {
-	f := float32(v) / 255
+func linear(v uint8) float64 {
+	f := float64(v) / 255
 	if f <= 0.04045 {
 		return f / 12.92
 	}
-	return float32(math.Pow(float64((f+0.055)/1.055), 2.4))
+	return math.Pow((f+0.055)/1.055, 2.4)
 }

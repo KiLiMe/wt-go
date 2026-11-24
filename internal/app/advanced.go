@@ -54,14 +54,16 @@ func (a *App) rediscover() {
 // start again stays open, so that the settings it lost are not a dead end.
 func (a *App) reset() {
 	if err := sys.RemoveSettings(); err != nil {
-		log.Printf("wt-go: %s", fault.Line(fault.SettingsGone, err.Error()))
-		a.note = locales.ErrDeleteSettings(fault.Line(fault.SettingsGone, err.Error()))
+		line := fault.Line(fault.SettingsGone, err.Error())
+		log.Printf("wt-go: %s", line)
+		a.note = locales.ErrDeleteSettings(line)
 		a.redraw()
 		return
 	}
 	if err := a.relaunch(); err != nil {
-		log.Printf("wt-go: %s", fault.Line(fault.Relaunch, err.Error()))
-		a.note = locales.ErrRelaunch(fault.Line(fault.Relaunch, err.Error()))
+		line := fault.Line(fault.Relaunch, err.Error())
+		log.Printf("wt-go: %s", line)
+		a.note = locales.ErrRelaunch(line)
 		a.redraw()
 		return
 	}
@@ -96,13 +98,15 @@ func (a *App) OpenSettingsFile() {
 		return
 	}
 	if err := a.ensureSettingsFile(); err != nil {
-		log.Printf("wt-go: %s", fault.Line(fault.SettingsWrite, err.Error()))
-		a.setNote(locales.ErrSettings(fault.Line(fault.SettingsWrite, err.Error())))
+		line := fault.Line(fault.SettingsWrite, err.Error())
+		log.Printf("wt-go: %s", line)
+		a.setNote(locales.ErrSettings(line))
 		return
 	}
 	if err := sys.OpenPath(path); err != nil {
-		log.Printf("wt-go: %s", fault.Line(fault.OpenFile, err.Error()))
-		a.setNote(locales.ErrOpenFile(fault.Line(fault.OpenFile, err.Error())))
+		line := fault.Line(fault.OpenFile, err.Error())
+		log.Printf("wt-go: %s", line)
+		a.setNote(locales.ErrOpenFile(line))
 		a.redraw()
 	}
 }
@@ -143,8 +147,9 @@ func (a *App) OpenProgramFolder() {
 // desktop has none.
 func (a *App) openFolder(dir string) {
 	if err := sys.OpenPath(dir); err != nil {
-		log.Printf("wt-go: %s", fault.Line(fault.OpenFolder, err.Error()))
-		a.note = locales.ErrOpenFolder(fault.Line(fault.OpenFolder, err.Error()))
+		line := fault.Line(fault.OpenFolder, err.Error())
+		log.Printf("wt-go: %s", line)
+		a.note = locales.ErrOpenFolder(line)
 	}
 	a.redraw()
 }

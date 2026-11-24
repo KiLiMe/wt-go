@@ -21,24 +21,7 @@ func (a *App) RecordKeybinding(action string) {
 // behind would keep running it, invisibly, on a key the page shows as free.
 func (a *App) SetKeybinding(action, key string) {
 	if key != "" {
-		out := make([]store.Keybinding, 0, len(a.settings.Keybindings)+1)
-		found := false
-		for _, kb := range a.settings.Keybindings {
-			if kb.Action != action {
-				out = append(out, kb)
-				continue
-			}
-			if !found {
-				// The first keybinding of the action keeps its place in the
-				// file, so that the list does not reorder as keys change.
-				out = append(out, store.Keybinding{Key: key, Action: action})
-				found = true
-			}
-		}
-		if !found {
-			out = append(out, store.Keybinding{Key: key, Action: action})
-		}
-		a.settings.Keybindings = out
+		a.withKeys(action, []store.Keybinding{{Key: key, Action: action}})
 	}
 	a.recording = ""
 	a.redraw()
@@ -47,13 +30,7 @@ func (a *App) SetKeybinding(action, key string) {
 // RemoveKeybinding drops the keybindings of an action, so that it runs on no
 // key at all.
 func (a *App) RemoveKeybinding(action string) {
-	out := a.settings.Keybindings[:0]
-	for _, kb := range a.settings.Keybindings {
-		if kb.Action != action {
-			out = append(out, kb)
-		}
-	}
-	a.settings.Keybindings = out
+	a.withKeys(action, nil)
 	a.recording = ""
 	a.redraw()
 }
@@ -62,31 +39,38 @@ func (a *App) RemoveKeybinding(action string) {
 // place of the first key it ran on: one row at a time, so that the rest of the
 // file, and where the action sat in it, stay as they are.
 func (a *App) ResetKeybinding(action string) {
-	rest := make([]store.Keybinding, 0, len(a.settings.Keybindings))
-	at := -1
-	for _, kb := range a.settings.Keybindings {
-		if kb.Action == action {
-			if at < 0 {
-				at = len(rest)
-			}
-			continue
-		}
-		rest = append(rest, kb)
-	}
-	if at < 0 {
-		at = len(rest)
-	}
-	out := make([]store.Keybinding, 0, len(rest)+1)
-	out = append(out, rest[:at]...)
+	var keys []store.Keybinding
 	for _, kb := range store.DefaultKeybindings() {
 		if kb.Action == action {
-			out = append(out, kb)
+			keys = append(keys, kb)
 		}
 	}
-	out = append(out, rest[at:]...)
-	a.settings.Keybindings = out
+	a.withKeys(action, keys)
 	a.recording = ""
 	a.redraw()
+}
+
+// withKeys rebuilds the list with keys in place of the ones action had, at the
+// place of the first: the list does not reorder as an action's keys change, so
+// the file a person reads stays where it was. An action bound nowhere takes its
+// keys at the end, being new to the list.
+func (a *App) withKeys(action string, keys []store.Keybinding) {
+	out := make([]store.Keybinding, 0, len(a.settings.Keybindings)+len(keys))
+	placed := false
+	for _, kb := range a.settings.Keybindings {
+		if kb.Action != action {
+			out = append(out, kb)
+			continue
+		}
+		if !placed {
+			out = append(out, keys...)
+			placed = true
+		}
+	}
+	if !placed {
+		out = append(out, keys...)
+	}
+	a.settings.Keybindings = out
 }
 
 // ToggleChangedKeys narrows the actions page to the actions the file binds on

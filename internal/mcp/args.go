@@ -2,7 +2,6 @@ package mcp
 
 import (
 	"encoding/json"
-	"fmt"
 	"math"
 )
 
@@ -38,12 +37,6 @@ func ArgInt(args map[string]any, key string, def, min, max int) int {
 	return int(v)
 }
 
-// ArgBool reads a boolean argument.
-func ArgBool(args map[string]any, key string) bool {
-	v, _ := args[key].(bool)
-	return v
-}
-
 // JSON renders v as indented JSON, the form the tools answer in.
 func JSON(v any) (string, error) {
 	b, err := json.MarshalIndent(v, "", "  ")
@@ -70,5 +63,3 @@ func ObjectSchema(props map[string]any, required []string) map[string]any {
 func Prop(typ, desc string) map[string]any {
 	return map[string]any{"type": typ, "description": desc}
 }
-
-var _ = fmt.Sprintf

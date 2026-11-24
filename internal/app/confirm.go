@@ -78,42 +78,33 @@ func (a *App) askPaste(term *terminal.Terminal, d transfer.Data) bool {
 // askCloseSettings asks whether to close the settings tab, which drops the
 // changes it holds, and closes it when the answer is yes.
 func (a *App) askCloseSettings(tab *pane.Tab) {
-	a.ask(ui.Confirm{
-		Title: locales.ConfirmCloseSettingsTitle(),
-		Text:  locales.ConfirmCloseSettingsText(),
-		Yes:   locales.Close(),
-	}, func() { a.closeTab(tab) }, nil)
+	a.askClose(locales.ConfirmCloseSettingsTitle(), locales.ConfirmCloseSettingsText(), func() { a.closeTab(tab) })
 }
 
 // askCloseTab asks whether to close a tab whose program still runs, and closes
 // it when the answer is yes. It says what still runs, which is a shell at its
 // prompt only when the settings ask about every tab.
 func (a *App) askCloseTab(tab *pane.Tab, act tabActivity) {
-	a.ask(ui.Confirm{
-		Title: locales.ConfirmCloseTabTitle(),
-		Text:  a.closeText(act, closeTabTexts),
-		Yes:   locales.Close(),
-	}, func() { a.closeTab(tab) }, nil)
+	a.askClose(locales.ConfirmCloseTabTitle(), a.closeText(act, closeTabTexts), func() { a.closeTab(tab) })
 }
 
 // askCloseOtherTabs asks whether to close the other tabs whose programs still
 // run, and closes them when the answer is yes.
 func (a *App) askCloseOtherTabs(keep *pane.Tab, act tabActivity) {
-	a.ask(ui.Confirm{
-		Title: locales.ConfirmCloseOthersTitle(),
-		Text:  a.closeText(act, closeOthersTexts),
-		Yes:   locales.Close(),
-	}, func() { a.closeOtherTabs(keep) }, nil)
+	a.askClose(locales.ConfirmCloseOthersTitle(), a.closeText(act, closeOthersTexts), func() { a.closeOtherTabs(keep) })
 }
 
 // askCloseWindow asks whether the window may close, which takes the tabs it
 // holds and the shells they run with it, and closes it when the answer is yes.
 func (a *App) askCloseWindow() {
-	a.ask(ui.Confirm{
-		Title: locales.ConfirmCloseWindowTitle(),
-		Text:  locales.ConfirmCloseWindowText(len(a.panes.Tabs)),
-		Yes:   locales.Close(),
-	}, a.closeWindow, nil)
+	a.askClose(locales.ConfirmCloseWindowTitle(), locales.ConfirmCloseWindowText(len(a.panes.Tabs)), a.closeWindow)
+}
+
+// askClose asks a closing question, and closes what it names when the answer is
+// yes: every one of them is asked the same way, and answered by the tab or the
+// window going.
+func (a *App) askClose(title, text string, do func()) {
+	a.ask(ui.Confirm{Title: title, Text: text, Yes: locales.Close()}, do, nil)
 }
 
 // closeTexts are what a closing question says for each of the three answers

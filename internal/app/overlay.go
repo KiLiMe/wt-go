@@ -110,13 +110,6 @@ func (a *App) closeOpen() {
 	}
 }
 
-// closeOverlays closes every overlay of the window, which is what going to
-// another view of it does: the settings tab is not a terminal, so a bar that
-// asks the terminal in front for text has nothing left to ask once it shows.
-func (a *App) closeOverlays() {
-	a.closeOpen()
-}
-
 // dismissed is whether the frame closed one of the overlays it was drawing,
 // which the dialog sets as the user dismisses it. The frame then drops what was
 // closed before anything acts, so that a dismissal alone does not open another
@@ -130,20 +123,12 @@ func (a *App) dismissed() bool {
 		a.tabsList != nil && !a.tabsList.Open
 }
 
-// dropClosed forgets the overlays the last frame closed.
+// dropClosed forgets the overlay the last frame closed. The overlays are
+// exclusive, so the one dismissal the frame can have made is the one closeOpen
+// drops.
 func (a *App) dropClosed() {
-	c := a.confirm
-	switch {
-	case a.renaming != nil && !a.renaming.Open:
-		a.renaming = nil
-	case c != nil && !c.Open:
-		a.confirm = nil
-	case a.about != nil && !a.about.Open:
-		a.about = nil
-	case a.palette != nil && !a.palette.Open:
-		a.palette = nil
-	case a.tabsList != nil && !a.tabsList.Open:
-		a.tabsList = nil
+	if a.dismissed() {
+		a.closeOpen()
 	}
 }
 

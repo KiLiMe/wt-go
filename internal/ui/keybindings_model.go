@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"slices"
 	"sort"
 
 	"wtgo/internal/action"
@@ -48,7 +49,7 @@ func pageKeys(k *PageKeybindings, all []store.Keybinding, st Settings) *PageKeyb
 	// it, and builds a new one only as the file changes, so the same slice
 	// holding the same keys is the file unchanged.
 	if k.groups != nil && k.only == st.OnlyChanged && k.expanded == st.KeysExpanded &&
-		sameKeybindings(k.all, all) {
+		slices.Equal(k.all, all) {
 		return k
 	}
 	*k = *newPageKeybindings(all, st)
@@ -81,21 +82,6 @@ func (k *PageKeybindings) keys(id string) []string {
 	}
 	k.of[id] = keys
 	return keys
-}
-
-// sameKeybindings reports whether two lists bind the same keys to the same
-// actions, in the same order: the length, then what they hold, since the page
-// hands the cache the list it already kept.
-func sameKeybindings(a, b []store.Keybinding) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 // keysOf are the keys the file binds an action on, in the order it lists them.
@@ -141,12 +127,7 @@ func sameKeys(a, b []string) bool {
 	y := append([]string(nil), b...)
 	sort.Strings(x)
 	sort.Strings(y)
-	for i := range x {
-		if x[i] != y[i] {
-			return false
-		}
-	}
-	return true
+	return slices.Equal(x, y)
 }
 
 // clashingKeys are the keys of the file that run more than one action, and how

@@ -3,7 +3,7 @@ package app
 import (
 	"strconv"
 	"strings"
-	"wtgo/internal/profile"
+
 	"wtgo/internal/store"
 	"wtgo/internal/ui"
 	"wtgo/locales"
@@ -20,11 +20,9 @@ func (a *App) AddProfile() {
 	a.settings.Profiles = append(a.settings.Profiles, p)
 	a.profileSearch = ""
 	a.settingsPage = ui.ProfilePage(p.ID)
-	a.editing, a.editingFrom = &p, p
 	// The page shows the arguments it holds, so a line left from the profile
 	// that was open before would become this profile's arguments on save.
-	a.editingArgs = ""
-	a.editingGlyph = ""
+	a.editProfile(p.ID)
 	a.redraw()
 }
 
@@ -57,20 +55,15 @@ func (a *App) RemoveProfile(id string) {
 		// is the only removal that holds: dropping it would put it back.
 		p.Hidden = true
 		a.upsertProfile(p)
-		a.settingsPage = ui.PageProfiles
-		a.editNone()
-		a.nextProfile(id)
-		a.recording = ""
-		a.redraw()
-		return
-	}
-	out := make([]store.Profile, 0, len(a.settings.Profiles))
-	for _, p := range a.settings.Profiles {
-		if p.ID != id {
-			out = append(out, p)
+	} else {
+		out := make([]store.Profile, 0, len(a.settings.Profiles))
+		for _, q := range a.settings.Profiles {
+			if q.ID != id {
+				out = append(out, q)
+			}
 		}
+		a.settings.Profiles = out
 	}
-	a.settings.Profiles = out
 	a.settingsPage = ui.PageProfiles
 	a.editNone()
 	a.nextProfile(id)
@@ -121,9 +114,7 @@ func (a *App) DuplicateProfile(id string) {
 	a.settings.Profiles = append(a.settings.Profiles, p)
 	a.profileSearch = ""
 	a.settingsPage = ui.ProfilePage(p.ID)
-	a.editing, a.editingFrom = &p, p
-	a.editingArgs = strings.Join(p.Args, "\n")
-	a.editingGlyph = profile.Glyph(p.Icon)
+	a.editProfile(p.ID)
 	a.redraw()
 }
 

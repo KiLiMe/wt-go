@@ -70,16 +70,6 @@ func (s *Set) Front() (*Tab, bool) {
 	return s.Tabs[s.Active], true
 }
 
-// Find is the tab that runs a profile.
-func (s *Set) Find(id string) (*Tab, bool) {
-	for _, t := range s.Tabs {
-		if t.ProfileID == id {
-			return t, true
-		}
-	}
-	return nil, false
-}
-
 // Index is where a tab is, -1 while it is not in the set.
 func (s *Set) Index(tab *Tab) int {
 	for i, t := range s.Tabs {

@@ -45,8 +45,8 @@ func profileInFront(st Settings) (string, bool) {
 	if id, ok := ProfileID(st.Page); ok && st.Profile != nil && st.Profile.ID == id {
 		return id, true
 	}
-	for _, p := range listedProfiles(st) {
-		return p.ID, true
+	if listed := listedProfiles(st); len(listed) > 0 {
+		return listed[0].ID, true
 	}
 	return "", false
 }
@@ -54,7 +54,7 @@ func profileInFront(st Settings) (string, bool) {
 // listedProfiles are the profiles the list shows: what the search keeps of the
 // profiles the settings hold, in the order of the file.
 func listedProfiles(st Settings) []Profile {
-	words := strings.ToLower(strings.TrimSpace(searchText(st.ProfileFilter)))
+	words := strings.ToLower(strings.TrimSpace(text(st.ProfileFilter)))
 	if words == "" {
 		return st.Profiles
 	}

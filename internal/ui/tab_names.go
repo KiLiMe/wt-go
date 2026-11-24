@@ -29,20 +29,6 @@ var nameMeasureCache = struct {
 	widths map[nameMeasure]float32
 }{widths: map[nameMeasure]float32{}}
 
-// forTest, called for its side effects, empties the caches this package keeps
-// across frames, so that a test draws what a window draws and sees nothing of
-// the frame before it. Those caches are kept by the frame a window builds it
-// view from, and a test builds its own views, so a cache that did not empty
-// would answer a test with the answer of another one.
-var forTest = func() {}
-
-// resetCaches empties every cache the package keeps across frames.
-func resetCaches() {
-	nameMeasureCache.Lock()
-	clear(nameMeasureCache.widths)
-	nameMeasureCache.Unlock()
-}
-
 // measuredName is how wide a tab draws its name: as wide as the name takes
 // in the theme's font, within the room a tab may take. Weight is the weight
 // the name is drawn in, so that a bold name is measured bold: a regular

@@ -473,25 +473,3 @@ func TestSchemesCacheReset(t *testing.T) {
 		t.Error("the rows emptied out of the cache are the answer still")
 	}
 }
-
-// TestSameSchemes covers telling one list of schemes from another: the length,
-// each name and each pair of colors count; the slice the window built is not
-// what is compared.
-func TestSameSchemes(t *testing.T) {
-	paper := Scheme{Name: "Paper", Bg: myui.RGB(1, 2, 3)}
-	for _, tc := range []struct {
-		name string
-		a, b []Scheme
-		want bool
-	}{
-		{"none", nil, nil, true},
-		{"one", []Scheme{paper}, []Scheme{paper}, true},
-		{"another name", []Scheme{paper}, []Scheme{{Name: "Campbell", Bg: paper.Bg}}, false},
-		{"another color", []Scheme{paper}, []Scheme{{Name: "Paper", Bg: myui.RGB(9, 9, 9)}}, false},
-		{"one more", []Scheme{paper}, []Scheme{paper, {Name: "Campbell"}}, false},
-	} {
-		if got := sameSchemes(tc.a, tc.b); got != tc.want {
-			t.Errorf("%s: sameSchemes = %v, want %v", tc.name, got, tc.want)
-		}
-	}
-}

@@ -12,6 +12,14 @@ import (
 	"wtgo/locales"
 )
 
+// LineHeightMin and LineHeightMax are the line heights the field offers and the
+// preview draws with: a line of a terminal is drawn at a multiple of the font
+// size rather than at a size of its own, so its bounds are its own.
+const (
+	LineHeightMin float32 = 0.8
+	LineHeightMax float32 = 2.4
+)
+
 // slicesContain reports whether one of the names is the one, compared without
 // case: a family name is a name, and "monospace" is the same word in any case.
 func slicesContain(names []string, name string) bool {

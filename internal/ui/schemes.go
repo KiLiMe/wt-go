@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"slices"
 	"strings"
 	"sync"
 
@@ -145,12 +146,7 @@ func schemeSwatch(c *myui.Context, bg, fg myui.Color, size float32) {
 }
 
 // filter is what the schemes are searched for.
-func filter(st Settings) string {
-	if st.Filter == nil {
-		return ""
-	}
-	return *st.Filter
-}
+func filter(st Settings) string { return text(st.Filter) }
 
 // schemeRow is one scheme in the list: its colors and its name, chosen by a
 // click, and for a scheme the settings write the button that removes it --
@@ -248,7 +244,7 @@ func searchSchemes(cache *SchemesCache, all []Scheme, words string) []Scheme {
 	}
 	cache.Lock()
 	defer cache.Unlock()
-	if cache.Rows != nil && cache.Key == words && sameSchemes(cache.All, all) {
+	if cache.Rows != nil && cache.Key == words && slices.Equal(cache.All, all) {
 		return cache.Rows
 	}
 	// search finds at least an empty list, and a nil one would stand for a
@@ -264,20 +260,4 @@ func (s *SchemesCache) reset() {
 	defer s.Unlock()
 	s.All, s.Key, s.Rows = nil, "", nil
 	s.names, s.named = nil, nil
-}
-
-// sameSchemes reports whether two lists name the same schemes, in the same
-// order, each written or found as the other says. The page is handed the list
-// the window built once for the settings, so its length and its names are what
-// tell a rebuilt list apart from the one the cache kept.
-func sameSchemes(a, b []Scheme) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }

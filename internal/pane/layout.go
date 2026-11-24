@@ -81,13 +81,20 @@ func (t *Tab) Auto(r layout.Rect) layout.Dir {
 // there is one: of the panes that way, the one sharing the most room with it
 // across the line between them, and then the nearest.
 func (t *Tab) Move(dir Direction, r layout.Rect) bool {
-	from, ok := t.room(r)
+	panes := t.Layout(r).Panes
+	var from layout.Rect
+	var ok bool
+	for _, p := range panes {
+		if p.Node == t.Focus && t.Focus.Pane() {
+			from, ok = p.Rect, true
+		}
+	}
 	if !ok {
 		return false
 	}
 	var best *Node
 	var bestOverlap, bestGap float32
-	for _, p := range t.Layout(r).Panes {
+	for _, p := range panes {
 		if p.Node == t.Focus {
 			continue
 		}

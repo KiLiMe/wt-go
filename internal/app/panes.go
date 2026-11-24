@@ -1,8 +1,10 @@
 package app
 
 import (
-	"github.com/egoist/mygo/plugins/terminal"
 	"log"
+
+	"github.com/egoist/mygo/plugins/terminal"
+
 	"wtgo/internal/fault"
 	"wtgo/internal/layout"
 	"wtgo/internal/pane"

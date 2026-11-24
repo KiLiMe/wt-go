@@ -103,11 +103,6 @@ func whole(step float32) float64 {
 	return math.Round(float64(step)*places) / places
 }
 
-// ratio is a control that picks a number from zero to one, in steps.
-func ratio(c *myui.Context, value *float64, lo, hi, step float64) myui.Element {
-	return myui.NumberInput(c, value, lo, hi, step)
-}
-
 // colorField is a field that holds a color, and the color it holds.
 func colorField(c *myui.Context, value *string) myui.Element {
 	t := c.Theme()

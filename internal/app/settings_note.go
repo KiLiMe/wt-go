@@ -44,14 +44,13 @@ func configError(data []byte, err error) string {
 }
 
 // setNote says what the settings page says, and redraws when it is something
-// new. It answers whether the note changed.
-func (a *App) setNote(note string) bool {
+// new.
+func (a *App) setNote(note string) {
 	if a.note == note {
-		return false
+		return
 	}
 	a.note = note
 	a.redraw()
-	return true
 }
 
 // forgetBadFile drops what the settings page says about a file that is not
@@ -59,14 +58,13 @@ func (a *App) setNote(note string) bool {
 // launch, so a file the reader deleted is not something to keep explaining.
 // The reason is the page's own, so nothing is shown while there is none to
 // drop, which is the first launch on a machine that has no file yet.
-func (a *App) forgetBadFile() bool {
+func (a *App) forgetBadFile() {
 	if a.configErr == "" && a.badData == nil {
-		return false
+		return
 	}
 	a.configErr, a.badData = "", nil
 	// The content the watcher remembers goes too, so that a file written back
 	// to what it held before it was deleted is taken as a new file.
 	a.file.forgetSeen()
 	a.redraw()
-	return true
 }

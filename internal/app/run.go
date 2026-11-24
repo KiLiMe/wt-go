@@ -2,13 +2,15 @@ package app
 
 import (
 	"fmt"
-	"github.com/egoist/mygo"
-	myui "github.com/egoist/mygo/ui"
 	"io"
 	"log"
 	"os"
 	"runtime/debug"
 	"strings"
+
+	"github.com/egoist/mygo"
+	myui "github.com/egoist/mygo/ui"
+
 	"wtgo/internal/cli"
 	"wtgo/internal/fault"
 	"wtgo/internal/i18n"

@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"math"
-
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/internal/theme"
@@ -30,29 +28,8 @@ var (
 // the blue and orange faces keep the white mark the rest of the window would
 // draw on them.
 func inkOn(c myui.Color) myui.Color {
-	if contrast(c, ink) > 1.8*contrast(c, paper) {
+	if theme.Contrast(c, ink) > 1.8*theme.Contrast(c, paper) {
 		return ink
 	}
 	return paper
-}
-
-// contrast is WCAG's contrast ratio of two colors, from 1 to 21.
-func contrast(a, b myui.Color) float64 {
-	la, lb := luminance(a), luminance(b)
-	if la < lb {
-		la, lb = lb, la
-	}
-	return (la + 0.05) / (lb + 0.05)
-}
-
-// luminance is WCAG's relative luminance of c, from 0 to 1.
-func luminance(c myui.Color) float64 {
-	channel := func(v uint8) float64 {
-		f := float64(v) / 255
-		if f <= 0.04045 {
-			return f / 12.92
-		}
-		return math.Pow((f+0.055)/1.055, 2.4)
-	}
-	return 0.2126*channel(c.R) + 0.7152*channel(c.G) + 0.0722*channel(c.B)
 }

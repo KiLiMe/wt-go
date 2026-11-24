@@ -27,7 +27,7 @@ func Terminal(s store.Settings) *terminal.Theme {
 // color, and a typo is no color rather than a panic.
 func Color(s string) (myui.Color, bool) {
 	s = strings.TrimSpace(s)
-	if len(s) < 4 || len(s) > 9 || s[0] != '#' {
+	if s == "" || s[0] != '#' {
 		return myui.Color{}, false
 	}
 	switch len(s) {

@@ -128,7 +128,7 @@ func TestUITheme(t *testing.T) {
 		if ui.Surface == ui.Background || ui.Border == ui.Background {
 			t.Errorf("%q draws its surfaces and borders in its background", name)
 		}
-		if c := contrast(ui.AccentText, ui.Accent); c < 3 {
+		if c := Contrast(ui.AccentText, ui.Accent); c < 3 {
 			t.Errorf("%q writes text on its accent at a contrast of %.1f", name, c)
 		}
 	}

@@ -37,11 +37,7 @@ type Divide struct {
 // back to what leaves it Min; when the room cannot hold two panes of Min, the
 // panes take half of it each.
 func Split(r Rect, dir Dir, share float32) Divide {
-	length := r.W
-	if dir == Stacked {
-		length = r.H
-	}
-	room := max(length-Divider, 0)
+	room := Room(r, dir)
 	first := room / 2
 	if room >= 2*Min {
 		first = min(max(share*room, Min), room-Min)

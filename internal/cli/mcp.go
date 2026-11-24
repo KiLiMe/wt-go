@@ -71,7 +71,7 @@ error is what the window would say instead of using the file.`,
 					r := Collect()
 					return mcp.JSON(map[string]any{
 						"settings": r.Settings,
-						"checks":   r.Checks[:2],
+						"checks":   r.fileChecks(),
 					})
 				},
 			},

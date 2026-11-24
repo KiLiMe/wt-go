@@ -1,43 +1,17 @@
 package sys
 
-import (
-	"errors"
-	"fmt"
-	"os"
-	"path/filepath"
-)
+// Boundary: window-state.json -- the window's place, size and state, beside the
+// settings, since the geometry a window was left in is a preference too.
 
-// WindowStatePath is where the window's place, size and state live: beside
-// the settings, since the geometry a window was left in is a preference too.
-func WindowStatePath() (string, error) {
-	dir, err := ConfigDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, "window-state.json"), nil
-}
+// windowStateName is where a window was left: beside settings.json, which is
+// the other thing a person edits and the window reads.
+const windowStateName = "window-state.json"
+
+// WindowStatePath is where the window's place, size and state live.
+func WindowStatePath() (string, error) { return configFile(windowStateName) }
 
 // ReadWindowState is window-state.json, and whether there was one.
-func ReadWindowState() ([]byte, bool, error) {
-	path, err := WindowStatePath()
-	if err != nil {
-		return nil, false, err
-	}
-	b, err := os.ReadFile(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil, false, nil
-	}
-	if err != nil {
-		return nil, false, fmt.Errorf("sys: %w", err)
-	}
-	return b, true, nil
-}
+func ReadWindowState() ([]byte, bool, error) { return readConfigFile(windowStateName) }
 
 // WriteWindowState makes the settings directory and writes window-state.json.
-func WriteWindowState(b []byte) error {
-	path, err := WindowStatePath()
-	if err != nil {
-		return err
-	}
-	return writeFileAtomic(path, b, 0o644)
-}
+func WriteWindowState(b []byte) error { return writeConfigFile(windowStateName, b) }

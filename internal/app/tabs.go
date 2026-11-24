@@ -2,6 +2,7 @@ package app
 
 import (
 	"github.com/egoist/mygo"
+
 	"wtgo/internal/pane"
 	"wtgo/internal/profile"
 )

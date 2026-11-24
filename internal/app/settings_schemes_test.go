@@ -2,6 +2,7 @@ package app
 
 import (
 	"testing"
+
 	"wtgo/internal/store"
 	"wtgo/internal/theme"
 	"wtgo/internal/ui"

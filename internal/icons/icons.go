@@ -22,11 +22,9 @@ import (
 //go:embed svg/*.svg
 var files embed.FS
 
-// Icon is one parsed icon: the name of the file it came from, and the SVG
-// that ui.Icon draws.
+// Icon is one parsed icon: the SVG that ui.Icon draws at the size it is given.
 type Icon struct {
-	Name string
-	SVG  *ui.SVG
+	SVG *ui.SVG
 }
 
 // load parses the icon name, whose file is in svg/. A missing file is a
@@ -36,7 +34,7 @@ func load(name string) *Icon {
 	if err != nil {
 		panic("icons: no svg/" + name + ".svg")
 	}
-	return &Icon{Name: name, SVG: ui.MustParseSVG(data)}
+	return &Icon{SVG: ui.MustParseSVG(data)}
 }
 
 // The icons the window draws, by what they mean.

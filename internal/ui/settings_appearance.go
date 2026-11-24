@@ -27,7 +27,7 @@ func appearancePage(c *myui.Context, st Settings, act Actions) {
 			choice(c, &s.Theme, options)
 		}, st.Reveal)
 		field(c, "backgroundOpacity", locales.BackgroundOpacity(), locales.BackgroundOpacityNote(), func() {
-			ratio(c, &s.BackgroundOpacity, 0.3, 1, 0.05)
+			myui.NumberInput(c, &s.BackgroundOpacity, 0.3, 1, 0.05)
 		}, st.Reveal)
 	})
 	section(c, locales.AppearanceType(), func() {
@@ -50,7 +50,7 @@ func appearancePage(c *myui.Context, st Settings, act Actions) {
 			measure(c, &s.Font.Size, 6, 48, 1)
 		}, st.Reveal)
 		field(c, "font.lineHeight", locales.LineHeight(), locales.LineHeightNote(), func() {
-			measure(c, &s.Font.LineHeight, 0.8, 2.4, 0.1)
+			measure(c, &s.Font.LineHeight, LineHeightMin, LineHeightMax, 0.1)
 		}, st.Reveal)
 		field(c, "padding", locales.Padding(), locales.PaddingNote(), func() {
 			myui.Row(c).AlignItems(myui.Center).Gap(8).Children(func() {

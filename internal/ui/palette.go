@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"slices"
+
 	myui "github.com/egoist/mygo/ui"
 
 	"wtgo/locales"
@@ -41,7 +43,6 @@ type Palette struct {
 	matched []Command
 	filter  string
 	cmds    []Command
-	known   bool
 }
 
 // Command is one thing the palette offers.
@@ -155,32 +156,12 @@ func paletteRow(c *myui.Context, item Command, selected bool) myui.Element {
 // they are compared with what the answer was found among rather than sorted
 // again. A palette is drawn on the goroutine that draws its window.
 func (p *Palette) matchedCommands() []Command {
-	if p.known && p.filter == p.Filter && sameCommands(p.cmds, p.Commands) {
+	if p.matched != nil && p.filter == p.Filter && slices.Equal(p.cmds, p.Commands) {
 		return p.matched
 	}
 	items := Match(p.Filter, p.Commands)
-	if items == nil {
-		// nil stands for an answer never found, and the next frame still
-		// finds it here.
-		items = []Command{}
-	}
 	p.matched = items
 	p.filter = p.Filter
 	p.cmds = append(p.cmds[:0], p.Commands...)
-	p.known = true
 	return items
-}
-
-// sameCommands reports whether two lists offer the same commands, in the same
-// order.
-func sameCommands(a, b []Command) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }

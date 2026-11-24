@@ -2,6 +2,7 @@ package app
 
 import (
 	"strings"
+
 	"wtgo/internal/profile"
 	"wtgo/internal/store"
 	"wtgo/internal/ui"
@@ -61,12 +62,13 @@ func (a *App) SelectSettingsPage(page string) {
 // openFirstProfile opens the first profile the page lists, which is what the
 // profiles page shows when it opens with none in front.
 func (a *App) openFirstProfile() {
-	for _, p := range fileProfiles(a.settings) {
-		a.editProfile(p.ID)
-		if a.editing != nil {
-			a.settingsPage = ui.ProfilePage(p.ID)
-		}
+	first := fileProfiles(a.settings)
+	if len(first) == 0 {
 		return
+	}
+	a.editProfile(first[0].ID)
+	if a.editing != nil {
+		a.settingsPage = ui.ProfilePage(first[0].ID)
 	}
 }
 
