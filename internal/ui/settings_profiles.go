@@ -213,13 +213,23 @@ func profilePage(c *myui.Context, st Settings, act Actions, id string) {
 	})
 }
 
+// iconChip is the square a mark of a profile is picked in, and iconMark the
+// mark in it: the mark is the size a tab draws it at, and the square around it
+// is as tall as the box of a character beside it.
+const (
+	iconChip = 30
+	iconMark = 18
+)
+
 // iconField is the mark of the profile the page edits: the built-in shapes,
 // the automatic one first, and a box for one character of the person's own.
 //
-// The squares are drawn at the size a tab has, so that the page shows what the
+// The shapes are drawn at the size a tab has, so that the page shows what the
 // strip will show: a preview at the size of the icon's own file would promise
-// detail that 16 DIP has no room for. A preset paints its own face, which is
-// why the color beside it only holds for the other two kinds of mark.
+// detail that a mark of that size has no room for. A preset paints its own
+// face, which is why the color beside it only holds for the other two kinds of
+// mark. The squares around them are wider than the mark they hold, so that a
+// row of twelve is a row of targets rather than of small squares.
 func iconField(c *myui.Context, st Settings, act Actions, p *store.Profile) {
 	t := c.Theme()
 	glyph := ""
@@ -230,7 +240,7 @@ func iconField(c *myui.Context, st Settings, act Actions, p *store.Profile) {
 	// none of them is.
 	chosen := func(key string) bool { return glyph == "" && profile.IconKey(p.Icon) == key }
 	chip := func(key, label string, ic *icons.Icon, picture bool) {
-		el := myui.Box(c).Size(24, 24).Shrink(0).Radius(6).Center().
+		el := myui.Box(c).Size(iconChip, iconChip).Shrink(0).Radius(6).Center().
 			BorderWidth(1).BorderColor(t.Border).Cursor(myui.CursorPointer).
 			Label(label).Tooltip(label).OnClick(func() { act.SetProfileIcon(key) })
 		if chosen(key) {
@@ -241,10 +251,10 @@ func iconField(c *myui.Context, st Settings, act Actions, p *store.Profile) {
 				// A preset brings its own colors; Icon would flatten them
 				// into the text color, which is how a row of white squares
 				// shipped once (ADR-76).
-				myui.Image(c, ic.SVG).Size(16, 16)
+				myui.Image(c, ic.SVG).Size(iconMark, iconMark)
 				return
 			}
-			myui.Icon(c, ic.SVG).Size(16, 16).TextColor(t.TextMuted)
+			myui.Icon(c, ic.SVG).Size(iconMark, iconMark).TextColor(t.TextMuted)
 		})
 	}
 	// Wrapped, because twelve shapes and a box are wider than the column
