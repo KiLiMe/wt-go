@@ -513,5 +513,6 @@
       }
     }
   },
-  "mygo.appDescription": "Windows Terminal 风格的终端：多标签、分栏、profile 与配色方案"
+  "mygo.appDescription": "Windows Terminal 风格的终端：多标签、分栏、profile 与配色方案",
+  "mygo.appName": "wt-go 终端"
 }
