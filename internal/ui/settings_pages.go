@@ -46,7 +46,7 @@ func generalPage(c *myui.Context, st Settings, act Actions) {
 			choice(c, &s.Language, opts)
 		}, st.Reveal)
 		fieldBlock(c, "startDirectory", locales.StartDirectory(), locales.StartDirectoryNote(), func() {
-			myui.TextInput(c, &s.StartDirectory).Placeholder(store.DefaultHomeHint())
+			myui.TextInput(c, &s.StartDirectory).Placeholder(store.DefaultHomeHint()).Grow(1)
 		}, st.Reveal)
 	})
 	section(c, locales.GeneralWindow(), func() {

@@ -161,11 +161,11 @@ func profilePage(c *myui.Context, st Settings, act Actions, id string) {
 		}, st.Reveal)
 		if readonly {
 			fieldBlock(c, "command", locales.CommandLine(), locales.DiscoveredProfileNote(), func() {
-				myui.TextInput(c, &p.Command).ReadOnly(true)
+				myui.TextInput(c, &p.Command).ReadOnly(true).Grow(1)
 			}, st.Reveal)
 		} else {
 			fieldBlock(c, "command", locales.CommandLine(), locales.CommandLineNote(), func() {
-				myui.TextInput(c, &p.Command).Placeholder(store.DefaultShellHint())
+				myui.TextInput(c, &p.Command).Placeholder(store.DefaultShellHint()).Grow(1)
 			}, st.Reveal)
 			// Below the field rather than beside it: the note says what
 			// emptying the field does, and the hint says why the empty one a
@@ -177,10 +177,10 @@ func profilePage(c *myui.Context, st Settings, act Actions, id string) {
 			}
 		}
 		fieldBlock(c, "args", locales.Arguments(), locales.ArgumentsNote(), func() {
-			myui.TextArea(c, st.Args).Lines(2, 6)
+			myui.TextArea(c, st.Args).Lines(2, 6).Grow(1)
 		}, st.Reveal)
 		fieldBlock(c, "dir", locales.StartDirectory(), locales.ProfileStartNote(), func() {
-			myui.TextInput(c, &p.Dir).Placeholder(store.DefaultHomeHint())
+			myui.TextInput(c, &p.Dir).Placeholder(store.DefaultHomeHint()).Grow(1)
 		}, st.Reveal)
 		fieldBlock(c, "icon", locales.Icon(), locales.IconNote(), func() {
 			iconField(c, st, act, p)
