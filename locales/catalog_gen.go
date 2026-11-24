@@ -1646,11 +1646,11 @@ func (msgs Messages) LinksProgram() string {
 	return Catalog.Format(msgs.locale, "linksProgram", nil)
 }
 
-// LinksProgramNote says "Text the program itself marked as a link (OSC 8), to a file or a place in a web page. Nothing is guessed here: the pr…"
+// LinksProgramNote says "Text the program itself marked as a link, to a file or a place in a web page. Nothing is guessed here."
 // in the language the app shows.
 func LinksProgramNote() string { return In(i18n.Locale()).LinksProgramNote() }
 
-// LinksProgramNote says "Text the program itself marked as a link (OSC 8), to a file or a place in a web page. Nothing is guessed here: the pr…"
+// LinksProgramNote says "Text the program itself marked as a link, to a file or a place in a web page. Nothing is guessed here."
 // in the language of msgs.
 func (msgs Messages) LinksProgramNote() string {
 	return Catalog.Format(msgs.locale, "linksProgramNote", nil)
@@ -1666,11 +1666,11 @@ func (msgs Messages) LinksURL() string {
 	return Catalog.Format(msgs.locale, "linksURL", nil)
 }
 
-// LinksURLNote says "A URL the terminal finds in what a program printed (http://, ftp://, mailto:). A program rarely prints a URL it did n…"
+// LinksURLNote says "A URL the terminal finds in what a program printed, as http:// or mailto:. A program rarely prints a URL it did not m…"
 // in the language the app shows.
 func LinksURLNote() string { return In(i18n.Locale()).LinksURLNote() }
 
-// LinksURLNote says "A URL the terminal finds in what a program printed (http://, ftp://, mailto:). A program rarely prints a URL it did n…"
+// LinksURLNote says "A URL the terminal finds in what a program printed, as http:// or mailto:. A program rarely prints a URL it did not m…"
 // in the language of msgs.
 func (msgs Messages) LinksURLNote() string {
 	return Catalog.Format(msgs.locale, "linksURLNote", nil)
@@ -1706,11 +1706,11 @@ func (msgs Messages) LinksHover() string {
 	return Catalog.Format(msgs.locale, "linksHover", nil)
 }
 
-// LinksHoverNote says "Whether the pointer underlines a link and shows the hand as soon as it is over one, the way Windows Terminal does, or…"
+// LinksHoverNote says "Whether the pointer underlines a link and shows the hand as soon as it is over one, or only while Control is held. Ho…"
 // in the language the app shows.
 func LinksHoverNote() string { return In(i18n.Locale()).LinksHoverNote() }
 
-// LinksHoverNote says "Whether the pointer underlines a link and shows the hand as soon as it is over one, the way Windows Terminal does, or…"
+// LinksHoverNote says "Whether the pointer underlines a link and shows the hand as soon as it is over one, or only while Control is held. Ho…"
 // in the language of msgs.
 func (msgs Messages) LinksHoverNote() string {
 	return Catalog.Format(msgs.locale, "linksHoverNote", nil)
