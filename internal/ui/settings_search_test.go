@@ -179,6 +179,21 @@ func TestSettingsSearchKeepsWhatIsTyped(t *testing.T) {
 	}
 }
 
+// TestSettingsSearchTakesSeveralWords covers a search of more than one word:
+// every word has to be found, so that typing two words narrows the answer
+// instead of asking for a phrase no setting is called.
+func TestSettingsSearchTakesSeveralWords(t *testing.T) {
+	hits := searchSettingsIndex("窗口 置顶")
+	if len(hits) != 1 || hits[0].key != "alwaysOnTop" {
+		t.Fatalf("窗口 置顶 = %v, want the one setting that puts the window on top", hits)
+	}
+	// A word no setting shares with the other leaves nothing: a search of two
+	// words is both of them, not either.
+	if got := searchSettingsIndex("窗口 回滚"); len(got) != 0 {
+		t.Fatalf("窗口 回滚 = %v, want nothing", got)
+	}
+}
+
 func TestKeybindingSearchRevealsControl(t *testing.T) {
 	for _, tc := range []struct{ query, label, key string }{
 		{"hotkey", locales.KeySearch(), keySearchActions},

@@ -106,13 +106,18 @@ func settingsIndex() []settingHit {
 }
 
 // searchSettingsIndex is the settings that answer what is searched for: the
-// ones whose name starts with the word, then the ones whose name holds it,
-// then the ones a word about them names.
-func searchSettingsIndex(words string) []settingHit {
-	words = strings.ToLower(strings.TrimSpace(words))
-	if words == "" {
+// ones whose name is what was typed, then the ones whose name starts with it,
+// then the ones whose name holds it, then the ones a word about them names.
+// A search of several words is those searches together: every word has to be
+// found, in the name or in the words about it, so that "窗口 置顶" is the
+// setting that puts the window on top rather than nothing at all -- the words
+// about a setting are not always the phrase a person types.
+func searchSettingsIndex(query string) []settingHit {
+	parts := strings.Fields(strings.ToLower(query))
+	if len(parts) == 0 {
 		return nil
 	}
+	phrase := strings.Join(parts, " ")
 	type scored struct {
 		hit   settingHit
 		score int
@@ -122,14 +127,16 @@ func searchSettingsIndex(words string) []settingHit {
 		name := strings.ToLower(h.name)
 		score := -1
 		switch {
-		case name == words:
+		case name == phrase:
 			score = 0
-		case strings.HasPrefix(name, words):
+		case strings.HasPrefix(name, phrase):
 			score = 10
-		case strings.Contains(name, words):
+		case strings.Contains(name, phrase):
 			score = 20
-		case strings.Contains(" "+h.words+" ", words):
+		case strings.Contains(" "+h.words+" ", phrase):
 			score = 30
+		case len(parts) > 1 && holdsAll(name+" "+h.words, parts):
+			score = 40
 		}
 		if score < 0 {
 			continue
@@ -142,6 +149,16 @@ func searchSettingsIndex(words string) []settingHit {
 		out = append(out, h.hit)
 	}
 	return out
+}
+
+// holdsAll says whether the text holds every one of the words.
+func holdsAll(text string, words []string) bool {
+	for _, w := range words {
+		if !strings.Contains(text, w) {
+			return false
+		}
+	}
+	return true
 }
 
 // settingsHitRow is one setting of the column while the search is on: what it
