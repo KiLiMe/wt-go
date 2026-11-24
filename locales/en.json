@@ -88,6 +88,7 @@
   "underline": "Underline",
   "blink": "Blink",
   "language": "Language",
+  "languageNote": "Which language the window's text is in. Following the system uses the display language of Windows.",
   "systemLanguage": "System",
   "systemProfile": "Follow the device",
   "systemProfileOf": "Follow the device ({device})",

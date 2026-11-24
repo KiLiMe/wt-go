@@ -88,6 +88,7 @@
   "underline": "下划线",
   "blink": "闪烁",
   "language": "语言",
+  "languageNote": "窗口里的文字用哪种语言。跟随系统时用 Windows 的显示语言。",
   "systemLanguage": "跟随系统",
   "systemProfile": "跟随设备",
   "systemProfileOf": "跟随设备（{device}）",

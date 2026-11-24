@@ -714,6 +714,16 @@ func (msgs Messages) Language() string {
 	return Catalog.Format(msgs.locale, "language", nil)
 }
 
+// LanguageNote says "Which language the window's text is in. Following the system uses the display language of Windows."
+// in the language the app shows.
+func LanguageNote() string { return In(i18n.Locale()).LanguageNote() }
+
+// LanguageNote says "Which language the window's text is in. Following the system uses the display language of Windows."
+// in the language of msgs.
+func (msgs Messages) LanguageNote() string {
+	return Catalog.Format(msgs.locale, "languageNote", nil)
+}
+
 // SystemLanguage says "System"
 // in the language the app shows.
 func SystemLanguage() string { return In(i18n.Locale()).SystemLanguage() }

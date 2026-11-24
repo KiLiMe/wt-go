@@ -36,7 +36,7 @@ func generalPage(c *myui.Context, st Settings, act Actions) {
 				act.SetDefaultProfile(picked)
 			}
 		}, st.Reveal)
-		field(c, "language", locales.Language(), "", func() {
+		field(c, "language", locales.Language(), locales.LanguageNote(), func() {
 			langs := i18n.Languages()
 			opts := make([]option, 0, len(langs)+1)
 			opts = append(opts, option{"", locales.SystemLanguage()})
