@@ -38,9 +38,11 @@ func advancedPage(c *myui.Context, st Settings, act Actions) {
 			}, st.Reveal)
 	})
 	// Last, and in the danger color: the row that starts over is the one a
-	// person comes to by mistake.
+	// person comes to by mistake. Its button sits under the words rather than in
+	// the column the page's other buttons make, so that a click meant for a
+	// button that opens a folder does not land on the one that deletes the file.
 	dangerSection(c, locales.Reset(), func() {
-		field(c, "reset", locales.DeleteSettings(),
+		fieldBlock(c, "reset", locales.DeleteSettings(),
 			locales.DeleteSettingsNote(),
 			func() {
 				myui.Button(c, locales.DeleteAndRestart()).
