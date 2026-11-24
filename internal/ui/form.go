@@ -47,10 +47,13 @@ func fieldRow(c *myui.Context, key, title, description string, control func(), b
 		})
 	} else {
 		// The words take the room the control leaves, so that the controls of a
-		// page line up on the right edge however wide they are.
+		// page line up on the right edge however wide they are. A window too
+		// narrow for both puts the control under the words, which is what
+		// fieldBlock does by hand: the row wraps before the words become a
+		// column a word wide.
 		cell.Padding(14, 16).Children(func() {
-			myui.Row(c).Gap(24).AlignItems(myui.Center).Children(func() {
-				myui.Column(c).Grow(1).MinWidth(0).Children(words)
+			myui.Row(c).Gap(24).Wrap().AlignItems(myui.Center).Children(func() {
+				myui.Column(c).Grow(1).MinWidth(fieldWordsMin).Children(words)
 				myui.Row(c).Shrink(0).Justify(myui.End).AlignItems(myui.Center).Children(control)
 			})
 		})
@@ -64,6 +67,11 @@ func fieldRow(c *myui.Context, key, title, description string, control func(), b
 // controlWidth is as wide as the control of a field grows: past it the words
 // beside it would be a line a word long.
 const controlWidth = 320
+
+// fieldWordsMin is the narrowest the words of a field get before its control
+// goes under them: a measure a line of text can be read in, rather than the
+// column a word wide that a control of six boxes leaves of a narrow window.
+const fieldWordsMin = 240
 
 // section is a heading and the fields under it, which the page draws as one
 // card: a surface between the window's own and its controls', so that a
