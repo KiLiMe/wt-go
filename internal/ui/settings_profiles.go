@@ -16,12 +16,14 @@ func profilesPage(c *myui.Context, st Settings, act Actions) {
 	t := c.Theme()
 	// The list takes the height of the fields beside it and scrolls with the
 	// page when it is longer than they are: a page of twenty profiles grows
-	// rather than crops, which is what a height of the card's own did.
-	myui.Row(c).Grow(1).MinHeight(0).AlignItems(myui.Stretch).Gap(24).Children(func() {
+	// rather than crops, which is what a height of the card's own did. A
+	// narrow window puts the fields under the list instead of squeezing them:
+	// a field narrower than the control in it draws past the card.
+	myui.Row(c).Grow(1).MinHeight(0).AlignItems(myui.Stretch).Gap(24).Wrap().Children(func() {
 		myui.Column(c).Width(profileListWidth).Shrink(0).Children(func() {
 			profileList(c, st, act)
 		})
-		myui.Column(c).Grow(1).MinWidth(0).Children(func() {
+		myui.Column(c).Grow(1).MinWidth(profileFieldsMin).Children(func() {
 			if id, ok := profileInFront(st); ok {
 				profilePage(c, st, act, id)
 				return
@@ -37,6 +39,11 @@ func profilesPage(c *myui.Context, st Settings, act Actions) {
 // profileListWidth is how wide the list of profiles is: enough for a name and
 // the badge beside it, and no more, so that the fields keep the page.
 const profileListWidth = 250
+
+// profileFieldsMin is how narrow the fields may get before they take a line of
+// their own under the list: the widest control they hold is 320, and a column
+// narrower than that draws it past the card.
+const profileFieldsMin = 320
 
 // profileInFront is the profile the fields on the right edit. A page that
 // names none, which is what a window shows while it has none open, shows the

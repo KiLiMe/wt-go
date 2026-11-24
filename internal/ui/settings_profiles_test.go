@@ -246,6 +246,32 @@ func TestProfileReset(t *testing.T) {
 // TestProfileIcon covers the field that picks the mark of a profile: a square
 // is one of the built-in shapes, and the first square is the mark the command
 // asks for, which is the file's "".
+// TestProfilesPageFitsANarrowWindow covers the two halves of the profiles
+// page: the list of profiles and the fields of the one in front sit beside each
+// other while the fields have room, and the fields take a line of their own
+// under the list when they do not, rather than be squeezed narrower than the
+// controls in them, which draws them past the card.
+func TestProfilesPageFitsANarrowWindow(t *testing.T) {
+	for _, width := range []int{900, 620, 480} {
+		s := store.Default()
+		p := store.Profile{ID: "p", Name: "A name long enough to be cut", Command: "pwsh.exe"}
+		args := ""
+		tt := myui.NewTester(func(c *myui.Context) {
+			SettingsTab(c, Settings{Draft: &s, Page: ProfilePage(p.ID), Profile: &p, Args: &args}, &navActions{})
+		}, width, 900)
+		tt.Frame()
+		for _, a := range tt.AccessAll() {
+			if a.Role != myui.RoleTextField {
+				continue
+			}
+			if a.Bounds.X+a.Bounds.W > float32(width) {
+				t.Fatalf("at %v the field %q is drawn to %v, past the window",
+					width, a.Name, a.Bounds.X+a.Bounds.W)
+			}
+		}
+	}
+}
+
 func TestProfileIcon(t *testing.T) {
 	s := store.Default()
 	p := store.Profile{ID: "p", Name: "P", Command: "pwsh.exe", Discovered: true}
