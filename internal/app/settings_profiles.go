@@ -1,13 +1,16 @@
 package app
 
 import (
-	"strconv"
 	"strings"
 	"wtgo/internal/profile"
 	"wtgo/internal/store"
 	"wtgo/internal/ui"
-	"wtgo/locales"
 )
+
+// Boundary: the profiles of the settings page -- the list the page shows, the
+// profile it edits, and the copy of that profile the draft holds. Adding,
+// removing and marking one is settings_profile_edit.go; putting one back the
+// way this machine has it is settings_profile_reset.go.
 
 // fileProfiles are the profiles the file holds, as the settings list them: the
 // hidden ones too, since the page edits hiding and is where it is undone.
@@ -108,17 +111,6 @@ func (a *App) editNone() {
 	a.editing, a.editingFrom, a.editingArgs, a.editingGlyph = nil, store.Profile{}, "", ""
 }
 
-// splitArgs is the arguments a text holds, one on each line.
-func splitArgs(text string) []string {
-	var args []string
-	for _, line := range strings.Split(text, "\n") {
-		if line = strings.TrimSpace(line); line != "" {
-			args = append(args, line)
-		}
-	}
-	return args
-}
-
 // profileByID is the profile the file holds by an id.
 func profileByID(s store.Settings, id string) (store.Profile, bool) {
 	for _, p := range s.Profiles {
@@ -127,71 +119,6 @@ func profileByID(s store.Settings, id string) (store.Profile, bool) {
 		}
 	}
 	return store.Profile{}, false
-}
-
-// upsertProfile writes a profile into the file's list: where it is, or at the
-// end.
-func (a *App) upsertProfile(p store.Profile) {
-	for i, q := range a.settings.Profiles {
-		if q.ID == p.ID {
-			a.settings.Profiles[i] = p
-			return
-		}
-	}
-	a.settings.Profiles = append(a.settings.Profiles, p)
-}
-
-// AddProfile adds a profile to the file's list, opens it in the fields of the
-// profiles page, and keeps the search box of that page from hiding it.
-func (a *App) AddProfile() {
-	p := store.Profile{ID: a.newProfileID(), Name: locales.NewProfile()}
-	a.settings.Profiles = append(a.settings.Profiles, p)
-	a.profileSearch = ""
-	a.settingsPage = ui.ProfilePage(p.ID)
-	a.editing, a.editingFrom = &p, p
-	// The page shows the arguments it holds, so a line left from the profile
-	// that was open before would become this profile's arguments on save.
-	a.editingArgs = ""
-	a.editingGlyph = ""
-	a.redraw()
-}
-
-// newProfileID is an id no profile the file holds has.
-func (a *App) newProfileID() string {
-	for n := 1; ; n++ {
-		id := "profile-" + strconv.Itoa(n)
-		if _, ok := profileByID(a.settings, id); !ok {
-			return id
-		}
-	}
-}
-
-// RemoveProfile drops a profile from the file's list.
-func (a *App) RemoveProfile(id string) {
-	if p, ok := profileByID(a.settings, id); ok && p.Discovered {
-		// The window finds this shell again on the next start, so hiding it
-		// is the only removal that holds: dropping it would put it back.
-		p.Hidden = true
-		a.upsertProfile(p)
-		a.settingsPage = ui.PageProfiles
-		a.editNone()
-		a.nextProfile(id)
-		a.recording = ""
-		a.redraw()
-		return
-	}
-	out := make([]store.Profile, 0, len(a.settings.Profiles))
-	for _, p := range a.settings.Profiles {
-		if p.ID != id {
-			out = append(out, p)
-		}
-	}
-	a.settings.Profiles = out
-	a.settingsPage = ui.PageProfiles
-	a.editNone()
-	a.nextProfile(id)
-	a.recording = ""
-	a.redraw()
 }
 
 // nextProfile opens the profile the list now starts at, once the one that was
@@ -204,99 +131,4 @@ func (a *App) nextProfile(gone string) {
 		a.editNone()
 		a.settingsPage = ui.PageProfiles
 	}
-}
-
-// HideProfile hides the profile with an id, through the draft the page edits:
-// the list goes on listing it, marked, and saving writes it to the file.
-func (a *App) HideProfile(id string) {
-	p, ok := profileByID(a.settings, id)
-	if !ok || p.Hidden {
-		return
-	}
-	p.Hidden = true
-	a.upsertProfile(p)
-	if a.editing != nil && a.editing.ID == id {
-		a.editing.Hidden = true
-	}
-	a.redraw()
-}
-
-// ResetProfile puts the profile with an id back the way this machine has it:
-// the probe gives it the program and the arguments of the shell it is, and the
-// built-in table gives it back the name and the dot. A profile the machine no
-// longer has the program for is hidden, since that is all the menu can hold,
-// and a profile that is hidden comes back, since the one thing a reset can say
-// about a program it found is that it is there.
-func (a *App) ResetProfile(id string) {
-	p, ok := profileByID(a.settings, id)
-	if !ok || !p.Discovered {
-		return
-	}
-	f, present := foundByID(found(), id)
-	a.resetProfile(p, f, present)
-}
-
-// resetProfile is the reset a probe of this machine has already answered.
-func (a *App) resetProfile(p store.Profile, f profile.Found, present bool) {
-	if !present {
-		p.Hidden = true
-		a.upsertProfile(p)
-		if a.editing != nil && a.editing.ID == p.ID {
-			a.editing.Hidden = true
-		}
-		a.setNote(locales.ResetProfileGone(p.Name))
-		return
-	}
-	p = profile.Reset(p, f)
-	a.upsertProfile(p)
-	if a.editing != nil && a.editing.ID == p.ID {
-		*a.editing = p
-		a.editingArgs = strings.Join(p.Args, "\n")
-		a.editingGlyph = profile.Glyph(p.Icon)
-	}
-	a.setNote(locales.ResetProfileDone(p.Name))
-}
-
-// foundByID is the shell a probe found, by the id a profile has.
-func foundByID(shells []profile.Found, id string) (profile.Found, bool) {
-	for _, f := range shells {
-		if f.ID == id {
-			return f, true
-		}
-	}
-	return profile.Found{}, false
-}
-
-// DuplicateProfile copies a profile, and shows the copy's page.
-func (a *App) DuplicateProfile(id string) {
-	p, ok := profileByID(a.settings, id)
-	if !ok {
-		return
-	}
-	p.ID = a.newProfileID()
-	p.Name = p.Name + " " + locales.CopySuffix()
-	p.Discovered = false
-	// Args is a slice, so a copy that kept it would share its lines with the
-	// profile it copies, and the page's edits would write both.
-	p.Args = append([]string(nil), p.Args...)
-	a.settings.Profiles = append(a.settings.Profiles, p)
-	a.profileSearch = ""
-	a.settingsPage = ui.ProfilePage(p.ID)
-	a.editing, a.editingFrom = &p, p
-	a.editingArgs = strings.Join(p.Args, "\n")
-	a.editingGlyph = profile.Glyph(p.Icon)
-	a.redraw()
-}
-
-// SetProfileIcon gives the profile the page edits a mark: a preset, or "" for
-// the one its command asks for. The character box is cleared, because the
-// marks of a profile are one setting, and a shape and a character cannot both
-// be the one it holds.
-func (a *App) SetProfileIcon(mark string) {
-	if a.editing == nil {
-		return
-	}
-	a.editing.Icon = mark
-	a.editingGlyph = ""
-	a.redraw()
 }

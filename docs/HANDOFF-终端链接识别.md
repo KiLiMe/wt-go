@@ -20,7 +20,7 @@
 | --- | --- |
 | 插件来源 | `go.mod` 里 `replace github.com/egoist/mygo => github.com/KiLiMe/mygo v0.9.1-0.20261116134437-f8b821f95ae1` |
 | 模块缓存路径 | `C:\Users\mk\go\pkg\mod\github.com\!ki!li!me\mygo@v0.9.1-0.20261116134437-f8b821f95ae1\` |
-| 本项目侧 | `internal/app/links.go`、`internal/app/proc.go:45`、`internal/app/apply.go:123` |
+| 本项目侧 | `internal/app/links.go`、`internal/app/proc.go:39`、`internal/app/apply.go:123` |
 | WT 对照源码副本 | `tmp_wt_src\`（main 分支 raw 下载，可删；重新拉取见 §5 末尾） |
 
 插件关键文件：`plugins/terminal/links.go`（纯函数：正则与判定）、`plugins/terminal/view.go`（命中与手势）、
@@ -89,10 +89,11 @@
 | `pathWithoutPlace(path)` | 93 | 反复剥 `:line(:col)`；`i <= 1` 保护盘符 |
 | `allDigits` | 105 | 位置必须是数字串 |
 
-注入点：`internal/app/proc.go:45`
+注入点：`internal/app/proc.go:39`
 `opts.OpenLink = func(link string) bool { return a.openLink(link, linkDir(term, opts.Dir)) }`
 
-开关：`settings.json` 的 `links.open`（`internal/store/settings.go:124-127`、`:151-153`、默认值 `:248`），
+开关：`settings.json` 的 `links.open`（`internal/store/settings.go:110`，`Links` 结构体见 `:105`，
+每个 profile 的 `links` 覆盖见 `:75`，默认值 `internal/store/defaults.go:71`），
 改动时 `internal/app/apply.go:71` 比较、`:123` 对每个终端重放。用户文档：`docs/配置参考.md:88`。
 
 **已知副作用**（测试里已明确接受）：`pathWithoutPlace("12:30") == "12"`（`internal/app/links_test.go` 的
