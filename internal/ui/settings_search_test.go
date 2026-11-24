@@ -12,13 +12,22 @@ import (
 // search changes, so the page beside it is the one that has nothing to say.
 func settingsSearched(t *testing.T, search *string) (*myui.Tester, *navActions) {
 	t.Helper()
+	tt, act, _ := settingsSearchedPick(t, search)
+	return tt, act
+}
+
+// settingsSearchedPick is settingsSearched with the row of what the search
+// found that the arrows are on.
+func settingsSearchedPick(t *testing.T, search *string) (*myui.Tester, *navActions, *int) {
+	t.Helper()
 	s := store.Default()
 	act := &navActions{}
+	pick := 0
 	tt := myui.NewTester(func(c *myui.Context) {
-		SettingsTab(c, Settings{Draft: &s, Page: PageGeneral, Search: search}, act)
+		SettingsTab(c, Settings{Draft: &s, Page: PageGeneral, Search: search, Pick: &pick}, act)
 	}, 900, 700)
 	tt.Frame()
-	return tt, act
+	return tt, act, &pick
 }
 
 // TestSettingsSearchFindsTheFieldOfAPage covers the box over the column of
@@ -191,6 +200,62 @@ func TestSettingsSearchTakesSeveralWords(t *testing.T) {
 	// words is both of them, not either.
 	if got := searchSettingsIndex("窗口 回滚"); len(got) != 0 {
 		t.Fatalf("窗口 回滚 = %v, want nothing", got)
+	}
+}
+
+// TestSettingsSearchWalksWhatItFound covers the keys the box takes before the
+// field does: the arrows walk what the search found and Enter opens the row
+// they are on, so that typing the name of a setting and pressing Enter is a way
+// to the setting rather than to the top of a page.
+func TestSettingsSearchWalksWhatItFound(t *testing.T) {
+	search := "link"
+	tt, act, pick := settingsSearchedPick(t, &search)
+	box, ok := tt.AccessByRole(myui.RoleTextField, "")
+	if !ok {
+		t.Fatalf("the column has no search box: %q", tt.Texts())
+	}
+	x, y := box.Bounds.X+box.Bounds.W/2, box.Bounds.Y+box.Bounds.H/2
+	tt.Press(x, y)
+	tt.Release(x, y)
+	tt.Frame()
+
+	hits := searchSettingsIndex("link")
+	if len(hits) < 3 {
+		t.Fatalf("link found %d settings, want three to walk", len(hits))
+	}
+	// Enter opens the row the arrows start on, which is the first of them.
+	tt.Key(0, myui.KeyEnter)
+	tt.Frame()
+	if act.page != hits[0].page || act.key != hits[0].key {
+		t.Fatalf("Enter opened %q/%q, want the first hit %q/%q",
+			act.page, act.key, hits[0].page, hits[0].key)
+	}
+	// Down walks the list, and Enter opens what the arrows came to.
+	tt.Key(0, myui.KeyDown)
+	tt.Key(0, myui.KeyDown)
+	tt.Frame()
+	if *pick != 2 {
+		t.Fatalf("the arrows are on row %d after two Down, want 2", *pick)
+	}
+	tt.Key(0, myui.KeyEnter)
+	tt.Frame()
+	if act.page != hits[2].page || act.key != hits[2].key {
+		t.Fatalf("Enter opened %q/%q, want the third hit %q/%q",
+			act.page, act.key, hits[2].page, hits[2].key)
+	}
+	// Up stops at the top of the list rather than run off it.
+	for range 5 {
+		tt.Key(0, myui.KeyUp)
+	}
+	tt.Frame()
+	if *pick != 0 {
+		t.Fatalf("the arrows are on row %d after five Up, want the top", *pick)
+	}
+	// Escape empties the box, which lists the pages again.
+	tt.Key(0, myui.KeyEscape)
+	tt.Frame()
+	if search != "" {
+		t.Fatalf("search = %q after Escape, want the box empty", search)
 	}
 }
 

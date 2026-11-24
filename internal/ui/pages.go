@@ -104,6 +104,10 @@ type Settings struct {
 	// for. A page drawn without it lists the pages alone rather than give the
 	// box nowhere to write what is typed.
 	Search *string
+	// Pick is the row of what the search found that the arrows are on, which
+	// Enter opens: the window keeps it, so that it stays while the box has the
+	// keys and a click on a row leaves it where the click put it.
+	Pick *int
 	// Reveal is the setting the search found and how far the mark over it has
 	// faded, nil when the search found nothing to mark.
 	Reveal *Reveal

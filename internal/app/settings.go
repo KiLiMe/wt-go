@@ -47,6 +47,12 @@ func (a *App) settingsState() ui.Settings {
 		a.ensureFontFamilies()
 		fontDiagnostic = a.selectFont(a.settings.Font.Family, a.settings.Font.Size).note
 	}
+	// The settings the search found are another list once the words change, so
+	// the row the arrows are on goes back to the top of it.
+	if a.settingsSeen != a.settingsSearch {
+		a.settingsSeen = a.settingsSearch
+		a.settingsPick = 0
+	}
 	return ui.Settings{
 		Page:           a.settingsPage,
 		KeysCache:      &a.keysDerived,
@@ -67,6 +73,7 @@ func (a *App) settingsState() ui.Settings {
 		Profiles:       fileProfiles(a.settings),
 		ProfileFilter:  &a.profileSearch,
 		Search:         &a.settingsSearch,
+		Pick:           &a.settingsPick,
 		Reveal:         &a.reveal,
 		Known:          knownProfiles(a.profiles),
 		Device:         a.device.Name,

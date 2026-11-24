@@ -161,14 +161,65 @@ func holdsAll(text string, words []string) bool {
 	return true
 }
 
+// pickOf is the row the arrows are on, kept inside what the search found: the
+// words narrow the list as they are typed, and the row the arrows were on may
+// be past the end of it.
+func pickOf(pick *int, n int) int {
+	if pick == nil || n == 0 {
+		return 0
+	}
+	if *pick < 0 {
+		*pick = 0
+	}
+	if *pick >= n {
+		*pick = n - 1
+	}
+	return *pick
+}
+
+// searchKey is what the box over the column takes before the field does: the
+// arrows walk what the search found, and Enter opens the row they are on. A
+// person who types the name of a setting and presses Enter is asking for that
+// setting, and the row under the arrows says which one that is. The keys that
+// type text, and the ones that move the caret, go on to the field.
+func searchKey(k myui.TextKey, hits []settingHit, pick *int, act Actions) bool {
+	if pick == nil || len(hits) == 0 || k.Mods != 0 {
+		return false
+	}
+	switch k.Key {
+	case myui.KeyDown:
+		if *pick < len(hits)-1 {
+			*pick++
+		}
+	case myui.KeyUp:
+		if *pick > 0 {
+			*pick--
+		}
+	case myui.KeyEnter:
+		h := hits[pickOf(pick, len(hits))]
+		act.RevealSetting(h.page, h.key)
+	case myui.KeyEscape:
+		// The way out of a search is the way out of everything else, and it
+		// leaves the box empty for the next one.
+		if k.Text() == "" {
+			return false
+		}
+		k.SetText("")
+	default:
+		return false
+	}
+	return true
+}
+
 // settingsHitRow is one setting of the column while the search is on: what it
 // is called, the page that holds it under it, and a click that opens that page
-// and marks the setting on it.
-func settingsHitRow(c *myui.Context, h settingHit, act Actions) {
+// and marks the setting on it. chosen is the row the arrows are on, which Enter
+// opens, and it shows as the row under the pointer does.
+func settingsHitRow(c *myui.Context, h settingHit, chosen bool, act Actions) {
 	t := c.Theme()
 	el := myui.Column(c).Padding(4, 8).Gap(1).Radius(6).
 		Cursor(myui.CursorPointer).OnClick(func() { act.RevealSetting(h.page, h.key) })
-	if el.Hovered() {
+	if chosen || el.Hovered() {
 		el.Background(t.SurfaceHover)
 	}
 	el.Children(func() {
