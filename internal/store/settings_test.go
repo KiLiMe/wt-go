@@ -243,12 +243,18 @@ func TestMarshalLeavesTheDefaultFamiliesOut(t *testing.T) {
 }
 
 func TestRightClickCopyPastePriority(t *testing.T) {
-	old, err := Parse([]byte(`{"rightClick":"copyOrPaste"}`))
-	if err != nil || old.RightClickCopyPastePriority {
-		t.Fatalf("reading settings without the new key turned it on or failed: %t, %v", old.RightClickCopyPastePriority, err)
+	// Off in a file is a choice; a file that never heard of the key gets what
+	// the window starts with, which is on.
+	on, err := Parse([]byte(`{"rightClick":"copyOrPaste"}`))
+	if err != nil || !on.RightClickCopyPastePriority {
+		t.Fatalf("a file without the key did not take the default: %t, %v", on.RightClickCopyPastePriority, err)
 	}
-	old.RightClickCopyPastePriority = true
-	b, err := Marshal(old)
+	off, err := Parse([]byte(`{"rightClickCopyPastePriority":false}`))
+	if err != nil || off.RightClickCopyPastePriority {
+		t.Fatalf("a file that turned it off did not stay off: %t, %v", off.RightClickCopyPastePriority, err)
+	}
+	off.RightClickCopyPastePriority = true
+	b, err := Marshal(off)
 	if err != nil {
 		t.Fatal(err)
 	}
