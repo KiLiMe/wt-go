@@ -61,35 +61,27 @@ const readingWidth = 880
 // over it, and the pages, or what the search finds on them.
 func nav(c *myui.Context, st Settings, act Actions) myui.Element {
 	t := c.Theme()
-	// The search runs before the box is drawn, because the box takes the keys
-	// that walk what the search found: the words are what the field holds now,
-	// which is a frame ahead of what the app has seen.
-	words := searchSettings(st)
-	hits := searchSettingsIndex(words)
-	pick := pickOf(st.Pick, len(hits))
 	// The column is the page's own color, not a surface of its own: a band of
 	// Surface beside the page read as a second window, and the tab in front
 	// already carries the background down from the strip.
 	return myui.Column(c).Width(navWidth).Padding(12, 8, 12, 8).Gap(2).
 		BorderWidth(0, 1, 0, 0).BorderColor(cardLine(t)).Children(func() {
 		if st.Search != nil {
-			myui.TextInput(c, st.Search).Placeholder(locales.SearchSettings()).
-				OnTextKey(func(k myui.TextKey) bool {
-					return searchKey(k, hits, st.Pick, act)
-				})
+			myui.TextInput(c, st.Search).Placeholder(locales.SearchSettings())
 		}
 		// The column is the pages and nothing else: a profile is not a page of
 		// its own any more but a row of the profiles page, which lists them
 		// beside the one it edits, so that adding one never grows the column.
 		myui.Scroll(c).Grow(1).MinHeight(0).Children(func() {
 			myui.Column(c).Gap(2).Children(func() {
-				if words != "" {
+				if words := searchSettings(st); words != "" {
+					hits := searchSettingsIndex(words)
 					if len(hits) == 0 {
 						myui.Text(c, locales.NoMatchingSettings()).FontSize(12).
 							TextColor(t.TextMuted).Padding(4, 8).Wrap()
 					}
-					for i, h := range hits {
-						settingsHitRow(c, h, i == pick, act)
+					for _, h := range hits {
+						settingsHitRow(c, h, act)
 					}
 					return
 				}

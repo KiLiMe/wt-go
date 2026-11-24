@@ -169,12 +169,6 @@ type App struct {
 	actionSearch   string
 	profileSearch  string
 	settingsSearch string
-	// settingsPick is the row of what the search over the settings found that
-	// the arrows are on, and settingsSeen the words it was found for: the list
-	// is another list as the words change, so the arrows start again at the top
-	// of it.
-	settingsPick int
-	settingsSeen string
 	// reveal is the setting the search over the column of pages found, and how
 	// far the mark over it has faded: the page scrolls to the setting on the
 	// first frame of it, and the mark goes over the frames after.
