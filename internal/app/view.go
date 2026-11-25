@@ -94,7 +94,7 @@ func (a *App) settingsView(c *myui.Context) myui.Element {
 // bind gives the window the keys of the tabs, unless the settings wait for a
 // key of their own or an overlay has the keyboard. A key the keyboard repeats
 // while it stays held runs an action that steps through something, and is left
-// to the program for the rest: a held Ctrl+T makes one tab, not fifty.
+// to the program for the rest: a held Ctrl+Shift+T makes one tab, not fifty.
 func (a *App) bind(c *myui.Context) {
 	if a.recording != "" || a.top() != overlayNone {
 		return

@@ -37,16 +37,16 @@ func TestActionsPageToolbar(t *testing.T) {
 }
 
 // TestActionsPageShowsEveryKeyOfAnAction covers the cell of a row the file
-// binds twice, which tab.new is by default: both keys are in it, and the hint
-// holds them in full for the cell too narrow to show them.
+// binds twice: both keys are in it, and the hint holds them in full for the
+// cell too narrow to show them.
 func TestActionsPageShowsEveryKeyOfAnAction(t *testing.T) {
 	s := store.Default()
-	s.Keybindings = store.DefaultKeybindings()
+	s.Keybindings = append(store.DefaultKeybindings(), store.Keybinding{Key: "ctrl+shift+t", Action: action.TabNew})
 	tt := myui.NewTester(func(c *myui.Context) {
 		SettingsTab(c, Settings{Draft: &s, Page: PageActions}, &navActions{})
 	}, 900, 700)
 	tt.Frame()
-	if _, ok := tt.Find("ctrl+shift+t · ctrl+t"); !ok {
+	if _, ok := tt.Find("ctrl+shift+t · ctrl+shift+t"); !ok {
 		t.Fatal("the row of tab.new does not show both of its keys")
 	}
 }
@@ -64,9 +64,11 @@ func TestActionsPageNamesOnlyRealClashes(t *testing.T) {
 	if _, ok := tt.Find(locales.KeysConflict()); ok {
 		t.Fatal("the page says a key runs two actions while every key runs one")
 	}
-	s.Keybindings = append(s.Keybindings, store.Keybinding{Key: "ctrl+t", Action: action.TabClose})
+	s.Keybindings = append(s.Keybindings,
+		store.Keybinding{Key: "ctrl+alt+y", Action: action.TabClose},
+		store.Keybinding{Key: "ctrl+alt+y", Action: action.TabNew})
 	tt.Frame()
 	if _, ok := tt.Find(locales.KeysConflict()); !ok {
-		t.Fatal("two actions on ctrl+t are not named as a clash")
+		t.Fatal("two actions on one key are not named as a clash")
 	}
 }

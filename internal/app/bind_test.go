@@ -8,7 +8,7 @@ import (
 )
 
 // TestHeldKeys covers which keys keep firing while they stay held: the ones
-// that step through the tabs and the panes, and no others. A held Ctrl+T
+// that step through the tabs and the panes, and no others. A held Ctrl+Shift+T
 // making a tab per repeat is what the terminal filled up with.
 func TestHeldKeys(t *testing.T) {
 	repeats := map[string]bool{}

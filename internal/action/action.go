@@ -80,19 +80,19 @@ type Action struct {
 	Keys []string
 	// Repeats says the action takes the key again and again while it stays
 	// held. Only the ones that step through something set it: a new tab per
-	// press is what a held Ctrl+T must not make, and a keyboard repeats in
-	// whatever time the system set.
+	// press is what a held Ctrl+Shift+T must not make, and a keyboard repeats
+	// in whatever time the system set.
 	Repeats bool
 }
 
 // fixed are the actions that are not numbered, in the order the settings list
 // them, and the keys they start on.
 var fixed = []Action{
-	{ID: TabNew, TitleKey: "newTab", GroupKey: GroupTab, Keys: []string{"ctrl+shift+t", "ctrl+t"}},
+	{ID: TabNew, TitleKey: "newTab", GroupKey: GroupTab, Keys: []string{"ctrl+shift+t"}},
 	{ID: TabNext, TitleKey: "nextTab", GroupKey: GroupTab, Keys: []string{"ctrl+tab"}, Repeats: true},
 	{ID: TabPrev, TitleKey: "previousTab", GroupKey: GroupTab, Keys: []string{"ctrl+shift+tab"}, Repeats: true},
 	{ID: TabDuplicate, TitleKey: "duplicateTab", GroupKey: GroupTab, Keys: []string{"ctrl+shift+d"}},
-	{ID: TabClose, TitleKey: "closeTab", GroupKey: GroupTab},
+	{ID: TabClose, TitleKey: "closeTab", GroupKey: GroupTab, Keys: []string{"ctrl+shift+q"}},
 
 	{ID: PaneSplitAuto, TitleKey: "splitPane", GroupKey: GroupPane, Keys: []string{"alt+shift+d"}},
 	{ID: PaneSplitRight, TitleKey: "splitRight", GroupKey: GroupPane, Keys: []string{"alt+shift+right"}},

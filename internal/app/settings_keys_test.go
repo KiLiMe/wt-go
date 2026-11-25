@@ -15,18 +15,18 @@ func TestSetKeybinding(t *testing.T) {
 	a, _ := settingsApp(t, store.Default())
 	n := len(a.settings.Keybindings)
 
-	a.RecordKeybinding(action.TabClose)
-	if a.recording != action.TabClose {
-		t.Fatalf("recording = %q, want %q", a.recording, action.TabClose)
+	a.RecordKeybinding(action.About)
+	if a.recording != action.About {
+		t.Fatalf("recording = %q, want %q", a.recording, action.About)
 	}
-	a.RecordKeybinding(action.TabClose)
+	a.RecordKeybinding(action.About)
 	if a.recording != "" {
 		t.Fatalf("recording = %q, want none", a.recording)
 	}
 
-	a.SetKeybinding(action.TabClose, "ctrl+alt+w")
-	if got := keyOf(a.settings.Keybindings, action.TabClose); got != "ctrl+alt+w" {
-		t.Errorf("key of %q = %q, want %q", action.TabClose, got, "ctrl+alt+w")
+	a.SetKeybinding(action.About, "ctrl+alt+w")
+	if got := keyOf(a.settings.Keybindings, action.About); got != "ctrl+alt+w" {
+		t.Errorf("key of %q = %q, want %q", action.About, got, "ctrl+alt+w")
 	}
 	if len(a.settings.Keybindings) != n+1 {
 		t.Errorf("the settings hold %d keybindings, want %d", len(a.settings.Keybindings), n+1)
@@ -35,23 +35,24 @@ func TestSetKeybinding(t *testing.T) {
 		t.Errorf("recording = %q, want none", a.recording)
 	}
 
-	a.SetKeybinding(action.TabClose, "ctrl+alt+e")
-	if got := keyOf(a.settings.Keybindings, action.TabClose); got != "ctrl+alt+e" {
-		t.Errorf("key of %q = %q, want %q", action.TabClose, got, "ctrl+alt+e")
+	a.SetKeybinding(action.About, "ctrl+alt+e")
+	if got := keyOf(a.settings.Keybindings, action.About); got != "ctrl+alt+e" {
+		t.Errorf("key of %q = %q, want %q", action.About, got, "ctrl+alt+e")
 	}
 	if len(a.settings.Keybindings) != n+1 {
 		t.Errorf("the settings hold %d keybindings, want %d", len(a.settings.Keybindings), n+1)
 	}
 
-	a.RemoveKeybinding(action.TabClose)
-	if got := keyOf(a.settings.Keybindings, action.TabClose); got != "" {
-		t.Errorf("key of %q = %q, want none", action.TabClose, got)
+	a.RemoveKeybinding(action.About)
+	if got := keyOf(a.settings.Keybindings, action.About); got != "" {
+		t.Errorf("key of %q = %q, want none", action.About, got)
 	}
 	if len(a.settings.Keybindings) != n {
 		t.Errorf("the settings hold %d keybindings, want the %d they started with", len(a.settings.Keybindings), n)
 	}
 
-	// An action the defaults bind twice loses both keys.
+	// An action the file binds twice loses both keys.
+	a.settings.Keybindings = append(a.settings.Keybindings, store.Keybinding{Key: "f9", Action: action.TabNew})
 	a.RemoveKeybinding(action.TabNew)
 	for _, kb := range a.settings.Keybindings {
 		if kb.Action == action.TabNew {
