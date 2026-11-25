@@ -56,7 +56,7 @@ func Default() Settings {
 		Language:          "",
 		Theme:             "dark",
 		StartOn:           "default",
-		Font:              Font{Family: DefaultFontFamily(), Weight: 400, Size: 13, LineHeight: 1.2},
+		Font:              Font{Family: DefaultFontFamily(), Weight: 500, Size: 16, LineHeight: 1.2},
 		ColorScheme:       "Campbell",
 		Padding:           Padding{X: 12, Y: 8},
 		BackgroundOpacity: 1.0,

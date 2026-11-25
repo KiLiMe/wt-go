@@ -66,7 +66,7 @@ func TestDefault(t *testing.T) {
 	if s.Language != "" || s.Theme != "dark" || s.ColorScheme != "Campbell" {
 		t.Errorf("language, theme, scheme = %q, %q, %q", s.Language, s.Theme, s.ColorScheme)
 	}
-	if s.Font.Family != DefaultFontFamily() || s.Font.Size != 13 || s.Font.LineHeight != 1.2 {
+	if s.Font.Family != DefaultFontFamily() || s.Font.Size != 16 || s.Font.LineHeight != 1.2 {
 		t.Errorf("font = %+v", s.Font)
 	}
 	if s.Padding.X != 12 || s.Padding.Y != 8 {
@@ -509,19 +509,19 @@ func TestConfirmJSON(t *testing.T) {
 	}
 }
 
-// TestFontWeight covers the weight a terminal draws at: the regular face before
-// the file names one, and the regular face for a file that leaves the key out,
-// which is what a zero says and what mygo reads a zero as.
+// TestFontWeight covers the weight a terminal draws at: the default weight
+// before the file names one, and the same weight for a file that leaves the key
+// out, which is what a zero says.
 func TestFontWeight(t *testing.T) {
-	if got := Default().Font.Weight; got != 400 {
-		t.Errorf("default weight = %d, want 400", got)
+	if got := Default().Font.Weight; got != 500 {
+		t.Errorf("default weight = %d, want 500", got)
 	}
 	read, err := Parse([]byte(`{"font":{"size":14}}`))
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}
-	if read.Font.Weight != 400 {
-		t.Errorf("a file without a weight reads as %d, want 400", read.Font.Weight)
+	if read.Font.Weight != 500 {
+		t.Errorf("a file without a weight reads as %d, want 500", read.Font.Weight)
 	}
 	read, err = Parse([]byte(`{"font":{"weight":300}}`))
 	if err != nil {

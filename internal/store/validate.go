@@ -92,7 +92,7 @@ func (s *Settings) fallbackUnknown() {
 	// A family the file leaves empty is the default families, which is also what
 	// the window draws with: an empty setting would say nothing at all.
 	s.FillEmptyFont()
-	// A weight the file leaves out is the regular one, which is what terminal
+	// A weight the file leaves out is the default one, which is what terminal
 	// text is drawn at: a zero says nothing, and the page has to show the face
 	// the terminal draws with rather than a weight no family has.
 	if s.Font.Weight == 0 {

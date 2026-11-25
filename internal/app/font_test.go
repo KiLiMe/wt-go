@@ -86,8 +86,6 @@ func TestIsMonospaceCaches(t *testing.T) {
 	}
 }
 
-// TestTerminalFont covers the font the terminals draw with: the settings' one
-// while it is monospace, and the fallback while it is not.
 // TestWeightOf covers what a terminal draws at: a weight of nothing is the
 // regular face, and a weight no family has is the nearest one it does.
 func TestWeightOf(t *testing.T) {
@@ -101,6 +99,8 @@ func TestWeightOf(t *testing.T) {
 	}
 }
 
+// TestTerminalFont covers the font the terminals draw with: the settings' one
+// while it is monospace, and the fallback while it is not.
 func TestTerminalFont(t *testing.T) {
 	s := store.Default()
 	s.Font.Family, s.Font.Size, s.Font.LineHeight = "no-such-font-at-all", 15, 1.4
@@ -112,8 +112,8 @@ func TestTerminalFont(t *testing.T) {
 	if f.Size != 15 || f.LineHeight != 1.4 {
 		t.Errorf("font = %+v, want the size and the line height the settings name", f)
 	}
-	if f.Weight != 400 {
-		t.Errorf("weight = %d, want the regular face", f.Weight)
+	if f.Weight != s.Font.Weight {
+		t.Errorf("weight = %d, want the weight the settings name %d", f.Weight, s.Font.Weight)
 	}
 
 	s.Font.Family = "monospace"
