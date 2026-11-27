@@ -103,7 +103,7 @@ func (a *App) CloseAbout() {
 // in the dialog when the desktop has none: a button that does nothing leaves a
 // person clicking it.
 func (a *App) OpenProjectPage() {
-	if err := sys.OpenPath(project); err != nil {
+	if err := sys.OpenURL(project); err != nil {
 		log.Printf("wt-go: %s", fault.Line(fault.OpenLink, err.Error()))
 		if a.about != nil {
 			a.about.Note = locales.ErrOpenLink(fault.Line(fault.OpenLink, err.Error()))
